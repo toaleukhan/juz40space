@@ -1,0 +1,59 @@
+const pool = require('./db');
+
+const createTables = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS curators (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      phone VARCHAR(20) UNIQUE NOT NULL,
+      password_hash VARCHAR(255) NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS groups (
+      id SERIAL PRIMARY KEY,
+      curator_id INTEGER REFERENCES curators(id) ON DELETE CASCADE,
+      name VARCHAR(255) NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS students (
+      id SERIAL PRIMARY KEY,
+      group_id INTEGER REFERENCES groups(id) ON DELETE CASCADE,
+      name VARCHAR(255) NOT NULL,
+      phone VARCHAR(20) NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS whatsapp_sessions (
+      id SERIAL PRIMARY KEY,
+      curator_id INTEGER UNIQUE REFERENCES curators(id) ON DELETE CASCADE,
+      session_data TEXT,
+      is_connected BOOLEAN DEFAULT FALSE,
+      connected_at TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS messages (
+      id SERIAL PRIMARY KEY,
+      curator_id INTEGER REFERENCES curators(id),
+      group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL,
+      message_text TEXT NOT NULL,
+      total_sent INTEGER DEFAULT 0,
+      total_failed INTEGER DEFAULT 0,
+      sent_at TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS message_logs (
+      id SERIAL PRIMARY KEY,
+      message_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,
+      student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+      status VARCHAR(20) DEFAULT 'pending',
+      sent_at TIMESTAMP
+    );
+  `);
+
+  console.log('✅ Tables created');
+};
+
+module.exports = createTables;
