@@ -36,7 +36,7 @@ const SUBJECTS = [
 function buildSubjectMap() {
   const map = {};
   const process = (days, dir) => {
-    (days || []).forEach(({ lessons }) => {
+    (Array.isArray(days) ? days : []).forEach(({ lessons }) => {
       (lessons || []).forEach(({ subject, stream, teachers }) => {
         if (!map[subject]) map[subject] = {};
         (teachers || []).forEach(({ name, times }) => {
