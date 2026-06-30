@@ -48,8 +48,8 @@ function buildSubjectMap() {
       });
     });
   };
-  Object.values(smartScheduleByMonth).forEach(days => process(days, 'SMART'));
-  Object.values(juniorScheduleByMonth).forEach(days => process(days, 'JUNIOR'));
+  Object.values(smartScheduleByMonth).forEach(days => process(Array.isArray(days) ? days : [], 'SMART'));
+  Object.values(juniorScheduleByMonth).forEach(days => process(Array.isArray(days) ? days : [], 'JUNIOR'));
   const result = {};
   Object.entries(map).forEach(([subj, teachers]) => {
     result[subj] = Object.entries(teachers).map(([name, d]) => ({
