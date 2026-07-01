@@ -25,7 +25,6 @@ const C = {
   divider:    'var(--border)',
 };
 
-const SUPERVISOR = { login: 'admin', password: 'admin123' };
 const MIN_FREE_GAP = 11;
 
 // Merge smartScheduleByMonth (LIVE) and smartAdditionalScheduleByMonth (ҚОСЫМША)
@@ -1259,45 +1258,6 @@ function TeachersView({ teachersIndex, filters }) {
 }
 
 // ─── Supervisor ───────────────────────────────────────────────────────────────
-function SupervisorLogin({ onLogin, onCancel }) {
-  const [l,setL]=useState(''); const [p,setP]=useState(''); const [err,setErr]=useState('');
-  const submit=()=>{ if(l===SUPERVISOR.login&&p===SUPERVISOR.password) onLogin(); else setErr('Логин немесе пароль қате'); };
-  const inputStyle={width:'100%',padding:'10px 14px',borderRadius:9,
-    border:'1.5px solid rgba(13,74,87,0.15)',fontSize:13,color:C.text,
-    background:'rgba(255,255,255,0.9)',outline:'none',fontFamily:'inherit',boxSizing:'border-box'};
-  return (
-    <div style={{minHeight:'100vh',background:C.pageBg,display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <style>{G}</style>
-      <div className="g-card" style={{padding:'40px 36px',width:340}}>
-        <div style={{textAlign:'center',marginBottom:24}}>
-          <Logo h={28}/>
-          <div style={{fontSize:15,fontWeight:700,color:C.titleColor,marginTop:14}}>Басқарушы кабинеті</div>
-          <div style={{fontSize:12,color:C.textMuted,marginTop:4}}>Логин мен пароль керек</div>
-        </div>
-        <div style={{display:'flex',flexDirection:'column',gap:12}}>
-          <div>
-            <label style={{fontSize:11,fontWeight:600,color:C.textSub,display:'block',marginBottom:5}}>Логин</label>
-            <input value={l} onChange={e=>setL(e.target.value)} placeholder="admin" autoComplete="off" style={inputStyle}/>
-          </div>
-          <div>
-            <label style={{fontSize:11,fontWeight:600,color:C.textSub,display:'block',marginBottom:5}}>Пароль</label>
-            <input value={p} onChange={e=>setP(e.target.value)} type="password" placeholder="••••••••"
-              onKeyDown={e=>e.key==='Enter'&&submit()} style={inputStyle}/>
-          </div>
-          {err&&<div style={{fontSize:12,color:'#dc2626',textAlign:'center',padding:'6px',background:'rgba(239,68,68,0.06)',borderRadius:7}}>{err}</div>}
-          <button onClick={submit}
-            style={{padding:'10px',borderRadius:9,background:JUZ.teal,border:'none',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',boxShadow:'0 4px 14px rgba(27,110,126,0.30)'}}>
-            Кіру
-          </button>
-          <button onClick={onCancel}
-            style={{padding:'8px',borderRadius:9,background:'transparent',border:`1px solid ${C.divider}`,color:C.textMuted,fontSize:12,cursor:'pointer'}}>
-            ← Кестеге оралу
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function SupervisorDashboard({ onLogout, onBack }) {
   const [file,setFile]=useState(null); const [fileName,setFileName]=useState('');
@@ -1655,8 +1615,7 @@ export default function Schedule({ onGoToCabinet }) {
     return parts.length?parts.join(' · '):'Фильтр';
   };
 
-  if (supervisorMode&&!supervisorAuth) return <SupervisorLogin onLogin={()=>{setSA(true);setSM(false);}} onCancel={()=>setSM(false)}/>;
-  if (supervisorMode&&supervisorAuth)  return <SupervisorDashboard onLogout={()=>{setSM(false);setSA(false);}} onBack={()=>setSM(false)}/>;
+  if (supervisorMode) return <SupervisorDashboard onLogout={()=>{setSM(false);setSA(false);}} onBack={()=>setSM(false)}/>;
 
   const NAV_ITEMS=[
     {id:'schedule',icon:'📋',label:'Тізім'},
@@ -1682,7 +1641,7 @@ export default function Schedule({ onGoToCabinet }) {
           <span style={{fontSize:12,color:C.textMuted,fontWeight:500}}>Сабақ кестесі</span>
         </div>
         <div style={{display:'flex',gap:8}}>
-          <button onClick={()=>setSM(true)}
+          <button onClick={()=>{setSM(true);setSA(true);}}
             style={{padding:'6px 13px',borderRadius:8,fontSize:11,cursor:'pointer',
               background: supervisorAuth ? '#1B6E7E' : '#f5f7fa',
               border:`1px solid ${supervisorAuth?'#1B6E7E':'#eef0f3'}`,
