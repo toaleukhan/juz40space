@@ -1,29 +1,27 @@
 // scheduleOverrides.js — Басқарушы қолмен қосқан сабақтар
 // scheduleData.js статикалық файл болғандықтан, "Енгізу" формасы арқылы
-// қосылған сабақтар осы модуль арқылы браузерде (localStorage) сақталып,
+// қосылған сабақтар осы модуль арқылы серверде (Postgres) сақталып,
 // негізгі кестемен render кезінде біріктіріледі (List / Calendar / Teachers
-// бәрінде бірден көрінеді).
+// бәрінде, барлық кураторда бірдей көрінеді).
 
-const STORAGE_KEY = 'juz40_schedule_overrides_v1';
+import api from '../services/api';
 
-const EMPTY = { live: {}, additional: {}, junior: {} };
+export const EMPTY_OVERRIDES = { live: {}, additional: {}, junior: {} };
 
-export function loadOverrides() {
+export async function loadOverrides() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...EMPTY };
-    const parsed = JSON.parse(raw);
-    return { ...EMPTY, ...parsed };
+    const { data } = await api.get('/schedule/overrides');
+    return { ...EMPTY_OVERRIDES, ...data };
   } catch {
-    return { ...EMPTY };
+    return { ...EMPTY_OVERRIDES };
   }
 }
 
-export function saveOverrides(overrides) {
+export async function saveOverrides(overrides) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
+    await api.put('/schedule/overrides', overrides);
   } catch {
-    // localStorage болмаса (private mode т.б.) — үнсіз елемейміз
+    // желі/сервер қатесі — үнсіз елемейміз, келесі өзгертуде қайта көреді
   }
 }
 

@@ -49,24 +49,20 @@ const securityHeaders = (req, res, next) => {
 
 // ── Input санитизация ─────────────────────────────────────────────────────────
 const sanitizeInput = (req, res, next) => {
-  const sanitize = (obj) => {
-    if (typeof obj !== 'object' || obj === null) return obj;
-    const clean = {};
-    for (const [key, val] of Object.entries(obj)) {
-      if (typeof val === 'string') {
-        // XSS базалық тазалау
-        clean[key] = val
-          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-          .replace(/javascript:/gi, '')
-          .replace(/on\w+\s*=/gi, '')
-          .trim();
-      } else if (typeof val === 'object') {
-        clean[key] = sanitize(val);
-      } else {
-        clean[key] = val;
-      }
+  const cleanString = (val) => val
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+\s*=/gi, '')
+    .trim();
+  const sanitize = (val) => {
+    if (typeof val === 'string') return cleanString(val);
+    if (Array.isArray(val)) return val.map(sanitize);
+    if (typeof val === 'object' && val !== null) {
+      const clean = {};
+      for (const [key, v] of Object.entries(val)) clean[key] = sanitize(v);
+      return clean;
     }
-    return clean;
+    return val;
   };
   if (req.body) req.body = sanitize(req.body);
   next();

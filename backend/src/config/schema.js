@@ -51,6 +51,14 @@ const createTables = async () => {
       status VARCHAR(20) DEFAULT 'pending',
       sent_at TIMESTAMP
     );
+
+    -- Барлық кураторлар үшін ортақ, "Басқару → Енгізу" арқылы қолмен қосылған сабақтар.
+    -- Бір ғана жол (singleton) — бұрын браузердің localStorage-інде ғана сақталушы еді.
+    CREATE TABLE IF NOT EXISTS schedule_overrides (
+      id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+      data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
   `);
 
   console.log('✅ Tables created');

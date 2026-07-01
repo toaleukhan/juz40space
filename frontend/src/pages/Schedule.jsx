@@ -2,7 +2,7 @@ import {
   months, smartScheduleByMonth, smartAdditionalScheduleByMonth, juniorScheduleByMonth,
   buildTeachersIndex, SUBJECT_COLORS, SUBJECT_LOGOS, juniorStreamNames
 } from './scheduleData';
-import { loadOverrides, saveOverrides, mergeDays, addLessonOverride, getAllTeacherNames } from './scheduleOverrides';
+import { loadOverrides, saveOverrides, mergeDays, addLessonOverride, getAllTeacherNames, EMPTY_OVERRIDES } from './scheduleOverrides';
 import juz40Logo from '../assets/juz40-logo.png';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
@@ -1536,8 +1536,8 @@ export default function Schedule({ onGoToCabinet }) {
   const [showFilter, setShowFilter] = useState(false);
   const [showEntry, setShowEntry]   = useState(false);
 
-  const [overrides, setOverrides] = useState(()=>loadOverrides());
-  useEffect(()=>{ saveOverrides(overrides); }, [overrides]);
+  const [overrides, setOverrides] = useState(EMPTY_OVERRIDES);
+  useEffect(()=>{ loadOverrides().then(setOverrides); }, []);
 
   const [filters, setFilters] = useState({
     dir:'Барлығы', subjects:[], month:'01',
@@ -1602,7 +1602,11 @@ export default function Schedule({ onGoToCabinet }) {
   }),[filters.month,overrides]);
 
   const handleAddLesson = (entry) => {
-    setOverrides(prev => addLessonOverride(prev, entry));
+    setOverrides(prev => {
+      const next = addLessonOverride(prev, entry);
+      saveOverrides(next);
+      return next;
+    });
     setShowEntry(false);
   };
 

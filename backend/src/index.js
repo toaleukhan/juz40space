@@ -2,26 +2,46 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const createTables = require('./config/schema');
+const { apiLimiter, loginLimiter, whatsappLimiter, securityHeaders, sanitizeInput } = require('./middleware/security');
 
 const app = express();
 
+// Дәл домен/сабдомен тексеру — substring bypass болдырмау үшін
+// (мыс. "evil-juz40.space.attacker.com".includes('juz40.space') === true болатын еді)
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+  try {
+    const { hostname } = new URL(origin);
+    return (
+      hostname === 'localhost' ||
+      hostname === 'vercel.app' || hostname.endsWith('.vercel.app') ||
+      hostname === 'juz40.space' || hostname.endsWith('.juz40.space')
+    );
+  } catch {
+    return false;
+  }
+};
+
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || origin.includes('vercel.app') || origin.includes('localhost') || origin.includes('juz40.space')) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS error'));
-    }
+    if (isAllowedOrigin(origin)) callback(null, true);
+    else callback(new Error('CORS error'));
   },
   credentials: true
 }));
 app.use(express.json({ limit: '20mb' }));
+app.use(securityHeaders);
+app.use(sanitizeInput);
+app.use(apiLimiter);
 
+app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/groups', require('./routes/groups'));
+app.use('/api/whatsapp/send', whatsappLimiter);
 app.use('/api/whatsapp', require('./routes/whatsapp'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/parse-schedule', require('./routes/parseSchedule'));
+app.use('/api/schedule', require('./routes/schedule'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 

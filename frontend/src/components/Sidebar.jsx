@@ -2,11 +2,24 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import juz40Logo from '../assets/juz40-logo.png';
+import { SUBJECT_COLORS, smartScheduleByMonth, smartAdditionalScheduleByMonth, juniorScheduleByMonth } from '../pages/scheduleData';
 
 const NAV = [
   { id: 'dashboard', label: 'Басты бет',     icon: '⊞', path: '/dashboard',  desc: 'Пәндер & шолу' },
   { id: 'schedule',  label: 'Сабақ кестесі', icon: '📅', path: '/schedule',   desc: 'Апталық кесте' },
 ];
+
+const SUBJECT_COUNT = Object.keys(SUBJECT_COLORS).length;
+const TEACHER_COUNT = (() => {
+  const names = new Set();
+  const collect = (byMonth) => Object.values(byMonth || {}).forEach(days =>
+    (Array.isArray(days) ? days : []).forEach(d =>
+      (d.lessons || []).forEach(l => (l.teachers || []).forEach(t => names.add(t.name)))));
+  collect(smartScheduleByMonth);
+  collect(smartAdditionalScheduleByMonth);
+  collect(juniorScheduleByMonth);
+  return names.size;
+})();
 
 export default function Sidebar() {
   const navigate = useNavigate();
@@ -171,8 +184,8 @@ export default function Sidebar() {
         }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {[
-              { label: 'Пәндер', val: '13' },
-              { label: 'Мұғалімдер', val: '20+' },
+              { label: 'Пәндер', val: String(SUBJECT_COUNT) },
+              { label: 'Мұғалімдер', val: String(TEACHER_COUNT) },
               { label: 'SMART', val: '●' },
               { label: 'JUNIOR', val: '●' },
             ].map((s, i) => (
