@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import juz40Logo from '../assets/juz40-logo.png';
@@ -369,8 +369,11 @@ export default function Login() {
 
           <div style={{ marginTop:28, paddingTop:20, borderTop:'1px solid var(--border)', textAlign:'center' }}>
             <span style={{ fontSize:12, color:'var(--text-muted)' }}>
-              Аккаунт жоқ па? Администраторға хабарласыңыз
+              Аккаунт жоқ па?{' '}
             </span>
+            <Link to="/register" style={{ fontSize:12, color:'#1B6E7E', fontWeight:600, textDecoration:'none' }}>
+              Тіркелу
+            </Link>
           </div>
 
           <div style={{ textAlign:'center', marginTop:16 }}>
