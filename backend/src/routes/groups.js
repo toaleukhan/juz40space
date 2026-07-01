@@ -70,9 +70,15 @@ router.post('/:id/students/bulk', auth, async (req, res) => {
   try {
     const group = await pool.query('SELECT id FROM groups WHERE id = $1 AND curator_id = $2', [req.params.id, req.curatorId]);
     if (!group.rows.length) return res.status(403).json({ error: 'Рұқсат жоқ' });
-    for (const s of students) {
-      await pool.query('INSERT INTO students (group_id, name, phone) VALUES ($1, $2, $3)', [req.params.id, s.name, s.phone]);
-    }
+
+    const values = [];
+    const placeholders = students.map((s, i) => {
+      const n = i * 3;
+      values.push(req.params.id, s.name, s.phone);
+      return `($${n+1}, $${n+2}, $${n+3})`;
+    }).join(',');
+    await pool.query(`INSERT INTO students (group_id, name, phone) VALUES ${placeholders}`, values);
+
     res.json({ success: true, count: students.length });
   } catch (err) { res.status(500).json({ error: 'Сервер қатесі' }); }
 });
