@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
+import LiveScheduleWidget from '../components/LiveScheduleWidget';
 import { smartScheduleByMonth, juniorScheduleByMonth, SUBJECT_COLORS } from './scheduleData';
 
 import imgAngl  from '../assets/subjects/Английский_Язык.webp';
@@ -111,11 +112,16 @@ export default function DashboardHome() {
         <div style={{ position:'absolute', width:280, height:280, borderRadius:'50%', background:'rgba(255,255,255,0.15)', bottom:-60, left:-60 }} />
 
         {/* Header */}
-        <div style={{ position:'absolute', top:32, left:40, zIndex:3 }}>
+        <div style={{ position:'absolute', top:32, left:40, zIndex:3, maxWidth:'calc(100% - 480px)' }}>
           <h1 style={{ fontSize:24, fontWeight:900, color:'#0D4A57', margin:0, letterSpacing:'-0.6px' }}>Пәндер</h1>
           <p style={{ fontSize:12.5, color:'rgba(13,74,87,0.65)', margin:'5px 0 0' }}>
             Көрсеткілерді басып пәндер арасында ауысыңыз
           </p>
+        </div>
+
+        {/* Live schedule widget */}
+        <div style={{ position:'absolute', top:24, right:24, zIndex:3, width:'min(380px, 32vw)' }}>
+          <LiveScheduleWidget />
         </div>
 
         {/* Prev / Next arrow buttons — fixed at the edges */}
