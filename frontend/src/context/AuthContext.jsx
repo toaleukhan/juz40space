@@ -24,14 +24,6 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const register = async (form) => {
-    const { data } = await api.post('/auth/register', form);
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('curator', JSON.stringify(data.curator));
-    setCurator(data.curator);
-    return data;
-  };
-
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('curator');
@@ -39,7 +31,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ curator, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ curator, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
