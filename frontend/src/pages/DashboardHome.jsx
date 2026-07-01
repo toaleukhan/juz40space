@@ -3,19 +3,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
 import { smartScheduleByMonth, juniorScheduleByMonth, SUBJECT_COLORS } from './scheduleData';
 
-import imgAngl  from '../assets/subjects/Английский_Язык.png';
-import imgBio   from '../assets/subjects/Биология.png';
-import imgWHist from '../assets/subjects/Всемирная_История.png';
-import imgGeo   from '../assets/subjects/География.png';
-import imgGeom  from '../assets/subjects/Геометрия.png';
-import imgInfo  from '../assets/subjects/Информатика.png';
-import imgHist  from '../assets/subjects/История_Казахстана.png';
-import imgLit   from '../assets/subjects/Казахская_Литература.png';
-import imgKaz   from '../assets/subjects/Казахский_Язык.png';
-import imgLogic from '../assets/subjects/Логика.png';
-import imgMath  from '../assets/subjects/Математика.png';
-import imgRus   from '../assets/subjects/Русский_Язык.png';
-import imgChem  from '../assets/subjects/Химия.png';
+import imgAngl  from '../assets/subjects/Английский_Язык.webp';
+import imgBio   from '../assets/subjects/Биология.webp';
+import imgWHist from '../assets/subjects/Всемирная_История.webp';
+import imgGeo   from '../assets/subjects/География.webp';
+import imgGeom  from '../assets/subjects/Геометрия.webp';
+import imgInfo  from '../assets/subjects/Информатика.webp';
+import imgHist  from '../assets/subjects/История_Казахстана.webp';
+import imgLit   from '../assets/subjects/Казахская_Литература.webp';
+import imgKaz   from '../assets/subjects/Казахский_Язык.webp';
+import imgLogic from '../assets/subjects/Логика.webp';
+import imgMath  from '../assets/subjects/Математика.webp';
+import imgRus   from '../assets/subjects/Русский_Язык.webp';
+import imgChem  from '../assets/subjects/Химия.webp';
 
 const SUBJECTS = [
   { code: 'МАТ',   nameKk: 'Математика',          img: imgMath  },
@@ -69,6 +69,10 @@ export default function DashboardHome() {
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
   const [dir, setDir] = useState(1); // 1 = forward, -1 = backward (for slide direction)
+
+  useEffect(() => {
+    SUBJECTS.forEach(s => { const img = new Image(); img.src = s.img; });
+  }, []);
 
   useEffect(() => {
     if (paused) return;

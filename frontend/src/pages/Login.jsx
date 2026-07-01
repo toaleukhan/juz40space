@@ -5,19 +5,19 @@ import { useAuth } from '../context/AuthContext';
 import juz40Logo from '../assets/juz40-logo.png';
 import { smartScheduleByMonth, juniorScheduleByMonth } from './scheduleData';
 
-import math    from '../assets/subjects/Математика.png';
-import kaz     from '../assets/subjects/Казахский_Язык.png';
-import bio     from '../assets/subjects/Биология.png';
-import inf     from '../assets/subjects/Информатика.png';
-import geo     from '../assets/subjects/География.png';
-import hist    from '../assets/subjects/История_Казахстана.png';
-import rus     from '../assets/subjects/Русский_Язык.png';
-import geom    from '../assets/subjects/Геометрия.png';
-import chem    from '../assets/subjects/Химия.png';
-import logic   from '../assets/subjects/Логика.png';
-import kazLit  from '../assets/subjects/Казахская_Литература.png';
-import eng     from '../assets/subjects/Английский_Язык.png';
-import wHist   from '../assets/subjects/Всемирная_История.png';
+import math    from '../assets/subjects/Математика.webp';
+import kaz     from '../assets/subjects/Казахский_Язык.webp';
+import bio     from '../assets/subjects/Биология.webp';
+import inf     from '../assets/subjects/Информатика.webp';
+import geo     from '../assets/subjects/География.webp';
+import hist    from '../assets/subjects/История_Казахстана.webp';
+import rus     from '../assets/subjects/Русский_Язык.webp';
+import geom    from '../assets/subjects/Геометрия.webp';
+import chem    from '../assets/subjects/Химия.webp';
+import logic   from '../assets/subjects/Логика.webp';
+import kazLit  from '../assets/subjects/Казахская_Литература.webp';
+import eng     from '../assets/subjects/Английский_Язык.webp';
+import wHist   from '../assets/subjects/Всемирная_История.webp';
 
 const SUBJECTS = [
   { code:'МАТ',   name:'Математика',          img: math   },
@@ -60,6 +60,10 @@ function IllustrationPanel() {
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    SUBJECTS.forEach(s => { const img = new Image(); img.src = s.img; });
+  }, []);
 
   useEffect(() => {
     if (paused) return;
