@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const AdmZip = require('adm-zip');
+const { logAction } = require('../utils/audit');
 
 const DAYS_MAP = {
   'ДҮЙСЕНБІ': 'Дүйсенбі',
@@ -144,7 +145,7 @@ function buildSchedule(rows) {
 
 // POST /api/parse-schedule
 // Body: { base64: string, direction: string, monthId: string }
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { base64, direction, monthId } = req.body;
   if (!base64) return res.status(400).json({ error: 'base64 міндетті' });
 
@@ -164,6 +165,7 @@ router.post('/', (req, res) => {
     const teachers = schedule.reduce((a, d) =>
       a + d.lessons.reduce((b, l) => b + l.teachers.length, 0), 0);
 
+    await logAction(req.curatorId, 'schedule_parse', 'parse_schedule', { direction, monthId, days, teachers });
     res.json({ result: jsCode, days, teachers });
   } catch (err) {
     console.error('parseSchedule error:', err);

@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const { requireAdmin } = auth;
 const pool = require('../config/db');
+const { logAction } = require('../utils/audit');
 
 // Барлық кураторларға ортақ, қолмен қосылған сабақтарды алу
 router.get('/overrides', auth, async (req, res) => {
@@ -26,6 +27,7 @@ router.put('/overrides', auth, requireAdmin, async (req, res) => {
        ON CONFLICT (id) DO UPDATE SET data = $1, updated_at = NOW()`,
       [JSON.stringify(data)]
     );
+    await logAction(req.curatorId, 'schedule_override_update', 'schedule_overrides', data);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Сервер қатесі' });

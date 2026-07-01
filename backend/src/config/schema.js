@@ -63,6 +63,16 @@ const createTables = async () => {
       data JSONB NOT NULL DEFAULT '{}'::jsonb,
       updated_at TIMESTAMP DEFAULT NOW()
     );
+
+    -- Admin әрекеттерінің тарихы (кесте өзгерту, docx парсинг)
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id SERIAL PRIMARY KEY,
+      curator_id INTEGER REFERENCES curators(id),
+      action VARCHAR(50) NOT NULL,
+      entity VARCHAR(50) NOT NULL,
+      details JSONB,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
   `);
 
   console.log('✅ Tables created');
