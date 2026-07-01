@@ -7,8 +7,12 @@ const createTables = async () => {
       name VARCHAR(255) NOT NULL,
       phone VARCHAR(20) UNIQUE NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
+      role VARCHAR(20) NOT NULL DEFAULT 'curator',
       created_at TIMESTAMP DEFAULT NOW()
     );
+
+    -- Ертеректе жасалған curators кестесінде role бағаны болмауы мүмкін
+    ALTER TABLE curators ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'curator';
 
     CREATE TABLE IF NOT EXISTS groups (
       id SERIAL PRIMARY KEY,

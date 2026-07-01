@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const { requireAdmin } = auth;
 const pool = require('../config/db');
 
 // Барлық кураторларға ортақ, қолмен қосылған сабақтарды алу
@@ -14,7 +15,7 @@ router.get('/overrides', auth, async (req, res) => {
 });
 
 // Қолмен қосылған сабақтарды сақтау (толық ауыстыру)
-router.put('/overrides', auth, async (req, res) => {
+router.put('/overrides', auth, requireAdmin, async (req, res) => {
   const data = req.body;
   if (typeof data !== 'object' || data === null) {
     return res.status(400).json({ error: 'Деректер форматы қате' });

@@ -1,13 +1,16 @@
 // Куратор аккаунтын қолмен жасау (публикалық тіркелу жоқ болғандықтан).
-// Қолдану: node scripts/create-curator.js "Аты-жөні" "+77001234567" "құпия_сөз" "Топ атауы"
+// Қолдану: node scripts/create-curator.js "Аты-жөні" "+77001234567" "құпия_сөз" "Топ атауы" [--admin]
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const pool = require('../src/config/db');
 
-const [name, phone, password, groupName] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const isAdmin = args.includes('--admin');
+const [name, phone, password, groupName] = args.filter(a => a !== '--admin');
+const role = isAdmin ? 'admin' : 'curator';
 
 if (!name || !phone || !password || !groupName) {
-  console.error('Қолдану: node scripts/create-curator.js "Аты-жөні" "+77001234567" "құпия_сөз" "Топ атауы"');
+  console.error('Қолдану: node scripts/create-curator.js "Аты-жөні" "+77001234567" "құпия_сөз" "Топ атауы" [--admin]');
   process.exit(1);
 }
 
@@ -21,8 +24,8 @@ if (!name || !phone || !password || !groupName) {
 
     const hash = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      'INSERT INTO curators (name, phone, password_hash) VALUES ($1, $2, $3) RETURNING id, name, phone',
-      [name, phone, hash]
+      'INSERT INTO curators (name, phone, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, phone, role',
+      [name, phone, hash, role]
     );
     const curator = result.rows[0];
 
