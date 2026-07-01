@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import juz40Logo from '../assets/juz40-logo.png';
+import StatsWidget from './StatsWidget';
 import { SUBJECT_COLORS, smartScheduleByMonth, smartAdditionalScheduleByMonth, juniorScheduleByMonth } from '../pages/scheduleData';
 
 const NAV = [
@@ -196,6 +197,12 @@ export default function Sidebar() {
             ))}
           </div>
         </div>
+
+        {curator?.role === 'admin' && (
+          <div style={{ margin: '10px 2px 4px' }}>
+            <StatsWidget />
+          </div>
+        )}
       </div>
 
       {/* ── Theme toggle ── */}
