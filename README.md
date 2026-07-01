@@ -8,6 +8,18 @@
 
 Публикалық тіркелу жоқ — жаңа куратор аккаунтын тек сервер қолжетімділігі бар адам [backend/scripts/create-curator.js](backend/scripts/create-curator.js) скрипті арқылы қолмен жасайды.
 
+## Даму процесі — `main`-ге тікелей push жасамау
+
+`main` = әрқашан жұмыс істейтін, тексерілген нұсқа (production осыдан деплой болады). Жаңа функция немесе үлкенірек өзгеріс кезінде:
+
+1. **Жаңа branch ашу** (GitHub Desktop: "Current Branch" → "New Branch", атын мағыналы қой, мыс. `feature/file-upload`)
+2. Сол branch-қа commit жасап, **соны** push жасау (`main`-ді емес)
+3. Vercel GitHub-пен байланысты болғандықтан, әр push-тан кейін **автоматты preview сілтеме** пайда болады (Vercel dashboard → Deployments, немесе GitHub-тағы commit статусында сілтеме шығады) — production доменге (`juz40.space`) тимейді
+4. Сол preview сілтемеде тексер (мыс. ауыр файл жүктеу, жаңа беттер, т.б.) — сынса, тек preview бұзылады, нақты сайт зақымдалмайды
+5. Көңіліңізден шықса ғана — branch-ты `main`-ге merge жаса (GitHub Desktop: "Branch" → "Merge into current branch" немесе GitHub-та Pull Request ашу)
+
+Backend (Railway) үшін preview автоматты емес — ауыр жүктеме/деректер қорына қатысты өзгерісті локалды (`npm run dev` + локалды Postgres) тексеріп алған дұрыс.
+
 ## Архитектура
 
 ```
@@ -105,6 +117,8 @@ git push origin main
 
 ### Schedule
 - `POST /api/parse-schedule` — .docx кестені парсинг жасау (Басқарушы кабинеті)
+- `GET /api/schedule/overrides` — "Енгізу" арқылы қолмен қосылған сабақтар (барлық кураторға ортақ)
+- `PUT /api/schedule/overrides` — сол деректерді сақтау
 
 ### Stats
 - `GET /api/stats` — метрикалар
