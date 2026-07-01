@@ -62,6 +62,16 @@ const G = `
     display:inline-block; width:6px; height:6px; border-radius:50%;
     background:#ef4444; animation: liveBlink 1.2s ease-in-out infinite;
   }
+  @keyframes plusPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249,115,22,0.35); }
+    50% { transform: scale(1.18); box-shadow: 0 0 0 3px rgba(249,115,22,0); }
+  }
+  .plus-dot {
+    display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+    width:15px; height:15px; border-radius:50%; background:#f97316; color:#fff;
+    font-size:11px; font-weight:800; line-height:1;
+    animation: plusPulse 1.4s ease-in-out infinite;
+  }
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); font-family: 'Inter', system-ui, sans-serif; color: var(--text); }
@@ -335,12 +345,7 @@ function DirBadge({ dir }) {
 // Per-lesson LIVE / ҚОСЫМША indicator (only meaningful for SMART direction)
 function KindBadge({ kind }) {
   if (kind === 'additional') {
-    return (
-      <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:9, padding:'2px 7px', borderRadius:20,
-        background:'#FFF7ED', color:'#9a3412', fontWeight:700, border:'1px solid #fed7aa' }}>
-        ➕ ҚОСЫМША
-      </span>
-    );
+    return <span className="plus-dot" title="Қосымша сабақ">+</span>;
   }
   return (
     <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:9, padding:'2px 7px', borderRadius:20,
@@ -389,9 +394,9 @@ function LessonCard({ lesson, direction }) {
         </div>
       </div>
 
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:6,marginBottom:8,flexWrap:'wrap'}}>
         <SubjectBadge subject={lesson.subject} size="sm" />
-        <div style={{display:'flex',gap:3}}>
+        <div style={{display:'flex',alignItems:'center',gap:5}}>
           {lesson.stream&&<span style={{fontSize:9,padding:'2px 7px',borderRadius:20,background:`${col.primary}18`,color:col.primary,fontWeight:600}}>{lesson.stream}</span>}
           {direction==='SMART' ? <KindBadge kind={lesson._kind||'live'} /> : <DirBadge dir={direction} />}
         </div>
@@ -1756,29 +1761,7 @@ export default function Schedule({ onGoToCabinet }) {
       )}
 
       {/* ── Layout */}
-      <div style={{ padding:'20px 28px', display:'flex', gap:16, alignItems:'flex-start' }}>
-
-        {/* ── Filter sidebar */}
-        <aside style={{ width:160, flexShrink:0, position:'sticky', top:56 }}>
-          <div style={{ background:'var(--surface)', border:'1px solid #eef0f3', borderRadius:14, padding:'10px 8px', marginBottom:10 }}>
-            <div style={{ fontSize:9, fontWeight:700, color:'var(--text-muted)', letterSpacing:'1.5px', textTransform:'uppercase', padding:'4px 8px 8px' }}>Фильтрлер</div>
-            <button className={`filter-pill${hasFilter?' has-filter':''}`} onClick={()=>setShowFilter(true)} style={{ width:'100%', justifyContent:'center', borderRadius:9 }}>
-              <span>⚡</span><span>{filterLabel()}</span>
-            </button>
-            {filters.dir!=='Барлығы'&&(
-              <div style={{ marginTop:6, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'4px 8px', borderRadius:8, background:`${JUZ.teal}10`, color:JUZ.teal, fontSize:11, fontWeight:600 }}>
-                <span>{filters.dir}</span>
-                <span style={{cursor:'pointer'}} onClick={()=>setFilters(f=>({...f,dir:'Барлығы',subjects:[]}))}>×</span>
-              </div>
-            )}
-            {filters.subjects.map(s=>(
-              <div key={s} style={{ marginTop:4, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'4px 8px', borderRadius:8, background:`${JUZ.teal}10`, color:JUZ.teal, fontSize:11, fontWeight:600 }}>
-                <span>{s}</span>
-                <span style={{cursor:'pointer'}} onClick={()=>setFilters(f=>({...f,subjects:f.subjects.filter(x=>x!==s)}))}>×</span>
-              </div>
-            ))}
-          </div>
-        </aside>
+      <div style={{ padding:'20px 28px' }}>
 
         {/* ── Main */}
         <main style={{flex:1,minWidth:0}}>

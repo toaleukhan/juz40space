@@ -28,7 +28,7 @@ const SUBJECTS = [
   { code: 'ГЕОМ',  nameKk: 'Геометрия',             img: imgGeom  },
   { code: 'ХИМ',   nameKk: 'Химия',                 img: imgChem  },
   { code: 'МС',    nameKk: 'Логика / МС',            img: imgLogic },
-  { code: 'ЛИТ',   nameKk: 'Қазақ әдебиеті',        img: imgLit   },
+  { code: 'ӘДЕБ',  nameKk: 'Қазақ әдебиеті',        img: imgLit   },
   { code: 'АНГЛ',  nameKk: 'Ағылшын тілі',           img: imgAngl  },
   { code: 'ДЖТ',   nameKk: 'Дүниежүзі тарихы',      img: imgWHist },
 ];

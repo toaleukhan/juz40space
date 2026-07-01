@@ -30,7 +30,7 @@ const SUBJECTS = [
   { code:'ГЕОМ',  name:'Геометрия',             img: geom   },
   { code:'ХИМ',   name:'Химия',                 img: chem   },
   { code:'МС',    name:'Логика / МС',           img: logic  },
-  { code:'ЛИТ',   name:'Қазақ әдебиеті',        img: kazLit },
+  { code:'ӘДЕБ',  name:'Қазақ әдебиеті',        img: kazLit },
   { code:'АНГЛ',  name:'Ағылшын тілі',          img: eng    },
   { code:'ДЖТ',   name:'Дүниежүзі тарихы',      img: wHist  },
 ];
