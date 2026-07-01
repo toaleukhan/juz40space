@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import Register from './pages/Register';
 import Login from './pages/Login';
 import WhatsAppConnect from './pages/WhatsAppConnect';
 import CuratorPanel from './pages/Dashboard';
@@ -25,9 +24,8 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Login мен тіркелу — ашық */}
+          {/* Тек login — ашық */}
           <Route path="/login"     element={<Login />} />
-          <Route path="/register"  element={<Register />} />
 
           {/* Барлық қалған беттер — авторизация керек */}
           <Route path="/"          element={<PrivateRoute><DashboardHome /></PrivateRoute>} />
