@@ -9,6 +9,7 @@ import { mergeSmartSchedule, timeToMinutes, pickBase } from './scheduleUtils';
 import { JUZ, C, G } from './schedule.styles';
 import { useState, useMemo, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
+import useIsMobile from '../hooks/useIsMobile';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Logo, MergedDayBlock, DayBlock } from '../components/schedule/ScheduleAtoms';
 import { CalendarView } from '../components/schedule/CalendarView';
@@ -19,6 +20,7 @@ import { LessonEntryModal } from '../components/schedule/LessonEntryModal';
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function Schedule({ onGoToCabinet }) {
+  const isMobile = useIsMobile();
   const [view, setView]             = useState('calendar');
   const [supervisorMode, setSM]     = useState(false);
   const [supervisorAuth, setSA]     = useState(false);
@@ -148,7 +150,7 @@ export default function Schedule({ onGoToCabinet }) {
       {/* ── Header */}
       <header className="g-panel" style={{
         position:'sticky',top:0,zIndex:50,borderRadius:0,
-        padding:'0 24px',height:56,
+        padding: isMobile ? '0 16px 0 60px' : '0 24px',height:56,
         display:'flex',alignItems:'center',justifyContent:'space-between',
       }}>
         <div style={{display:'flex',alignItems:'center',gap:12}}>

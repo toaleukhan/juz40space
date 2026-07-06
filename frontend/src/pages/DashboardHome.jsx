@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
 import LiveScheduleWidget from '../components/LiveScheduleWidget';
+import useIsMobile from '../hooks/useIsMobile';
 import { smartScheduleByMonth, juniorScheduleByMonth, SUBJECT_COLORS } from './scheduleData';
 
 import imgAngl  from '../assets/subjects/Английский_Язык.webp';
@@ -93,6 +94,7 @@ export default function DashboardHome() {
   const subj = SUBJECTS[idx];
   const teachers = SUBJECT_DATA[subj.code] || [];
   const col = SUBJECT_COLORS[subj.code] || { primary: '#1B6E7E' };
+  const isMobile = useIsMobile();
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: "'Inter',system-ui,sans-serif", background: 'var(--bg)' }}>
@@ -113,7 +115,7 @@ export default function DashboardHome() {
 
         {/* Header + live widget */}
         <div style={{
-          position:'absolute', top:24, left:40, right:24, zIndex:3,
+          position:'absolute', top: isMobile?64:24, left: isMobile?16:40, right: isMobile?16:24, zIndex:3,
           display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:16, flexWrap:'wrap',
         }}>
           <div style={{ paddingTop:8, minWidth:180 }}>
@@ -129,8 +131,8 @@ export default function DashboardHome() {
 
         {/* Prev / Next arrow buttons — fixed at the edges */}
         <button onClick={() => go(-1)} aria-label="Алдыңғы пән" style={{
-          position:'absolute', left:28, top:'50%', transform:'translateY(-50%)', zIndex:4,
-          width:52, height:52, borderRadius:'50%', cursor:'pointer',
+          position:'absolute', left: isMobile?8:28, top:'50%', transform:'translateY(-50%)', zIndex:4,
+          width: isMobile?38:52, height: isMobile?38:52, borderRadius:'50%', cursor:'pointer',
           border:'1px solid rgba(255,255,255,0.80)',
           background:'rgba(255,255,255,0.70)',
           backdropFilter:'blur(20px) saturate(180%)',
@@ -143,8 +145,8 @@ export default function DashboardHome() {
           onMouseLeave={e=>{e.currentTarget.style.transform='translateY(-50%) scale(1)';e.currentTarget.style.boxShadow='0 6px 24px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,1)';}}
         >‹</button>
         <button onClick={() => go(1)} aria-label="Келесі пән" style={{
-          position:'absolute', right:28, top:'50%', transform:'translateY(-50%)', zIndex:4,
-          width:52, height:52, borderRadius:'50%', cursor:'pointer',
+          position:'absolute', right: isMobile?8:28, top:'50%', transform:'translateY(-50%)', zIndex:4,
+          width: isMobile?38:52, height: isMobile?38:52, borderRadius:'50%', cursor:'pointer',
           border:'1px solid rgba(255,255,255,0.80)',
           background:'rgba(255,255,255,0.70)',
           backdropFilter:'blur(20px) saturate(180%)',
@@ -158,7 +160,7 @@ export default function DashboardHome() {
         >›</button>
 
         {/* Big icon */}
-        <div style={{ position:'relative', width:'min(56vh, 42vw, 560px)', aspectRatio:'1/1', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
+        <div style={{ position:'relative', width: isMobile?'min(48vw, 220px)':'min(56vh, 42vw, 560px)', aspectRatio:'1/1', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
           <AnimatePresence mode="wait" custom={dir}>
             <motion.img
               key={idx}

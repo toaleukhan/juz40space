@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import juz40Logo from '../assets/juz40-logo.png';
+import useIsMobile from '../hooks/useIsMobile';
 import { smartScheduleByMonth, juniorScheduleByMonth } from './scheduleData';
 
 import math    from '../assets/subjects/Математика.webp';
@@ -218,6 +219,7 @@ function IllustrationPanel() {
 export default function Login() {
   const { login } = useAuth();
   const navigate  = useNavigate();
+  const isMobile  = useIsMobile();
   const [form, setForm]   = useState({ phone:'', password:'' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -274,7 +276,8 @@ export default function Login() {
       }}>
         {/* ── Left: Form ── */}
         <div style={{
-          flex:'0 0 460px', background:'var(--surface)', padding:'52px 48px', display:'flex',
+          flex: isMobile ? '1 1 100%' : '0 0 460px',
+          background:'var(--surface)', padding: isMobile ? '32px 24px' : '52px 48px', display:'flex',
           flexDirection:'column', justifyContent:'center', minHeight:'100vh',
           borderRight:'1px solid var(--border)',
         }}>
@@ -385,7 +388,7 @@ export default function Login() {
         </div>
 
         {/* ── Right: Illustration ── */}
-        <IllustrationPanel />
+        {!isMobile && <IllustrationPanel />}
       </div>
     </div>
   );

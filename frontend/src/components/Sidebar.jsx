@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import useIsMobile from '../hooks/useIsMobile';
 import juz40Logo from '../assets/juz40-logo.png';
 import StatsWidget from './StatsWidget';
 import { SUBJECT_COLORS, smartScheduleByMonth, smartAdditionalScheduleByMonth, juniorScheduleByMonth } from '../pages/scheduleData';
@@ -29,19 +31,48 @@ export default function Sidebar() {
   const { theme, toggle } = useTheme();
   const isDark = theme === 'dark';
   const isActive = (p) => location.pathname === p;
+  const isMobile = useIsMobile();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
+
+  const go = (path) => {
+    navigate(path);
+    setMobileOpen(false);
+  };
 
   return (
-    <aside style={{
+    <>
+      {isMobile && (
+        <button onClick={() => setMobileOpen(v => !v)} aria-label="Мәзір"
+          style={{
+            position: 'fixed', top: 14, left: 14, zIndex: 101,
+            width: 40, height: 40, borderRadius: 12, border: '1px solid var(--sidebar-border)',
+            background: 'var(--sidebar-bg)', backdropFilter: 'var(--glass-blur)',
+            WebkitBackdropFilter: 'var(--glass-blur)',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 18, cursor: 'pointer', color: 'var(--text)',
+          }}>
+          {mobileOpen ? '×' : '☰'}
+        </button>
+      )}
+      {isMobile && mobileOpen && (
+        <div onClick={() => setMobileOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 99 }} />
+      )}
+      <aside style={{
       width: 220, minHeight: '100vh', height: '100vh',
       background: 'var(--sidebar-bg)',
       backdropFilter: 'var(--glass-blur)',
       WebkitBackdropFilter: 'var(--glass-blur)',
       borderRight: '1px solid var(--sidebar-border)',
       display: 'flex', flexDirection: 'column', flexShrink: 0,
-      position: 'sticky', top: 0, overflowY: 'auto',
+      position: isMobile ? 'fixed' : 'sticky', top: 0, left: 0, overflowY: 'auto',
       boxShadow: '2px 0 24px rgba(0,0,0,0.06), inset -1px 0 0 rgba(255,255,255,0.5)',
-      transition: 'background 0.35s',
-      zIndex: 10,
+      transition: 'background 0.35s, transform 0.3s cubic-bezier(0.34,1.56,0.64,1)',
+      transform: isMobile && !mobileOpen ? 'translateX(-100%)' : 'translateX(0)',
+      zIndex: 100,
     }}>
       <style>{`
         /* ── Sidebar nav button ── */
@@ -155,7 +186,7 @@ export default function Sidebar() {
         {NAV.map(item => (
           <button key={item.id}
             className={`sb-btn${isActive(item.path) ? ' active' : ''}`}
-            onClick={() => navigate(item.path)}>
+            onClick={() => go(item.path)}>
             <span className="sb-icon">{item.icon}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, lineHeight: 1.2 }}>{item.label}</div>
@@ -250,5 +281,6 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }
