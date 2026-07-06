@@ -79,10 +79,10 @@ export function CalEventCard({ ev }) {
   );
 }
 
-export function CalendarView({ filters, overrides }) {
+export function CalendarView({ filters, overrides, published }) {
   const totalH = W_END - W_START;
 
-  const byDay = useMemo(() => buildCalEvents(filters, overrides), [filters, overrides]);
+  const byDay = useMemo(() => buildCalEvents(filters, overrides, published), [filters, overrides, published]);
 
   const layout = (evs) => {
     const sorted = [...evs].sort((a,b) => a.startMin - b.startMin || b.endMin - a.endMin);

@@ -8,15 +8,23 @@ import { mergeDays } from './scheduleOverrides';
 
 export const MIN_FREE_GAP = 11;
 
+// Admin "Жариялау" арқылы DB-ге сақтаған нұсқа сол айға бар болса — соны негіз
+// етіп аламыз (толық ауыстырады), болмаса ескі статикалық файл fallback болады.
+export function pickBase(monthId, staticByMonth, publishedByMonth) {
+  const pub = publishedByMonth?.[monthId];
+  return (pub && pub.length) ? pub : (staticByMonth[monthId] || []);
+}
+
 // Merge smartScheduleByMonth (LIVE) and smartAdditionalScheduleByMonth (ҚОСЫМША)
 // for a given month, according to which kinds are selected. Each lesson gets
 // tagged with `_kind` ('live' | 'additional') so cards/badges can render correctly.
-export function mergeSmartSchedule(monthId, kinds, overrides) {
+export function mergeSmartSchedule(monthId, kinds, overrides, published) {
   const ov = overrides || { live:{}, additional:{} };
+  const pub = published || { smart:{}, smartAdditional:{} };
   const showLive = kinds.includes('live');
   const showAdditional = kinds.includes('additional');
-  const liveDays = showLive ? mergeDays(smartScheduleByMonth[monthId]||[], ov.live?.[monthId]||[]) : [];
-  const addDays  = showAdditional ? mergeDays(smartAdditionalScheduleByMonth[monthId]||[], ov.additional?.[monthId]||[]) : [];
+  const liveDays = showLive ? mergeDays(pickBase(monthId, smartScheduleByMonth, pub.smart), ov.live?.[monthId]||[]) : [];
+  const addDays  = showAdditional ? mergeDays(pickBase(monthId, smartAdditionalScheduleByMonth, pub.smartAdditional), ov.additional?.[monthId]||[]) : [];
 
   const dayNames = [...new Set([...liveDays.map(d=>d.day), ...addDays.map(d=>d.day)])];
   const DAY_ORDER_=['Дүйсенбі','Сейсенбі','Сәрсенбі','Бейсенбі','Жұма','Сенбі','Жексенбі'];
@@ -98,9 +106,10 @@ export function parseTime(ts) {
 // array) instead of merging a teacher's whole day into one min→max span.
 // This matters because consecutive blocks can belong to different
 // subgroups (e.g. "13:00–14:30 (гум)" vs "16:20–17:50 (тех)").
-export function buildCalEvents(filters, overrides) {
+export function buildCalEvents(filters, overrides, published) {
   const out = [];
   const ov = overrides || { live:{}, additional:{}, junior:{} };
+  const pub = published || { smart:{}, smartAdditional:{}, junior:{} };
 
   const process = (sched, dir, kindTag) => {
     (sched[filters.month]||[]).forEach(db => {
@@ -125,9 +134,9 @@ export function buildCalEvents(filters, overrides) {
     });
   };
   const kinds = filters.kinds || ['live','additional'];
-  const liveMerged       = { [filters.month]: mergeDays(smartScheduleByMonth[filters.month]||[],           ov.live?.[filters.month]||[]) };
-  const additionalMerged = { [filters.month]: mergeDays(smartAdditionalScheduleByMonth[filters.month]||[], ov.additional?.[filters.month]||[]) };
-  const juniorMerged     = { [filters.month]: mergeDays(juniorScheduleByMonth[filters.month]||[],          ov.junior?.[filters.month]||[]) };
+  const liveMerged       = { [filters.month]: mergeDays(pickBase(filters.month, smartScheduleByMonth, pub.smart),           ov.live?.[filters.month]||[]) };
+  const additionalMerged = { [filters.month]: mergeDays(pickBase(filters.month, smartAdditionalScheduleByMonth, pub.smartAdditional), ov.additional?.[filters.month]||[]) };
+  const juniorMerged     = { [filters.month]: mergeDays(pickBase(filters.month, juniorScheduleByMonth, pub.junior),          ov.junior?.[filters.month]||[]) };
   if (filters.dir === 'SMART'  || filters.dir === 'Барлығы') {
     if (kinds.includes('live'))       process(liveMerged,       'SMART', 'live');
     if (kinds.includes('additional')) process(additionalMerged, 'SMART', 'additional');

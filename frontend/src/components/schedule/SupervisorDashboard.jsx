@@ -10,14 +10,23 @@ export function SupervisorDashboard({ onLogout, onBack }) {
   const [parsing,setParsing]=useState(false); const [parseResult,setParseResult]=useState(null);
   const [preview,setPreview]=useState(''); const [status,setStatus]=useState('');
   const [error,setError]=useState(''); const [targetDir,setTargetDir]=useState('SMART');
-  const [targetMonth,setTargetMonth]=useState('01'); const fileRef=useRef();
+  const [targetMonth,setTargetMonth]=useState('01'); const [targetKind,setTargetKind]=useState('live');
+  const [draftId,setDraftId]=useState(null); const [publishing,setPublishing]=useState(false);
+  const [published,setPublished]=useState(false); const fileRef=useRef();
+
+  const apiBase=import.meta.env.VITE_API_URL||'http://localhost:3001/api';
+  const authHeaders=()=>{
+    const token=localStorage.getItem('token');
+    return token?{Authorization:`Bearer ${token}`}:{};
+  };
 
   const handleFile=(e)=>{
     const f=e.target.files[0]; if(!f) return;
     setFile(f); setFileName(f.name); setParseResult(null); setPreview(''); setStatus(''); setError('');
+    setDraftId(null); setPublished(false);
   };
   const handleParse=async()=>{
-    if(!file) return; setParsing(true); setError(''); setStatus(''); setParseResult(null);
+    if(!file) return; setParsing(true); setError(''); setStatus(''); setParseResult(null); setDraftId(null); setPublished(false);
     try {
       const base64=await new Promise((res,rej)=>{
         const r=new FileReader();
@@ -26,19 +35,29 @@ export function SupervisorDashboard({ onLogout, onBack }) {
         r.readAsDataURL(file);
       });
       const monthName=months.find(m=>m.id===targetMonth)?.name||'';
-      const apiBase=import.meta.env.VITE_API_URL||'http://localhost:3001/api';
-      const token=localStorage.getItem('token');
       const response=await fetch(`${apiBase}/parse-schedule`,{
         method:'POST',
-        headers:{'Content-Type':'application/json', ...(token?{Authorization:`Bearer ${token}`}:{})},
-        body:JSON.stringify({ base64, direction:targetDir, monthId:targetMonth, monthName }),
+        headers:{'Content-Type':'application/json', ...authHeaders()},
+        body:JSON.stringify({ base64, direction:targetDir, monthId:targetMonth, monthName, kind:targetKind }),
       });
       if(!response.ok){const err=await response.json();throw new Error(err.error||`Сервер қате: ${response.status}`);}
       const data=await response.json();
       setParseResult({teachers:data.teachers,days:data.days,chars:data.result?.length||0});
       setPreview(data.result||'');
-      setStatus(`✅ Дайын — ${data.days} күн, ${data.teachers} мұғалім`);
+      setDraftId(data.draftId||null);
+      setStatus(`✅ Дайын — ${data.days} күн, ${data.teachers} мұғалім. Тексеріп, жариялаңыз.`);
     } catch(err) { setError('❌ '+err.message); } finally { setParsing(false); }
+  };
+  const handlePublish=async()=>{
+    if(!draftId) return; setPublishing(true); setError('');
+    try {
+      const response=await fetch(`${apiBase}/schedule/${draftId}/publish`,{
+        method:'POST', headers:{...authHeaders()},
+      });
+      if(!response.ok){const err=await response.json();throw new Error(err.error||`Сервер қате: ${response.status}`);}
+      setPublished(true);
+      setStatus('✅ Жарияланды — сайтта бірден көрінеді.');
+    } catch(err) { setError('❌ '+err.message); } finally { setPublishing(false); }
   };
   const handleDownload=()=>{
     if(!preview) return;
@@ -70,9 +89,9 @@ export function SupervisorDashboard({ onLogout, onBack }) {
       </div>
       <div style={{maxWidth:820,margin:'0 auto',padding:'28px 24px',display:'flex',flexDirection:'column',gap:16}}>
         <div className="g-card" style={{padding:'16px 20px',background:'rgba(232,244,246,0.7)'}}>
-          <div style={{fontSize:14,fontWeight:700,color:C.titleColor,marginBottom:10}}>📋 Автоматты парсинг — docx → scheduleData.js</div>
+          <div style={{fontSize:14,fontWeight:700,color:C.titleColor,marginBottom:10}}>📋 Автоматты парсинг — docx → сайт</div>
           <div style={{fontSize:12,color:C.textSub,lineHeight:2}}>
-            <b>1.</b> Бағыт пен ай таңдаңыз &nbsp; <b>2.</b> .docx жүктеңіз &nbsp; <b>3.</b> Оқу → .js жүктеу &nbsp; <b>4.</b> scheduleData.js-ке қойып, GitHub push
+            <b>1.</b> Бағыт, түрі, ай таңдаңыз &nbsp; <b>2.</b> .docx жүктеңіз &nbsp; <b>3.</b> Оқу &nbsp; <b>4.</b> Тексеріп, «Жариялау» — сайтта бірден көрінеді
           </div>
         </div>
         <div className="g-card" style={{padding:'16px 20px'}}>
@@ -83,6 +102,15 @@ export function SupervisorDashboard({ onLogout, onBack }) {
                 <option>SMART</option><option>JUNIOR</option>
               </select>
             </div>
+            {targetDir==='SMART' && (
+              <div style={{display:'flex',flexDirection:'column',gap:5}}>
+                <label style={{fontSize:11,color:C.textMuted,fontWeight:600}}>Түрі</label>
+                <select value={targetKind} onChange={e=>setTargetKind(e.target.value)} style={sel}>
+                  <option value="live">● LIVE сабақ</option>
+                  <option value="additional">➕ ҚОСЫМША сабақ</option>
+                </select>
+              </div>
+            )}
             <div style={{display:'flex',flexDirection:'column',gap:5}}>
               <label style={{fontSize:11,color:C.textMuted,fontWeight:600}}>Ай</label>
               <select value={targetMonth} onChange={e=>setTargetMonth(e.target.value)} style={sel}>
@@ -113,6 +141,19 @@ export function SupervisorDashboard({ onLogout, onBack }) {
           <div style={{padding:'14px',borderRadius:10,background:'rgba(240,255,244,0.9)',border:'1px solid rgba(154,230,180,0.8)'}}>
             <div style={{fontSize:13,fontWeight:600,color:'#276749',marginBottom:4}}>Нәтиже:</div>
             <div style={{fontSize:12,color:'#276749',lineHeight:2}}>📅 Күндер: <b>{parseResult.days}</b> &nbsp; 👨‍🏫 Мұғалімдер: <b>{parseResult.teachers}</b></div>
+          </div>
+        )}
+        {draftId && !published && (
+          <button onClick={handlePublish} disabled={publishing}
+            style={{padding:'12px',borderRadius:10,fontSize:14,fontWeight:700,
+              background:publishing?C.textMuted:'#1B6E7E',border:'none',color:'#fff',cursor:publishing?'not-allowed':'pointer',
+              boxShadow:'0 4px 14px rgba(27,110,126,0.28)'}}>
+            {publishing?'Жариялануда...':'✅ Жариялау — сайтта көрсету'}
+          </button>
+        )}
+        {published && (
+          <div style={{padding:'12px 16px',borderRadius:9,background:'rgba(240,255,244,0.9)',border:'1px solid rgba(154,230,180,0.8)',fontSize:13,color:'#276749',fontWeight:600}}>
+            ✅ Жарияланды — куратор кабинетінде бірден көрінеді
           </div>
         )}
         {status&&<div style={{padding:'12px 16px',borderRadius:9,fontSize:13,

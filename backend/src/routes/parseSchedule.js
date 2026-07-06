@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const AdmZip = require('adm-zip');
 const { logAction } = require('../utils/audit');
+const pool = require('../config/db');
 
 const DAYS_MAP = {
   'ДҮЙСЕНБІ': 'Дүйсенбі',
@@ -144,9 +145,9 @@ function buildSchedule(rows) {
 }
 
 // POST /api/parse-schedule
-// Body: { base64: string, direction: string, monthId: string }
+// Body: { base64: string, direction: string, monthId: string, kind?: 'live'|'additional' }
 router.post('/', async (req, res) => {
-  const { base64, direction, monthId } = req.body;
+  const { base64, direction, monthId, kind } = req.body;
   if (!base64) return res.status(400).json({ error: 'base64 міндетті' });
 
   try {
@@ -158,15 +159,22 @@ router.post('/', async (req, res) => {
       return res.status(422).json({ error: 'Кесте табылмады — файл форматы қате болуы мүмкін' });
     }
 
-    // Render as JS code string
+    // Render as JS code string (ауысу кезеңінде қолмен scheduleData.js-ке қою нұсқасы)
     const jsCode = renderJS(schedule, direction, monthId);
 
     const days = schedule.length;
     const teachers = schedule.reduce((a, d) =>
       a + d.lessons.reduce((b, l) => b + l.teachers.length, 0), 0);
 
-    await logAction(req.curatorId, 'schedule_parse', 'parse_schedule', { direction, monthId, days, teachers });
-    res.json({ result: jsCode, days, teachers });
+    // "Алдын ала қарау" күйінде сақтау — admin жариялағанша frontend-те көрінбейді
+    const draft = await pool.query(
+      `INSERT INTO schedules (direction, month_id, kind, data, published)
+       VALUES ($1, $2, $3, $4, false) RETURNING id`,
+      [direction, monthId, kind || 'live', JSON.stringify(schedule)]
+    );
+
+    await logAction(req.curatorId, 'schedule_parse', 'parse_schedule', { direction, monthId, kind, days, teachers });
+    res.json({ result: jsCode, days, teachers, draftId: draft.rows[0].id });
   } catch (err) {
     console.error('parseSchedule error:', err);
     res.status(500).json({ error: 'Файл оқылмады: ' + err.message });

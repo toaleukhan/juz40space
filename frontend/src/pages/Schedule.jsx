@@ -3,7 +3,8 @@ import {
   buildTeachersIndex, juniorStreamNames,
 } from './scheduleData';
 import { loadOverrides, saveOverrides, mergeDays, addLessonOverride, getAllTeacherNames, EMPTY_OVERRIDES } from './scheduleOverrides';
-import { mergeSmartSchedule, timeToMinutes } from './scheduleUtils';
+import { loadPublishedSchedules, EMPTY_PUBLISHED } from './scheduleDb';
+import { mergeSmartSchedule, timeToMinutes, pickBase } from './scheduleUtils';
 import { JUZ, C, G } from './schedule.styles';
 import { useState, useMemo, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
@@ -26,28 +27,31 @@ export default function Schedule({ onGoToCabinet }) {
   const [overrides, setOverrides] = useState(EMPTY_OVERRIDES);
   useEffect(()=>{ loadOverrides().then(setOverrides); }, []);
 
+  const [published, setPublished] = useState(EMPTY_PUBLISHED);
+  useEffect(()=>{ loadPublishedSchedules().then(setPublished); }, []);
+
   const [filters, setFilters] = useState({
     dir:'Барлығы', subjects:[], month:'01',
     timeFrom:'13:00', timeTo:'19:00', kinds:['live','additional'],
   });
 
   const juniorMergedByMonth = useMemo(()=>({
-    [filters.month]: mergeDays(juniorScheduleByMonth[filters.month]||[], overrides.junior?.[filters.month]||[])
-  }),[filters.month, overrides.junior]);
+    [filters.month]: mergeDays(pickBase(filters.month, juniorScheduleByMonth, published.junior), overrides.junior?.[filters.month]||[])
+  }),[filters.month, overrides.junior, published.junior]);
 
   const allSubjects = useMemo(()=>{
-    const smartDays = mergeSmartSchedule(filters.month, filters.kinds, overrides);
+    const smartDays = mergeSmartSchedule(filters.month, filters.kinds, overrides, published);
     const days=[...smartDays,...(juniorMergedByMonth[filters.month]||[])];
     const set=new Set(); days.forEach(d=>d.lessons.forEach(l=>set.add(l.subject)));
     return ['Барлығы',...Array.from(set)];
-  },[filters.month,filters.dir,filters.kinds,overrides,juniorMergedByMonth]);
+  },[filters.month,filters.dir,filters.kinds,overrides,published,juniorMergedByMonth]);
 
   const DAY_ORDER=['Дүйсенбі','Сейсенбі','Сәрсенбі','Бейсенбі','Жұма','Сенбі'];
 
   const filteredDays = useMemo(()=>{
     const fromMin=timeToMinutes(filters.timeFrom);
     const toMin=timeToMinutes(filters.timeTo);
-    const smartSrcDays = mergeSmartSchedule(filters.month, filters.kinds, overrides);
+    const smartSrcDays = mergeSmartSchedule(filters.month, filters.kinds, overrides, published);
     const smartSrc = { [filters.month]: smartSrcDays };
     if (filters.dir==='Барлығы') {
       const sD=(smartSrc[filters.month]||[]).map(d=>({...d,_dir:'SMART'}));
@@ -74,7 +78,7 @@ export default function Schedule({ onGoToCabinet }) {
         l.teachers.some(t=>t.times.some(tm=>{const p=tm.split(/[–\-]/);if(p.length<2)return true;return timeToMinutes(p[0])<toMin&&timeToMinutes(p[1])>fromMin;}))
       )
     })).filter(d=>d.lessons.length>0);
-  },[filters,overrides,juniorMergedByMonth]);
+  },[filters,overrides,published,juniorMergedByMonth]);
 
   const teachersIndex=useMemo(()=>{
     const extraSmart = [
@@ -178,7 +182,10 @@ export default function Schedule({ onGoToCabinet }) {
         {/* Month bar */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
           <div style={{ display:'flex', gap:4, overflowX:'auto', paddingBottom:0 }}>
-            {months.filter(m=>m.id==='01'||smartScheduleByMonth[m.id]||juniorScheduleByMonth[m.id]).map(m=>(
+            {months.filter(m=>m.id==='01'
+              ||smartScheduleByMonth[m.id]||juniorScheduleByMonth[m.id]
+              ||published.smart[m.id]||published.smartAdditional[m.id]||published.junior[m.id]
+            ).map(m=>(
               <button key={m.id} onClick={()=>setFilters(f=>({...f,month:m.id}))}
                 style={{
                   padding:'7px 14px', borderRadius:'10px 10px 0 0', fontSize:12, cursor:'pointer',
@@ -316,7 +323,7 @@ export default function Schedule({ onGoToCabinet }) {
                 animate={{ opacity:1 }}
                 exit={{ opacity:0 }}
                 transition={{ duration:0.20 }}>
-                <CalendarView filters={filters} overrides={overrides}/>
+                <CalendarView filters={filters} overrides={overrides} published={published}/>
               </motion.div>
             )}
 

@@ -73,6 +73,19 @@ const createTables = async () => {
       details JSONB,
       created_at TIMESTAMP DEFAULT NOW()
     );
+
+    -- Docx-тен парсингленген кестелер. published=false — "алдын ала қарау" күйі,
+    -- admin жариялағанда ғана frontend осы жолды нақты кесте ретінде көрсетеді.
+    CREATE TABLE IF NOT EXISTS schedules (
+      id SERIAL PRIMARY KEY,
+      direction VARCHAR(20) NOT NULL,
+      month_id VARCHAR(10) NOT NULL,
+      kind VARCHAR(20) NOT NULL DEFAULT 'live',
+      data JSONB NOT NULL,
+      published BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
   `);
 
   console.log('✅ Tables created');
