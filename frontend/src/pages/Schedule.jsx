@@ -4,8 +4,8 @@ import {
 } from './scheduleData';
 import { loadOverrides, saveOverrides, mergeDays, addLessonOverride, getAllTeacherNames, EMPTY_OVERRIDES } from './scheduleOverrides';
 import { loadPublishedSchedules, EMPTY_PUBLISHED } from './scheduleDb';
-import { exportScheduleToPdf } from './exportSchedulePdf';
-import { mergeSmartSchedule, timeToMinutes, pickBase } from './scheduleUtils';
+import { exportScheduleToPdf, exportCalendarToPdf } from './exportSchedulePdf';
+import { mergeSmartSchedule, timeToMinutes, pickBase, buildCalEvents, CAL_DAYS } from './scheduleUtils';
 import { JUZ, C, G } from './schedule.styles';
 import { useState, useMemo, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
@@ -114,6 +114,17 @@ export default function Schedule({ onGoToCabinet }) {
         : { day: d.day, lessons: d.lessons }
       );
       await exportScheduleToPdf({ days: flatDays, monthName: activeMonthName, streamName });
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const handleExportCalendarPdf = async () => {
+    if (exportingPdf) return;
+    setExportingPdf(true);
+    try {
+      const byDay = buildCalEvents(filters, overrides, published);
+      await exportCalendarToPdf({ byDay, days: CAL_DAYS, monthName: activeMonthName, streamName });
     } finally {
       setExportingPdf(false);
     }
@@ -306,8 +317,8 @@ export default function Schedule({ onGoToCabinet }) {
                   onClick={()=>setFilters(f=>({...f,subjects:f.subjects.filter(x=>x!==s)}))}>×</span>
               </span>
             ))}
-            {view==='schedule'&&(
-              <button onClick={handleExportPdf} disabled={exportingPdf}
+            {(view==='schedule'||view==='calendar')&&(
+              <button onClick={view==='calendar'?handleExportCalendarPdf:handleExportPdf} disabled={exportingPdf}
                 style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:24,
                   fontSize:12,fontWeight:600,cursor:exportingPdf?'not-allowed':'pointer',
                   border:'1px solid rgba(27,110,126,0.30)',background:'rgba(27,110,126,0.06)',

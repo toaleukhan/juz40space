@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
 import LiveScheduleWidget from '../components/LiveScheduleWidget';
+import StatsWidget from '../components/StatsWidget';
 import useIsMobile from '../hooks/useIsMobile';
+import { useAuth } from '../context/AuthContext';
 import { smartScheduleByMonth, juniorScheduleByMonth, SUBJECT_COLORS } from './scheduleData';
 
 import imgAngl  from '../assets/subjects/Английский_Язык.webp';
@@ -95,6 +97,7 @@ export default function DashboardHome() {
   const teachers = SUBJECT_DATA[subj.code] || [];
   const col = SUBJECT_COLORS[subj.code] || { primary: '#1B6E7E' };
   const isMobile = useIsMobile();
+  const { curator } = useAuth();
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: "'Inter',system-ui,sans-serif", background: 'var(--bg)' }}>
@@ -124,8 +127,9 @@ export default function DashboardHome() {
               Көрсеткілерді басып пәндер арасында ауысыңыз
             </p>
           </div>
-          <div style={{ width:'min(360px, 100%)', flexShrink:0 }}>
+          <div style={{ width:'min(360px, 100%)', flexShrink:0, display:'flex', flexDirection:'column', gap:12 }}>
             <LiveScheduleWidget />
+            {curator?.role === 'admin' && <StatsWidget />}
           </div>
         </div>
 
