@@ -129,6 +129,9 @@ function buildSchedule(rows) {
     const row = rows[ri];
     const subject = row[0]?.join('').trim();
     if (!subject) continue;
+    // Файлда бірнеше кесте болса (мыс. LIVE + ҚОСЫМША), әр кестенің өз header
+    // жолы қайталанады — соны деректер ретінде қоспай, өткізіп жіберу керек
+    if (subject.toUpperCase() === 'ПӘН') continue;
 
     for (let ci = 1; ci < row.length; ci++) {
       const day = dayNames[ci - 1];

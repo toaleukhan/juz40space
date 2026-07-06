@@ -169,16 +169,6 @@ export default function Schedule({ onGoToCabinet }) {
           <div style={{width:1,height:18,background:'#eef0f3'}}/>
           <span style={{fontSize:12,color:C.textMuted,fontWeight:500}}>Сабақ кестесі</span>
         </div>
-        <div style={{display:'flex',gap:8}}>
-          <button onClick={()=>{setSM(true);setSA(true);}}
-            style={{padding:'6px 13px',borderRadius:8,fontSize:11,cursor:'pointer',
-              background: supervisorAuth ? '#1B6E7E' : '#f5f7fa',
-              border:`1px solid ${supervisorAuth?'#1B6E7E':'#eef0f3'}`,
-              color: supervisorAuth ? '#fff' : C.textMuted,
-              fontWeight:600, transition:'all 0.2s'}}>
-            🔧 Басқару{supervisorAuth?' ✓':''}
-          </button>
-        </div>
       </header>
 
       {/* ── Page header */}
