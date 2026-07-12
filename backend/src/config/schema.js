@@ -7,8 +7,12 @@ const createTables = async () => {
       name VARCHAR(255) NOT NULL,
       phone VARCHAR(20) UNIQUE NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
+      role VARCHAR(20) NOT NULL DEFAULT 'curator',
       created_at TIMESTAMP DEFAULT NOW()
     );
+
+    -- Ертеректе жасалған curators кестесінде role бағаны болмауы мүмкін
+    ALTER TABLE curators ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'curator';
 
     CREATE TABLE IF NOT EXISTS groups (
       id SERIAL PRIMARY KEY,
@@ -58,6 +62,43 @@ const createTables = async () => {
       id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
       data JSONB NOT NULL DEFAULT '{}'::jsonb,
       updated_at TIMESTAMP DEFAULT NOW()
+    );
+
+    -- Admin әрекеттерінің тарихы (кесте өзгерту, docx парсинг)
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id SERIAL PRIMARY KEY,
+      curator_id INTEGER REFERENCES curators(id),
+      action VARCHAR(50) NOT NULL,
+      entity VARCHAR(50) NOT NULL,
+      details JSONB,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+
+    -- Docx-тен парсингленген кестелер. published=false — "алдын ала қарау" күйі,
+    -- admin жариялағанда ғана frontend осы жолды нақты кесте ретінде көрсетеді.
+    CREATE TABLE IF NOT EXISTS schedules (
+      id SERIAL PRIMARY KEY,
+      direction VARCHAR(20) NOT NULL,
+      month_id VARCHAR(10) NOT NULL,
+      kind VARCHAR(20) NOT NULL DEFAULT 'live',
+      data JSONB NOT NULL,
+      published BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+
+    -- Сапа менеджерінің әр куратор бойынша 2 айлық тексеру жазбасы
+    CREATE TABLE IF NOT EXISTS curator_tracker (
+      id SERIAL PRIMARY KEY,
+      curator_id INTEGER NOT NULL REFERENCES curators(id) ON DELETE CASCADE,
+      reviewer_id INTEGER REFERENCES curators(id),
+      period VARCHAR(10) NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'pending',
+      score VARCHAR(20),
+      notes TEXT,
+      sheet_link TEXT,
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (curator_id, period)
     );
   `);
 

@@ -15,8 +15,8 @@ router.post('/login', async (req, res) => {
     const valid = await bcrypt.compare(password, curator.password_hash);
     if (!valid) return res.status(400).json({ error: 'Құпия сөз қате' });
 
-    const token = jwt.sign({ id: curator.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
-    res.json({ token, curator: { id: curator.id, name: curator.name, phone: curator.phone } });
+    const token = jwt.sign({ id: curator.id, role: curator.role }, process.env.JWT_SECRET, { expiresIn: '30d' });
+    res.json({ token, curator: { id: curator.id, name: curator.name, phone: curator.phone, role: curator.role } });
   } catch (err) {
     res.status(500).json({ error: 'Сервер қатесі' });
   }

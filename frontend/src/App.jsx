@@ -6,6 +6,7 @@ import WhatsAppConnect from './pages/WhatsAppConnect';
 import CuratorPanel from './pages/Dashboard';
 import DashboardHome from './pages/DashboardHome';
 import Schedule from './pages/Schedule';
+import QualityTracker from './pages/QualityTracker';
 import './index.css';
 
 const PrivateRoute = ({ children }) => {
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="/"          element={<PrivateRoute><DashboardHome /></PrivateRoute>} />
           <Route path="/dashboard" element={<PrivateRoute><DashboardHome /></PrivateRoute>} />
           <Route path="/schedule"  element={<PrivateRoute><Schedule onGoToCabinet={() => window.location.href='/curator'} /></PrivateRoute>} />
+          <Route path="/tracker"   element={<PrivateRoute><QualityTracker /></PrivateRoute>} />
 
           {/* Куратор кабинеті */}
           <Route path="/whatsapp"  element={<PrivateRoute><WhatsAppConnect /></PrivateRoute>} />

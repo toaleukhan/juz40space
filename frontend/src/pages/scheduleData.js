@@ -55,6 +55,12 @@ export const SUBJECT_LOGOS = {
 export const DIRECTIONS = ['SMART', 'JUNIOR'];
 
 // ─────────────────────────────────────────────
+// МАҢЫЗДЫ ДАТАЛАР — кейін оңай өзгерту үшін бір жерде
+// ─────────────────────────────────────────────
+export const LIVE_START_DATE = new Date('2026-07-08T00:00:00+05:00');       // SMART LIVE басталу күні (Сәрсенбі)
+export const ADDITIONAL_START_DATE = new Date('2026-08-01T00:00:00+05:00'); // SMART ҚОСЫМША — тамыз айынан (нақты күн белгісіз)
+
+// ─────────────────────────────────────────────
 // АЙЛАР
 // ─────────────────────────────────────────────
 export const months = [
@@ -70,6 +76,14 @@ export const months = [
   { id: '91',  name: 'Сәуір',     label: 'Сәуір · 91'     },
   { id: '101', name: 'Мамыр',     label: 'Мамыр · 101'    },
 ];
+
+// Берілген датаға сәйкес monthId табу (months[0] = 2026 жылғы шілде негізі)
+export function getMonthIdForDate(date = new Date()) {
+  const base = new Date(2026, 6, 1); // 2026 жылғы 1 шілде
+  const diff = (date.getFullYear() - base.getFullYear()) * 12 + (date.getMonth() - base.getMonth());
+  const idx = Math.max(0, Math.min(diff, months.length - 1));
+  return months[idx].id;
+}
 
 // JUNIOR ағын атаулары (айға байланысты)
 export const juniorStreamNames = {
