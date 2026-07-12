@@ -20,5 +20,14 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
+// Сапа трекеріне admin және сапа менеджері кіре алады
+const requireQuality = (req, res, next) => {
+  if (req.curatorRole !== 'admin' && req.curatorRole !== 'quality_manager') {
+    return res.status(403).json({ error: 'Тек сапа менеджері/admin рұқсаты бар' });
+  }
+  next();
+};
+
 module.exports = auth;
 module.exports.requireAdmin = requireAdmin;
+module.exports.requireQuality = requireQuality;

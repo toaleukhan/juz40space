@@ -1,16 +1,17 @@
 // Куратор аккаунтын қолмен жасау (публикалық тіркелу жоқ болғандықтан).
-// Қолдану: node scripts/create-curator.js "Аты-жөні" "+77001234567" "құпия_сөз" "Топ атауы" [--admin]
+// Қолдану: node scripts/create-curator.js "Аты-жөні" "+77001234567" "құпия_сөз" "Топ атауы" [--admin|--quality-manager]
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const pool = require('../src/config/db');
 
 const args = process.argv.slice(2);
 const isAdmin = args.includes('--admin');
-const [name, phone, password, groupName] = args.filter(a => a !== '--admin');
-const role = isAdmin ? 'admin' : 'curator';
+const isQuality = args.includes('--quality-manager');
+const [name, phone, password, groupName] = args.filter(a => a !== '--admin' && a !== '--quality-manager');
+const role = isAdmin ? 'admin' : isQuality ? 'quality_manager' : 'curator';
 
 if (!name || !phone || !password || !groupName) {
-  console.error('Қолдану: node scripts/create-curator.js "Аты-жөні" "+77001234567" "құпия_сөз" "Топ атауы" [--admin]');
+  console.error('Қолдану: node scripts/create-curator.js "Аты-жөні" "+77001234567" "құпия_сөз" "Топ атауы" [--admin|--quality-manager]');
   process.exit(1);
 }
 

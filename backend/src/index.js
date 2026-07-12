@@ -44,6 +44,7 @@ app.use('/api/whatsapp', require('./routes/whatsapp'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/parse-schedule', auth, requireAdmin, require('./routes/parseSchedule'));
 app.use('/api/schedule', require('./routes/schedule'));
+app.use('/api/tracker', require('./routes/tracker'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 

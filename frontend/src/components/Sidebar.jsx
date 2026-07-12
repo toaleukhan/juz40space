@@ -6,10 +6,11 @@ import useIsMobile from '../hooks/useIsMobile';
 import juz40Logo from '../assets/juz40-logo.png';
 import { SUBJECT_COLORS, smartScheduleByMonth, smartAdditionalScheduleByMonth, juniorScheduleByMonth } from '../pages/scheduleData';
 
-const NAV = [
+const BASE_NAV = [
   { id: 'dashboard', label: 'Басты бет',     icon: '⊞', path: '/dashboard',  desc: 'Пәндер & шолу' },
   { id: 'schedule',  label: 'Сабақ кестесі', icon: '📅', path: '/schedule',   desc: 'Апталық кесте' },
 ];
+const TRACKER_NAV_ITEM = { id: 'tracker', label: 'Сапа трекері', icon: '📊', path: '/tracker', desc: '2 айлық тексеру' };
 
 const SUBJECT_COUNT = Object.keys(SUBJECT_COLORS).length;
 const TEACHER_COUNT = (() => {
@@ -32,6 +33,8 @@ export default function Sidebar() {
   const isActive = (p) => location.pathname === p;
   const isMobile = useIsMobile();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const canSeeTracker = curator?.role === 'admin' || curator?.role === 'quality_manager';
+  const NAV = canSeeTracker ? [...BASE_NAV, TRACKER_NAV_ITEM] : BASE_NAV;
 
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 

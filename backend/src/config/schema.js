@@ -86,6 +86,20 @@ const createTables = async () => {
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );
+
+    -- Сапа менеджерінің әр куратор бойынша 2 айлық тексеру жазбасы
+    CREATE TABLE IF NOT EXISTS curator_tracker (
+      id SERIAL PRIMARY KEY,
+      curator_id INTEGER NOT NULL REFERENCES curators(id) ON DELETE CASCADE,
+      reviewer_id INTEGER REFERENCES curators(id),
+      period VARCHAR(10) NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'pending',
+      score VARCHAR(20),
+      notes TEXT,
+      sheet_link TEXT,
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (curator_id, period)
+    );
   `);
 
   console.log('✅ Tables created');
