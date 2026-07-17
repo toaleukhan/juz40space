@@ -72,7 +72,7 @@ export function computeFreeSlots(allSlots, ws=13*60, we=19*60+30) {
 }
 export function entriesToSlots(entries) {
   const slots=[];
-  entries.forEach(e=>e.times.forEach(t=>{
+  entries.forEach(e=>(Array.isArray(e.times)?e.times:[]).forEach(t=>{
     const p=t.split(/[–\-]/);
     if (p.length<2) return;
     const s=p[0].trim().replace(/[^\d:]/g,''), en=p[1].trim().replace(/[^\d:]/g,'');
@@ -112,13 +112,13 @@ export function buildCalEvents(filters, overrides, published) {
   const pub = published || { smart:{}, smartAdditional:{}, junior:{} };
 
   const process = (sched, dir, kindTag) => {
-    (sched[filters.month]||[]).forEach(db => {
-      db.lessons.forEach(ls => {
+    (Array.isArray(sched[filters.month]) ? sched[filters.month] : []).forEach(db => {
+      (Array.isArray(db.lessons) ? db.lessons : []).forEach(ls => {
         if (filters.dir !== 'Барлығы' && filters.dir !== dir) return;
         if (filters.subjects.length && !filters.subjects.includes(ls.subject)) return;
         const stream = ls.stream || db.stream || '';
-        ls.teachers.forEach(tc => {
-          tc.times.forEach(ts => {
+        (Array.isArray(ls.teachers) ? ls.teachers : []).forEach(tc => {
+          (Array.isArray(tc.times) ? tc.times : []).forEach(ts => {
             const p = parseTime(ts);
             if (!p) return;
             const note = ts.replace(/^[^(]*\(([^)]+)\).*$/, '$1');

@@ -17,7 +17,8 @@ const TEACHER_COUNT = (() => {
   const names = new Set();
   const collect = (byMonth) => Object.values(byMonth || {}).forEach(days =>
     (Array.isArray(days) ? days : []).forEach(d =>
-      (d.lessons || []).forEach(l => (l.teachers || []).forEach(t => names.add(t.name)))));
+      (Array.isArray(d.lessons) ? d.lessons : []).forEach(l =>
+        (Array.isArray(l.teachers) ? l.teachers : []).forEach(t => names.add(t.name)))));
   collect(smartScheduleByMonth);
   collect(smartAdditionalScheduleByMonth);
   collect(juniorScheduleByMonth);

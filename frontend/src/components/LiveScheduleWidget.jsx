@@ -54,9 +54,9 @@ export default function LiveScheduleWidget() {
     const merged = mergeDays(base, overrideDays);
     const dayBlock = merged.find(d => d.day === todayName);
     const entries = [];
-    (dayBlock?.lessons || []).forEach(lesson => {
-      (lesson.teachers || []).forEach(t => {
-        (t.times || []).forEach(timeStr => {
+    (Array.isArray(dayBlock?.lessons) ? dayBlock.lessons : []).forEach(lesson => {
+      (Array.isArray(lesson.teachers) ? lesson.teachers : []).forEach(t => {
+        (Array.isArray(t.times) ? t.times : []).forEach(timeStr => {
           const range = parseTimeRange(timeStr, now);
           if (range) entries.push({ subject: lesson.subject, teacher: t.name, timeStr, ...range });
         });

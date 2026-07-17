@@ -37,7 +37,7 @@ export function mergeDays(baseDays = [], overrideDays = []) {
     return {
       day,
       type: b?.type || o?.type || 'live',
-      lessons: [...(b?.lessons || []), ...(o?.lessons || [])],
+      lessons: [...(Array.isArray(b?.lessons) ? b.lessons : []), ...(Array.isArray(o?.lessons) ? o.lessons : [])],
     };
   });
 }
@@ -63,7 +63,9 @@ export function addLessonOverride(overrides, { bucket, monthId, day, type, lesso
 // Барлық мұғалімдердің атын жинақтайды (статикалық + overrides), мұғалім таңдау үшін
 export function getAllTeacherNames(monthId, overrides, staticSchedules) {
   const names = new Set();
-  const collect = (days) => (days || []).forEach(d => (d.lessons || []).forEach(l => (l.teachers || []).forEach(t => names.add(t.name))));
+  const collect = (days) => (Array.isArray(days) ? days : []).forEach(d =>
+    (Array.isArray(d.lessons) ? d.lessons : []).forEach(l =>
+      (Array.isArray(l.teachers) ? l.teachers : []).forEach(t => names.add(t.name))));
   collect(staticSchedules.smart[monthId]);
   collect(staticSchedules.smartAdditional[monthId]);
   collect(staticSchedules.junior[monthId]);

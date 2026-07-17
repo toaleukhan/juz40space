@@ -8,10 +8,10 @@ function countLessons(days) {
   let lessonCount = 0;
   const bySubject = {};
   const byTeacher = {};
-  (days || []).forEach(d => (d.lessons || []).forEach(l => {
+  (Array.isArray(days) ? days : []).forEach(d => (Array.isArray(d.lessons) ? d.lessons : []).forEach(l => {
     lessonCount++;
     bySubject[l.subject] = (bySubject[l.subject] || 0) + 1;
-    (l.teachers || []).forEach(t => { byTeacher[t.name] = (byTeacher[t.name] || 0) + 1; });
+    (Array.isArray(l.teachers) ? l.teachers : []).forEach(t => { byTeacher[t.name] = (byTeacher[t.name] || 0) + 1; });
   }));
   return { lessonCount, bySubject, byTeacher };
 }

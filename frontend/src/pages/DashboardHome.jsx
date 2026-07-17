@@ -41,12 +41,12 @@ function buildSubjectMap() {
   const map = {};
   const process = (days, dir) => {
     (Array.isArray(days) ? days : []).forEach(({ lessons }) => {
-      (lessons || []).forEach(({ subject, stream, teachers }) => {
+      (Array.isArray(lessons) ? lessons : []).forEach(({ subject, stream, teachers }) => {
         if (!map[subject]) map[subject] = {};
-        (teachers || []).forEach(({ name, times }) => {
+        (Array.isArray(teachers) ? teachers : []).forEach(({ name, times }) => {
           if (!map[subject][name]) map[subject][name] = { streams: new Set(), times: new Set(), dirs: new Set() };
           if (stream) map[subject][name].streams.add(stream);
-          times.forEach(t => map[subject][name].times.add(t));
+          (Array.isArray(times) ? times : []).forEach(t => map[subject][name].times.add(t));
           map[subject][name].dirs.add(dir);
         });
       });
