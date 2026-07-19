@@ -21,7 +21,7 @@ function parseTimeRange(timeStr, baseDate) {
   const parts = timeStr.split(/[–\-]/).map(s => s.trim());
   if (parts.length < 2) return null;
   const mk = (t) => {
-    const clean = t.replace(/[^\d:]/g, '');
+    const clean = t.replace(/\([^)]*\)/g, '').replace(/[^\d:]/g, '');
     const [h, m] = clean.split(':').map(Number);
     if (Number.isNaN(h)) return null;
     const d = new Date(baseDate);

@@ -43,7 +43,7 @@ export function mergeSmartSchedule(monthId, kinds, overrides, published) {
 
 // ─── Уақыт utils ──────────────────────────────────────────────────────────────
 export function timeToMinutes(t) {
-  const clean = t.split(/[–\-]/)[0].trim().replace(/[^\d:]/g,'');
+  const clean = t.split(/[–\-]/)[0].replace(/\([^)]*\)/g,'').trim().replace(/[^\d:]/g,'');
   const [h,m] = clean.split(':').map(Number);
   return h*60+(m||0);
 }
@@ -75,7 +75,7 @@ export function entriesToSlots(entries) {
   entries.forEach(e=>(Array.isArray(e.times)?e.times:[]).forEach(t=>{
     const p=t.split(/[–\-]/);
     if (p.length<2) return;
-    const s=p[0].trim().replace(/[^\d:]/g,''), en=p[1].trim().replace(/[^\d:]/g,'');
+    const s=p[0].replace(/\([^)]*\)/g,'').trim().replace(/[^\d:]/g,''), en=p[1].replace(/\([^)]*\)/g,'').trim().replace(/[^\d:]/g,'');
     const [sh,sm]=s.split(':').map(Number),[eh,em]=en.split(':').map(Number);
     if (isNaN(sh)||isNaN(eh)) return;
     slots.push({start:sh*60+(sm||0),end:eh*60+(em||0),direction:e.direction,subject:e.subject,stream:e.stream,timeStr:t});
@@ -95,7 +95,7 @@ export const DAY_MIN_W = 168; // minimum width per day column so events never ge
 export function parseTime(ts) {
   const pp = ts.split(/[–\-]/);
   if (pp.length < 2) return null;
-  const clean = s => s.trim().replace(/[^\d:]/g,'');
+  const clean = s => s.replace(/\([^)]*\)/g,'').trim().replace(/[^\d:]/g,'');
   const toMin = s => { const [h,m] = s.split(':').map(Number); return isNaN(h) ? null : h*60+(m||0); };
   const start = toMin(clean(pp[0])), end = toMin(clean(pp[1]));
   if (start === null || end === null) return null;
@@ -155,7 +155,7 @@ export const TL_END_MIN   = 19 * 60 + 30;  // 1170
 export const TL_RANGE     = TL_END_MIN - TL_START_MIN; // 390
 
 export function toMin(s) {
-  const c = s.trim().replace(/[^\d:]/g,'');
+  const c = s.replace(/\([^)]*\)/g,'').trim().replace(/[^\d:]/g,'');
   const [h,m] = c.split(':').map(Number);
   return h*60+(m||0);
 }
