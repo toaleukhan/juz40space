@@ -56,15 +56,15 @@ function getGoogleAuth() {
   return null;
 }
 
-// 1. Кестені алу
+// 1. Кестені алу (Пән, Ағым, Ай, Апта)
 router.get('/', auth, async (req, res) => {
-  const { subject, monthId, weekNum } = req.query;
+  const { subject, streamId, monthNum, weekNum } = req.query;
   try {
     const result = await pool.query(
       `SELECT * FROM st_recordings 
-       WHERE subject = $1 AND month_id = $2 AND week_num = $3 
+       WHERE subject = $1 AND (stream_id = $2 OR month_id = $2) AND (month_num = $3 OR month_id = $3) AND week_num = $4 
        ORDER BY id ASC`,
-      [subject || 'ФИЗ', monthId || '01', parseInt(weekNum) || 1]
+      [subject || 'ФИЗ', streamId || '01', parseInt(monthNum) || 1, parseInt(weekNum) || 1]
     );
     res.json(result.rows);
   } catch (err) {
@@ -74,15 +74,15 @@ router.get('/', auth, async (req, res) => {
 
 // 2. Жаңа куратор қосу
 router.post('/curator', auth, async (req, res) => {
-  const { subject, monthId, weekNum, curatorName } = req.body;
-  if (!curatorName || !subject || !monthId) {
+  const { subject, streamId, monthNum, weekNum, curatorName } = req.body;
+  if (!curatorName || !subject) {
     return res.status(400).json({ error: 'Ақпарат толық емес' });
   }
   try {
     const result = await pool.query(
-      `INSERT INTO st_recordings (subject, month_id, week_num, curator_name)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [subject, monthId, parseInt(weekNum) || 1, curatorName]
+      `INSERT INTO st_recordings (subject, stream_id, month_num, month_id, week_num, curator_name)
+       VALUES ($1, $2, $3, $2, $4, $5) RETURNING *`,
+      [subject, streamId || '01', parseInt(monthNum) || 1, parseInt(weekNum) || 1, curatorName]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -90,7 +90,7 @@ router.post('/curator', auth, async (req, res) => {
   }
 });
 
-// 3. Google Meet Сілтемесін жасау
+// 3. Google Meet Сілтемесін жасау (Бир кураторға коптiк Мит ашу мүмкiндiгiмен)
 router.post('/create-meet', auth, async (req, res) => {
   const { recordingId, curatorName, subject } = req.body;
   const authClient = getGoogleAuth();
@@ -126,11 +126,22 @@ router.post('/create-meet', auth, async (req, res) => {
     const meetLink = createdEvent.data.hangoutLink;
     const meetCode = meetLink ? meetLink.split('/').pop() : null;
 
+    const rec = await pool.query('SELECT * FROM st_recordings WHERE id = $1', [recordingId]);
+    const current = rec.rows[0];
+
+    const meetCodes = current.meet_codes || (current.meet_code ? [current.meet_code] : []);
+    const meetLinks = current.meet_links || (current.meet_link ? [current.meet_link] : []);
+
+    meetCodes.push(meetCode);
+    meetLinks.push(meetLink);
+
     const updated = await pool.query(
       `UPDATE st_recordings 
-       SET meet_link = $1, meet_code = $2, updated_at = NOW() 
-       WHERE id = $3 RETURNING *`,
-      [meetLink, meetCode, recordingId]
+       SET meet_link = $1, meet_code = $2, 
+           meet_codes = $3, meet_links = $4, 
+           updated_at = NOW() 
+       WHERE id = $5 RETURNING *`,
+      [meetLink, meetCode, meetCodes, meetLinks, recordingId]
     );
 
     res.json(updated.rows[0]);
@@ -139,16 +150,15 @@ router.post('/create-meet', auth, async (req, res) => {
   }
 });
 
-// 4. Драйвтан ВИДЕО мен ОТСЛЕЖКА-ны КАТАҢ ТЕКСЕРУ
+// 4. Драйвтан ВИДЕО мен ОТСЛЕЖКА-ны Табу
 router.post('/sync-drive', auth, async (req, res) => {
-  const { recordingId } = req.body;
+  const { recordingId, meetCode } = req.body;
 
   const rec = await pool.query('SELECT * FROM st_recordings WHERE id = $1', [recordingId]);
   if (!rec.rows.length) return res.status(404).json({ error: 'Жол табылмады' });
 
   const record = rec.rows[0];
-  const meetCode = record.meet_code;
-  const curatorName = record.curator_name;
+  const targetCode = meetCode || record.meet_code;
 
   const authClient = getGoogleAuth();
   if (!authClient) {
@@ -158,11 +168,7 @@ router.post('/sync-drive', auth, async (req, res) => {
   try {
     const drive = google.drive({ version: 'v3', auth: authClient });
 
-    let searchConditions = [];
-    if (meetCode) searchConditions.push(`name contains '${meetCode}'`);
-    if (curatorName) searchConditions.push(`name contains '${curatorName}'`);
-
-    const query = `(${searchConditions.join(' or ')}) and trashed = false`;
+    const query = `name contains '${targetCode}' and trashed = false`;
 
     const driveRes = await drive.files.list({
       q: query,
@@ -179,40 +185,28 @@ router.post('/sync-drive', auth, async (req, res) => {
       const mime = (f.mimeType || '').toLowerCase();
       const link = f.webViewLink || '';
 
-      // 💡 1. ТЕК ТАЗА ВИДЕО ФАЙЛДАР
-      const isVideo = mime.startsWith('video/') ||
-                      lowerName.endsWith('.mp4') ||
-                      lowerName.endsWith('.mkv') ||
-                      lowerName.endsWith('.mov') ||
-                      lowerName.endsWith('.webm');
+      const isVideo = mime.startsWith('video/') || lowerName.endsWith('.mp4') || lowerName.endsWith('.mkv');
+      const isAttendance = mime.includes('spreadsheet') || mime.includes('document') || mime.includes('pdf') || lowerName.includes('расшифровка') || lowerName.includes('отслежка');
 
-      // 💡 2. ОТСЛЕЖКА / ТАБЛИЦА / ТЕКСТ / PDF ФАЙЛДАР
-      const isAttendance = mime.includes('spreadsheet') ||
-                           mime.includes('document') ||
-                           mime.includes('pdf') ||
-                           mime.includes('text') ||
-                           link.includes('/spreadsheets/') ||
-                           link.includes('/document/') ||
-                           lowerName.includes('расшифровка') ||
-                           lowerName.includes('transcript') ||
-                           lowerName.includes('отслежка') ||
-                           lowerName.includes('чат') ||
-                           lowerName.endsWith('.pdf');
-
-      if (isVideo) {
-        videoLink = link;
-      } else if (isAttendance) {
-        attendanceLink = link;
-      }
+      if (isVideo) videoLink = link;
+      else if (isAttendance) attendanceLink = link;
     });
+
+    const vLinks = record.video_links || (record.video_link ? [record.video_link] : []);
+    const aLinks = record.attendance_links || (record.attendance_link ? [record.attendance_link] : []);
+
+    if (videoLink && !vLinks.includes(videoLink)) vLinks.push(videoLink);
+    if (attendanceLink && !aLinks.includes(attendanceLink)) aLinks.push(attendanceLink);
 
     const updated = await pool.query(
       `UPDATE st_recordings 
        SET video_link = COALESCE($1, video_link), 
            attendance_link = COALESCE($2, attendance_link), 
+           video_links = $3, 
+           attendance_links = $4, 
            updated_at = NOW() 
-       WHERE id = $3 RETURNING *`,
-      [videoLink, attendanceLink, recordingId]
+       WHERE id = $5 RETURNING *`,
+      [videoLink, attendanceLink, vLinks, aLinks, recordingId]
     );
 
     res.json({ success: true, record: updated.rows[0], foundCount: files.length });
