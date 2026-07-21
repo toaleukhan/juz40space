@@ -64,7 +64,7 @@ export default function StRecordings() {
       setNewCurator('');
       setRows(prev => [...prev, data]);
     } catch (err) {
-      alert('Қателік: Backend серверіне қосылу мүмкін болмады. Backend деплой сапасын тексеріңіз.');
+      alert('Қателік: Серверге қосылу мүмкін болмады.');
     }
   };
 
@@ -78,7 +78,7 @@ export default function StRecordings() {
       });
       setRows(prev => prev.map(r => r.id === rowId ? data : r));
     } catch (err) {
-      alert(err.response?.data?.error || 'Мит ашуда қателік (Google Token тексеріңіз)');
+      alert(err.response?.data?.error || 'Мит ашуда қателік');
     } finally {
       setActionLoading(prev => ({ ...prev, [rowId]: null }));
     }
@@ -137,7 +137,7 @@ export default function StRecordings() {
           )}
         </div>
 
-        {/* 1. ПӘНДЕР КАТАЛОГЫ (Ресми Векторлық Логотиптермен) */}
+        {/* 1. ПӘНДЕР КАТАЛОГЫ */}
         {!selectedSubject ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 16 }}>
             {SUBJECTS.map(s => {
@@ -177,7 +177,6 @@ export default function StRecordings() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* Ағымдар мен Апталар фильтрі */}
             <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-              {/* Ай таңдау */}
               <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
                 {months.slice(0, 5).map(m => (
                   <button key={m.id} onClick={() => setSelectedMonth(m.id)}
@@ -191,7 +190,6 @@ export default function StRecordings() {
                 ))}
               </div>
 
-              {/* Апта таңдау */}
               <div style={{ display: 'flex', background: 'var(--surface2)', borderRadius: 10, padding: 3, gap: 4 }}>
                 {WEEKS.map(w => (
                   <button key={w.id} onClick={() => setSelectedWeek(w.id)}
@@ -284,25 +282,25 @@ export default function StRecordings() {
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                           {!row.meet_link ? (
                             <button onClick={() => handleCreateMeet(row.id, row.curator_name)} disabled={actionLoading[row.id] === 'meet'}
-                              style={{ padding: '6px 10px', borderRadius: 8, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
+                              style={{ padding: '6px 10px', borderRadius: 8, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize 11, cursor: 'pointer' }}>
                               {actionLoading[row.id] === 'meet' ? '...' : '🎥 Мит ашу'}
                             </button>
                           ) : (
                             <a href={row.meet_link} target="_blank" rel="noreferrer"
-                              style={{ padding: '5px 8px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 10, textDecoration: 'none' }}>
+                              style={{ padding: '5px 8px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize 10, textDecoration: 'none' }}>
                               🔗 {row.meet_code}
                             </a>
                           )}
 
                           {row.meet_code && (!row.video_link || !row.attendance_link) && (
                             <button onClick={() => handleSyncDrive(row.id, row.meet_code)} disabled={actionLoading[row.id] === 'drive'}
-                              style={{ padding: '6px 8px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize 11, cursor: 'pointer' }}>
+                              style={{ padding: '6px 8px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight 700, fontSize 11, cursor: 'pointer' }}>
                               {actionLoading[row.id] === 'drive' ? '...' : '🔄 Жаңарту'}
                             </button>
                           )}
 
                           <button onClick={() => handleDeleteRow(row.id)}
-                            style={{ padding: '5px 8px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: 'none', fontSize: 11, cursor: 'pointer', marginLeft: 'auto' }}>
+                            style={{ padding: '5px 8px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: 'none', fontSize 11, cursor: 'pointer', marginLeft: 'auto' }}>
                             ✕
                           </button>
                         </div>
