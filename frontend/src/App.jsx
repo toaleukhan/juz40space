@@ -6,6 +6,7 @@ import WhatsAppConnect from './pages/WhatsAppConnect';
 import CuratorPanel from './pages/Dashboard';
 import DashboardHome from './pages/DashboardHome';
 import Schedule from './pages/Schedule';
+import StRecordings from './pages/StRecordings';
 import './index.css';
 
 const PrivateRoute = ({ children }) => {
@@ -25,16 +26,17 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           {/* Тек login — ашық */}
-          <Route path="/login"     element={<Login />} />
+          <Route path="/login"         element={<Login />} />
 
           {/* Барлық қалған беттер — авторизация керек */}
-          <Route path="/"          element={<PrivateRoute><DashboardHome /></PrivateRoute>} />
-          <Route path="/dashboard" element={<PrivateRoute><DashboardHome /></PrivateRoute>} />
-          <Route path="/schedule"  element={<PrivateRoute><Schedule onGoToCabinet={() => window.location.href='/curator'} /></PrivateRoute>} />
+          <Route path="/"              element={<PrivateRoute><DashboardHome /></PrivateRoute>} />
+          <Route path="/dashboard"     element={<PrivateRoute><DashboardHome /></PrivateRoute>} />
+          <Route path="/schedule"      element={<PrivateRoute><Schedule onGoToCabinet={() => window.location.href='/curator'} /></PrivateRoute>} />
+          <Route path="/st-recordings" element={<PrivateRoute><StRecordings /></PrivateRoute>} />
 
           {/* Куратор кабинеті */}
-          <Route path="/whatsapp"  element={<PrivateRoute><WhatsAppConnect /></PrivateRoute>} />
-          <Route path="/curator"   element={<PrivateRoute><CuratorPanel /></PrivateRoute>} />
+          <Route path="/whatsapp"      element={<PrivateRoute><WhatsAppConnect /></PrivateRoute>} />
+          <Route path="/curator"       element={<PrivateRoute><CuratorPanel /></PrivateRoute>} />
 
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
