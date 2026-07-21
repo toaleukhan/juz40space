@@ -1,5 +1,31 @@
 const pool = require('./db');
 
+// Нақты ФИЗ-01 ағымының 22 кураторы
+const PHYS_CURATORS = [
+  'Орынбек Меруерт',
+  'Жұбатбек Алия',
+  'Мұратқызы Сағыныш',
+  'Семгалиева Мадина Нұрлыбековна',
+  'Темірхан Нұржас Жандосұлы',
+  'Мирзабек Аяулым',
+  'Ерғали Айкүміс',
+  'Серік Дарын',
+  'Амит Алтынай',
+  'Сарқытбекова Аяжан',
+  'Таубай Аяжан',
+  'Нұрат Гүлжаз Ғалымқызы',
+  'Халидолла Ислам Арманұлы',
+  'Аждаров Аңсар',
+  'Қыдырбай Ерасыл',
+  'Қалмырзаев Ернар Бимағанбетұлы',
+  'Алмасов Данияр',
+  'Бегалы Алтынай',
+  'Хидирова Фатима',
+  'Арайлым Қанафия',
+  'Меңлібек Қаракөз',
+  'Жансая Қуандық'
+];
+
 const createTables = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS curators (
@@ -74,6 +100,25 @@ const createTables = async () => {
       updated_at TIMESTAMP DEFAULT NOW()
     );
   `);
+
+  // ФИЗ-01 кураторларын тексеру және жаңарту
+  const checkPhys = await pool.query(
+    "SELECT COUNT(*) FROM st_recordings WHERE subject = 'ФИЗ' AND month_id = '01' AND week_num = 1"
+  );
+
+  const count = parseInt(checkPhys.rows[0].count);
+  // Егер ескі кураторлар тұрса немесе бос болса, тазалап, жаңа 22 кураторды саламыз
+  if (count === 0 || count === 27) {
+    await pool.query("DELETE FROM st_recordings WHERE subject = 'ФИЗ' AND month_id = '01' AND week_num = 1");
+    for (const name of PHYS_CURATORS) {
+      await pool.query(
+        `INSERT INTO st_recordings (subject, month_id, week_num, curator_name)
+         VALUES ('ФИЗ', '01', 1, $1)`,
+        [name]
+      );
+    }
+    console.log('✅ ФИЗ-01 ағымының 22 кураторы сәтті қосылды!');
+  }
 
   console.log('✅ Tables created');
 };
