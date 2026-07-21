@@ -33,7 +33,7 @@ function getGoogleAuth() {
   return null;
 }
 
-// 1. Кестені алу (Пән, Ай, Апта)
+// 1. Кестені алу
 router.get('/', auth, async (req, res) => {
   const { subject, monthId, weekNum } = req.query;
   try {
@@ -163,7 +163,7 @@ router.post('/sync-drive', auth, async (req, res) => {
   }
 });
 
-// 5. Өрістерді (СТ тапсырды, ескертпе) жаңарту
+// 5. Өрістерді жаңарту
 router.put('/:id', auth, async (req, res) => {
   const { studentsCount, notes } = req.body;
   try {
@@ -181,7 +181,7 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// 6. Куратор жолын жою
+// 6. Өшіру
 router.delete('/:id', auth, async (req, res) => {
   try {
     await pool.query('DELETE FROM st_recordings WHERE id = $1', [req.params.id]);
