@@ -6,34 +6,61 @@ const { google } = require('googleapis');
 const path = require('path');
 const fs = require('fs');
 
+// Google OAuth авторизацияны жүктеу (Env немесе Файлдардан)
 function getGoogleAuth() {
-  const possibleTokenPaths = [
-    path.join(__dirname, '../../../sapa_bot/token.json'),
-    path.join(process.cwd(), 'token.json'),
-    path.join(process.cwd(), 'sapa_bot/token.json')
-  ];
-  const possibleCredsPaths = [
-    path.join(__dirname, '../../../sapa_bot/credentials.json'),
-    path.join(process.cwd(), 'credentials.json'),
-    path.join(process.cwd(), 'sapa_bot/credentials.json')
-  ];
+  try {
+    let tokens = null;
+    let creds = null;
 
-  const tokenPath = possibleTokenPaths.find(p => fs.existsSync(p));
-  const credsPath = possibleCredsPaths.find(p => fs.existsSync(p));
+    // 1. Railway Environment Variables-тен оқу
+    if (process.env.GOOGLE_TOKEN_JSON && process.env.GOOGLE_CREDENTIALS_JSON) {
+      tokens = JSON.parse(process.env.GOOGLE_TOKEN_JSON);
+      creds = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+    } else {
+      // 2. Егер локальді папкада тұрса
+      const tokenPaths = [
+        path.join(process.cwd(), 'token.json'),
+        path.join(process.cwd(), 'sapa_bot/token.json'),
+        path.join(__dirname, '../../../sapa_bot/token.json')
+      ];
+      const credsPaths = [
+        path.join(process.cwd(), 'credentials.json'),
+        path.join(process.cwd(), 'sapa_bot/credentials.json'),
+        path.join(__dirname, '../../../sapa_bot/credentials.json')
+      ];
 
-  if (tokenPath && credsPath) {
-    const tokens = JSON.parse(fs.readFileSync(tokenPath));
-    const creds = JSON.parse(fs.readFileSync(credsPath));
-    const config = creds.installed || creds.web;
-    const { client_id, client_secret, redirect_uris } = config;
-    const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
-    oAuth2Client.setCredentials(tokens);
-    return oAuth2Client;
+      const tPath = tokenPaths.find(p => fs.existsSync(p));
+      const cPath = credsPaths.find(p => fs.existsSync(p));
+
+      if (tPath && cPath) {
+        tokens = JSON.parse(fs.readFileSync(tPath, 'utf8'));
+        creds = JSON.parse(fs.readFileSync(cPath, 'utf8'));
+      }
+    }
+
+    if (tokens && creds) {
+      // Python 'token' өрісін Node.js 'access_token' өрісіне нормализациялау
+      if (tokens.token && !tokens.access_token) {
+        tokens.access_token = tokens.token;
+      }
+
+      const config = creds.installed || creds.web;
+      const { client_id, client_secret, redirect_uris } = config;
+      const oAuth2Client = new google.auth.OAuth2(
+        client_id, 
+        client_secret, 
+        redirect_uris ? redirect_uris[0] : 'http://localhost'
+      );
+      oAuth2Client.setCredentials(tokens);
+      return oAuth2Client;
+    }
+  } catch (e) {
+    console.error('Google Auth Error:', e.message);
   }
   return null;
 }
 
-// 1. Кестені алу
+// 1. Кестені алу (Пән, Ай, Апта)
 router.get('/', auth, async (req, res) => {
   const { subject, monthId, weekNum } = req.query;
   try {
@@ -41,11 +68,12 @@ router.get('/', auth, async (req, res) => {
       `SELECT * FROM st_recordings 
        WHERE subject = $1 AND month_id = $2 AND week_num = $3 
        ORDER BY id ASC`,
-      [subject, monthId, parseInt(weekNum) || 1]
+      [subject || 'ФИЗ', monthId || '01', parseInt(weekNum) || 1]
     );
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'База қатесі: ' + err.message });
   }
 });
 
@@ -63,7 +91,8 @@ router.post('/curator', auth, async (req, res) => {
     );
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Қосу қатесі: ' + err.message });
   }
 });
 
@@ -73,7 +102,7 @@ router.post('/create-meet', auth, async (req, res) => {
   const authClient = getGoogleAuth();
 
   if (!authClient) {
-    return res.status(400).json({ error: 'Google авторизация файлы (token.json) табылмады' });
+    return res.status(400).json({ error: 'Google авторизация кілттері табылмады.' });
   }
 
   try {
@@ -112,6 +141,7 @@ router.post('/create-meet', auth, async (req, res) => {
 
     res.json(updated.rows[0]);
   } catch (err) {
+    console.error('Meet error:', err);
     res.status(500).json({ error: 'Meet жасау қатесі: ' + err.message });
   }
 });
@@ -123,7 +153,7 @@ router.post('/sync-drive', auth, async (req, res) => {
 
   const authClient = getGoogleAuth();
   if (!authClient) {
-    return res.status(400).json({ error: 'Google авторизация файлы табылмады' });
+    return res.status(400).json({ error: 'Google авторизация кілттері табылмады' });
   }
 
   try {
@@ -159,6 +189,7 @@ router.post('/sync-drive', auth, async (req, res) => {
 
     res.json({ success: true, record: updated.rows[0], foundCount: files.length });
   } catch (err) {
+    console.error('Drive sync error:', err);
     res.status(500).json({ error: 'Драйв іздеу қатесі: ' + err.message });
   }
 });
