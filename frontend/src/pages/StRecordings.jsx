@@ -120,7 +120,6 @@ export default function StRecordings() {
     }
   };
 
-  // 🚀 ТІЗІММЕН ТАПСОМПЕ МАССОВЫЙ ҚОСУ
   const handleBulkAdd = async () => {
     if (!bulkText.trim()) return;
     try {
@@ -255,14 +254,13 @@ export default function StRecordings() {
           </div>
         )}
 
-        {/* ТІЗІММЕН БІРДЕН ҚОСУ БОКСЫ */}
         {showBulk && selectedSubject && (
           <div className="card" style={{ padding: 20, marginBottom: 20, border: '2px solid #3b82f6' }}>
             <h3 style={{ margin: '0 0 10px', fontSize: 15, fontWeight: 800 }}>
               📋 Тізіммен кураторларды массовый енгізу ({selectedSubject.name} · {selectedSubject.code}-{currentStream})
             </h3>
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
-              Әр куратордың аты-жөнін **жаңа жолдан (Enter арқылы)** жазыңыз немесе Excel/Word-тан көшіріп алып қойыңыз:
+              Әр куратордың аты-жөнін жаңа жолдан (Enter арқылы) жазыңыз немесе көшіріп алып қойыңыз:
             </p>
             <textarea
               rows={6}
@@ -359,7 +357,7 @@ export default function StRecordings() {
                   {WEEKS.map(w => (
                     <button key={w} onClick={() => updateFilters({ week: w })}
                       style={{
-                        padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight currentWeek === w ? 800 : 500,
+                        padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentWeek === w ? 800 : 500,
                         background: currentWeek === w ? '#3b82f6' : 'var(--surface2)',
                         color: currentWeek === w ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
                       }}>
