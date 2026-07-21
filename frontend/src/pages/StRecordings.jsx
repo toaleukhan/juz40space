@@ -33,8 +33,6 @@ const STATUS_MAP = {
 
 export default function StRecordings() {
   const [searchParams, setSearchParams] = useSearchParams();
-
-  // Режим: 'st' (СТ Есептері) немесе 'curators' (Кураторлар Базасы)
   const [activeTab, setActiveTab] = useState('st');
 
   const currentSubjectCode = searchParams.get('subject');
@@ -43,9 +41,7 @@ export default function StRecordings() {
   const currentWeek = parseInt(searchParams.get('week') || '1');
 
   const selectedSubject = SUBJECTS.find(s => s.code === currentSubjectCode) || null;
-
-  const maxMonths = selectedSubject ? selectedSubject.months : 5;
-  const availableMonths = Array.from({ length: maxMonths }, (_, i) => i + 1);
+  const availableMonths = Array.from({ length: selectedSubject ? selectedSubject.months : 5 }, (_, i) => i + 1);
 
   const [rows, setRows] = useState([]);
   const [curatorsList, setCuratorsList] = useState([]);
@@ -114,11 +110,23 @@ export default function StRecordings() {
           streamId: currentStream,
           status: 'active'
         });
-        setCuratorsList(prev => [data, ...prev]);
+        setCuratorsList(prev => [...prev, data]);
       }
       setNewCurator('');
     } catch (err) {
       alert('Қателік орын алды');
+    }
+  };
+
+  // 💡 БҰРЫНҒЫ КУРАТОРЛАРДЫ БАЗАДАН ТАРТУ (АВТОМАТТЫ)
+  const handleSyncOldCurators = async () => {
+    try {
+      const { data } = await api.post('/curators/sync-old');
+      alert(`Қалпына келтірілді! Бұрынғы ${data.addedCount} куратор орталық базаға қосылды.`);
+      if (activeTab === 'st') loadTable();
+      else loadCuratorsBase();
+    } catch (err) {
+      alert('Қателік: ' + err.message);
     }
   };
 
@@ -192,7 +200,6 @@ export default function StRecordings() {
       <Sidebar />
 
       <main style={{ flex: 1, padding: '24px 32px', minWidth: 0, overflowY: 'auto' }}>
-        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>JUZ40 · САПА БӨЛІМІ</div>
@@ -208,7 +215,6 @@ export default function StRecordings() {
           )}
         </div>
 
-        {/* ПӘН ДАРЫ ДЕҢГЕЙІНДЕГІ ТАБ АУЫСТЫРҒЫШ (СТ Записьтері / Кураторлар Базасы) */}
         {selectedSubject && (
           <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
             <button onClick={() => setActiveTab('st')}
@@ -229,10 +235,18 @@ export default function StRecordings() {
               }}>
               👥 Кураторлар Базасы (Басқару)
             </button>
+
+            {/* 💡 ЖОҒАЛҒАН 22 КУРАТОРДЫ ҚАЙТАРУ БАТЫРМАСЫ */}
+            <button onClick={handleSyncOldCurators}
+              style={{
+                padding: '10px 20px', marginLeft: 'auto', borderRadius: 12, fontWeight: 800, fontSize: 12, border: '1px solid #10b981', cursor: 'pointer',
+                background: 'rgba(16,185,129,0.1)', color: '#10b981',
+              }}>
+              🛠 Бұрынғы кураторларды қалпына келтіру
+            </button>
           </div>
         )}
 
-        {/* 1. ПӘНДЕР КАТАЛОГЫ */}
         {!selectedSubject ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 16 }}>
             {SUBJECTS.map(s => {
@@ -270,7 +284,6 @@ export default function StRecordings() {
             })}
           </div>
         ) : activeTab === 'st' ? (
-          /* 2. СТ ЕСЕПТЕРІ КЕСТЕСІ */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div className="card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -441,7 +454,6 @@ export default function StRecordings() {
             </div>
           </div>
         ) : (
-          /* 3. БАСҚАРУШЫҒА АРНАЛҒАН "КУРАТОРЛАР БАЗАСЫ" ТЕРЕЗЕСІ */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)' }}>АҒЫМ СҮЗГІСІ:</span>
