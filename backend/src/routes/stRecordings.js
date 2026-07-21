@@ -12,12 +12,10 @@ function getGoogleAuth() {
     let tokens = null;
     let creds = null;
 
-    // 1. Railway Environment Variables-тен оқу
     if (process.env.GOOGLE_TOKEN_JSON && process.env.GOOGLE_CREDENTIALS_JSON) {
       tokens = JSON.parse(process.env.GOOGLE_TOKEN_JSON);
       creds = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
     } else {
-      // 2. Егер локальді папкада тұрса
       const tokenPaths = [
         path.join(process.cwd(), 'token.json'),
         path.join(process.cwd(), 'sapa_bot/token.json'),
@@ -39,7 +37,6 @@ function getGoogleAuth() {
     }
 
     if (tokens && creds) {
-      // Python 'token' өрісін Node.js 'access_token' өрісіне нормализациялау
       if (tokens.token && !tokens.access_token) {
         tokens.access_token = tokens.token;
       }
@@ -60,7 +57,7 @@ function getGoogleAuth() {
   return null;
 }
 
-// 1. Кестені алу (Пән, Ай, Апта)
+// 1. Кестені алу
 router.get('/', auth, async (req, res) => {
   const { subject, monthId, weekNum } = req.query;
   try {
@@ -72,7 +69,6 @@ router.get('/', auth, async (req, res) => {
     );
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: 'База қатесі: ' + err.message });
   }
 });
@@ -91,18 +87,17 @@ router.post('/curator', auth, async (req, res) => {
     );
     res.json(result.rows[0]);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: 'Қосу қатесі: ' + err.message });
   }
 });
 
-// 3. Google Meet Сілтемесін жасау ("Мит ашу")
+// 3. Google Meet Сілтемесін жасау ("Мит ашу" - куратор атысыз, таза 10 әріптік стандартпен)
 router.post('/create-meet', auth, async (req, res) => {
-  const { recordingId, curatorName, subject } = req.body;
+  const { recordingId } = req.body;
   const authClient = getGoogleAuth();
 
   if (!authClient) {
-    return res.status(400).json({ error: 'Google авторизация кілттері табылмады.' });
+    return res.status(400).json({ error: 'Google авторизация кілттері табылмады' });
   }
 
   try {
@@ -111,8 +106,8 @@ router.post('/create-meet', auth, async (req, res) => {
     const endTime = new Date(Date.now() + 3600000).toISOString();
 
     const event = {
-      summary: `СТ: ${subject} - ${curatorName}`,
-      description: 'JUZ40 - Автоматты жасалған Сабақ Тапсыру Миті',
+      summary: 'СТ', // Жай ғана СТ (Куратор аты сүйретілмейді)
+      description: 'JUZ40 - Сабақ Тапсыру Миті',
       start: { dateTime: startTime },
       end: { dateTime: endTime },
       conferenceData: {
@@ -141,12 +136,11 @@ router.post('/create-meet', auth, async (req, res) => {
 
     res.json(updated.rows[0]);
   } catch (err) {
-    console.error('Meet error:', err);
     res.status(500).json({ error: 'Meet жасау қатесі: ' + err.message });
   }
 });
 
-// 4. Драйвтан видео мен отслежканы автоматты тауып сақтау
+// 4. Драйвтан видео мен отслежканы ТЕК 10 әріптік Мит кодымен табу
 router.post('/sync-drive', auth, async (req, res) => {
   const { recordingId, meetCode } = req.body;
   if (!meetCode) return res.status(400).json({ error: 'Мит коды көрсетілмеген' });
@@ -158,11 +152,14 @@ router.post('/sync-drive', auth, async (req, res) => {
 
   try {
     const drive = google.drive({ version: 'v3', auth: authClient });
+
+    // 💡 Тек 10 әріптік Мит коды арқылы іздеу
     const query = `name contains '${meetCode}' and trashed = false`;
 
     const driveRes = await drive.files.list({
       q: query,
-      fields: 'files(id, name, webViewLink)'
+      fields: 'files(id, name, webViewLink, createdTime)',
+      orderBy: 'createdTime desc'
     });
 
     const files = driveRes.data.files || [];
@@ -189,7 +186,6 @@ router.post('/sync-drive', auth, async (req, res) => {
 
     res.json({ success: true, record: updated.rows[0], foundCount: files.length });
   } catch (err) {
-    console.error('Drive sync error:', err);
     res.status(500).json({ error: 'Драйв іздеу қатесі: ' + err.message });
   }
 });
