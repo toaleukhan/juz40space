@@ -3,10 +3,47 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const pool = require('../config/db');
 
-// 1. Барлық кураторларды алу
+// Бұрынғы стандартты Физика кураторларының тізімі
+const DEFAULT_PHYSICS_CURATORS = [
+  "Орынбек Меруерт",
+  "Жұбатбек Алия",
+  "Мұратқызы Сағыныш",
+  "Семғалиева Мадина Нұрлыбековна",
+  "Темірхан Нұржас Жандосұлы",
+  "Мирзабек Аяулым",
+  "Ерғали Айкүміс",
+  "Серік Дарын",
+  "Амит Алтынай",
+  "Сарқытбекова Аяжан",
+  "Таубай Аяжан",
+  "Нұрат Гүлжаз Ғалымқызы",
+  "Халидолла Ислам Арманұлы"
+];
+
+// Автоматты толтыру функциясы
+async function seedDefaultCurators() {
+  try {
+    const check = await pool.query(`SELECT COUNT(*) FROM curators WHERE subject = 'ФИЗ'`);
+    if (parseInt(check.rows[0].count) === 0) {
+      for (const name of DEFAULT_PHYSICS_CURATORS) {
+        await pool.query(
+          `INSERT INTO curators (full_name, subject, stream_id, status) VALUES ($1, 'ФИЗ', '01', 'active')`,
+          [name]
+        );
+      }
+      console.log("✅ Физика кураторлары базаға автоматты енгізілді!");
+    }
+  } catch (e) {
+    console.error("Seed error:", e.message);
+  }
+}
+
+// 1. Орталық базадағы кураторларды алу
 router.get('/', auth, async (req, res) => {
   const { subject, streamId } = req.query;
   try {
+    await seedDefaultCurators();
+
     let query = `SELECT * FROM curators WHERE 1=1`;
     let params = [];
     let idx = 1;
@@ -28,7 +65,7 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// 2. Жаңа куратор қосу
+// 2. Жалғыз куратор қосу
 router.post('/', auth, async (req, res) => {
   const { fullName, subject, streamId, status } = req.body;
   if (!fullName || !subject) {
@@ -46,31 +83,45 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// 3. БҰРЫНҒЫ 22 КУРАТОРДЫ АВТОМАТТЫ ТАУЫП ҚОСУ (SYNC)
-router.post('/sync-old', auth, async (req, res) => {
-  try {
-    const oldCurators = await pool.query(`SELECT DISTINCT curator_name, subject FROM st_recordings WHERE curator_name IS NOT NULL`);
-    let addedCount = 0;
+// 3. 🚀 ТІЗІММЕН МАССОВЫЙ ҚОСУ (Excel/Word-тан көшіріп қою үшін)
+router.post('/bulk', auth, async (req, res) => {
+  const { namesText, subject, streamId } = req.body;
+  if (!namesText || !subject) {
+    return res.status(400).json({ error: 'Мәтін мен пән көрсетілмеген' });
+  }
 
-    for (const cur of oldCurators.rows) {
-      // Бұл куратор базада бар ма тексеру
-      const exists = await pool.query(`SELECT id FROM curators WHERE full_name = $1 AND subject = $2`, [cur.curator_name, cur.subject]);
-      
-      if (exists.rows.length === 0) {
-        await pool.query(
-          `INSERT INTO curators (full_name, subject, stream_id, status) VALUES ($1, $2, '01', 'active')`,
-          [cur.curator_name, cur.subject]
-        );
-        addedCount++;
-      }
+  const names = namesText
+    .split('\n')
+    .map(n => n.trim())
+    .filter(n => n.length > 0);
+
+  try {
+    const added = [];
+    for (const name of names) {
+      const resIns = await pool.query(
+        `INSERT INTO curators (full_name, subject, stream_id, status)
+         VALUES ($1, $2, $3, 'active') RETURNING *`,
+        [name, subject, streamId || '01']
+      );
+      added.push(resIns.rows[0]);
     }
-    res.json({ success: true, addedCount });
+    res.json({ success: true, count: added.length, added });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// 4. Куратор статусын, ағымын немесе пәнін өзгерту
+// 4. Қалпына келтіру
+router.post('/sync-old', auth, async (req, res) => {
+  try {
+    await seedDefaultCurators();
+    res.json({ success: true, message: 'Автоматты қалпына келтірілді' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 5. Статусын, ағымын, пәнін жаңарту
 router.put('/:id', auth, async (req, res) => {
   const { fullName, subject, streamId, status } = req.body;
   try {
@@ -89,7 +140,7 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// 5. Өшіру
+// 6. Өшіру
 router.delete('/:id', auth, async (req, res) => {
   try {
     await pool.query('DELETE FROM curators WHERE id = $1', [req.params.id]);

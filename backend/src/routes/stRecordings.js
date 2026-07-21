@@ -56,7 +56,7 @@ function getGoogleAuth() {
   return null;
 }
 
-// 1. Апталық СТ есебін алу (Автоматты түрде бұрынғы кураторларды қалпына келтіреді)
+// 1. СТ Кестесін алу
 router.get('/', auth, async (req, res) => {
   const { subject, streamId, monthNum, weekNum } = req.query;
   const subj = subject || 'ФИЗ';
@@ -65,22 +65,25 @@ router.get('/', auth, async (req, res) => {
   const wNum = parseInt(weekNum) || 1;
 
   try {
-    // 💡 Бұрынғы енгізілген кураторларды Орталық Базаға (curators) АВТО-МИГРАЦИЯ жасау
-    const countRes = await pool.query(`SELECT COUNT(*) FROM curators WHERE subject = $1`, [subj]);
-    if (parseInt(countRes.rows[0].count) === 0) {
-      const oldCurators = await pool.query(
-        `SELECT DISTINCT curator_name FROM st_recordings WHERE subject = $1 AND curator_name IS NOT NULL`,
-        [subj]
-      );
-      for (const cur of oldCurators.rows) {
+    // 💡 Егер орталық базада Физика кураторлары мүлдем болмаса -> автоматты тіркейді
+    const checkCur = await pool.query(`SELECT COUNT(*) FROM curators WHERE subject = $1`, [subj]);
+    if (parseInt(checkCur.rows[0].count) === 0 && subj === 'ФИЗ') {
+      const DEFAULTS = [
+        "Орынбек Меруерт", "Жұбатбек Алия", "Мұратқызы Сағыныш",
+        "Семғалиева Мадина Нұрлыбековна", "Темірхан Нұржас Жандосұлы",
+        "Мирзабек Аяулым", "Ерғали Айкүміс", "Серік Дарын", "Амит Алтынай",
+        "Сарқытбекова Аяжан", "Таубай Аяжан", "Нұрат Гүлжаз Ғалымқызы",
+        "Халидолла Ислам Арманұлы"
+      ];
+      for (const name of DEFAULTS) {
         await pool.query(
-          `INSERT INTO curators (full_name, subject, stream_id, status) VALUES ($1, $2, $3, 'active')`,
-          [cur.curator_name, subj, strId]
+          `INSERT INTO curators (full_name, subject, stream_id, status) VALUES ($1, $2, '01', 'active')`,
+          [name, subj]
         );
       }
     }
 
-    // Ағымдағы аптаның жазбаларын іздеу
+    // Ағымдағы аптаның жазбаларын тексеру
     let result = await pool.query(
       `SELECT * FROM st_recordings 
        WHERE subject = $1 AND (stream_id = $2 OR month_id = $2) AND (month_num = $3 OR month_id = $3) AND week_num = $4 
@@ -88,10 +91,10 @@ router.get('/', auth, async (req, res) => {
       [subj, strId, mNum, wNum]
     );
 
-    // Егер бұл апта бос болса, Орталық базадан ТЕК 🟢 ЖҰМЫСТА ТҰРҒАН кураторларды автоматты көшіру
+    // Егер ашылған апта бос болса -> Орталық базадан 🟢 ЖҰМЫСТАҒЫ кураторларды көшіреді
     if (result.rows.length === 0) {
       const activeCurators = await pool.query(
-        `SELECT * FROM curators WHERE subject = $1 AND stream_id = $2 AND status = 'active' ORDER BY id ASC`,
+        `SELECT * FROM curators WHERE subject = $1 AND (stream_id = $2 OR stream_id IS NULL) AND status = 'active' ORDER BY id ASC`,
         [subj, strId]
       );
 
