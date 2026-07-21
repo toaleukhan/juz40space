@@ -73,7 +73,7 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// 2. Жаңа куратор жолын қосу
+// 2. Жаңа куратор қосу
 router.post('/curator', auth, async (req, res) => {
   const { subject, monthId, weekNum, curatorName } = req.body;
   if (!curatorName || !subject || !monthId) {
@@ -91,9 +91,9 @@ router.post('/curator', auth, async (req, res) => {
   }
 });
 
-// 3. Google Meet Сілтемесін жасау (МҮЛДЕМ ЕШҚАНДАЙ АТАУСЫЗ, ТЕК 10 ӘРІПТІК КОД)
+// 3. Google Meet Сілтемесін жасау (СТ: ФИЗ - Орынбек Меруерт форматында)
 router.post('/create-meet', auth, async (req, res) => {
-  const { recordingId } = req.body;
+  const { recordingId, curatorName, subject } = req.body;
   const authClient = getGoogleAuth();
 
   if (!authClient) {
@@ -106,6 +106,8 @@ router.post('/create-meet', auth, async (req, res) => {
     const endTime = new Date(Date.now() + 3600000).toISOString();
 
     const event = {
+      summary: `СТ: ${subject} - ${curatorName}`,
+      description: 'JUZ40 - Сабақ Тапсыру Миті',
       start: { dateTime: startTime },
       end: { dateTime: endTime },
       conferenceData: {
@@ -138,10 +140,16 @@ router.post('/create-meet', auth, async (req, res) => {
   }
 });
 
-// 4. Драйвтан видеоны ТЕК 10 әріптік Мит коды арқылы табу
+// 4. Драйвтан видеоны ҮШ ҚАБАТТЫ іздеу арқылы табу
 router.post('/sync-drive', auth, async (req, res) => {
-  const { recordingId, meetCode } = req.body;
-  if (!meetCode) return res.status(400).json({ error: 'Мит коды көрсетілмеген' });
+  const { recordingId } = req.body;
+
+  const rec = await pool.query('SELECT * FROM st_recordings WHERE id = $1', [recordingId]);
+  if (!rec.rows.length) return res.status(404).json({ error: 'Жол табылмады' });
+
+  const record = rec.rows[0];
+  const meetCode = record.meet_code;
+  const curatorName = record.curator_name;
 
   const authClient = getGoogleAuth();
   if (!authClient) {
@@ -150,7 +158,15 @@ router.post('/sync-drive', auth, async (req, res) => {
 
   try {
     const drive = google.drive({ version: 'v3', auth: authClient });
-    const query = `name contains '${meetCode}' and trashed = false`;
+
+    // 💡 Іздеу: Мит коды ИӘ Куратор аты ИӘ Без названия
+    let searchConditions = [];
+    if (meetCode) searchConditions.push(`name contains '${meetCode}'`);
+    if (curatorName) searchConditions.push(`name contains '${curatorName}'`);
+    searchConditions.push(`name contains 'без названия'`);
+    searchConditions.push(`name contains 'Untitled'`);
+
+    const query = `(${searchConditions.join(' or ')}) and trashed = false`;
 
     const driveRes = await drive.files.list({
       q: query,
@@ -164,6 +180,9 @@ router.post('/sync-drive', auth, async (req, res) => {
 
     files.forEach(f => {
       const lower = f.name.toLowerCase();
+      // Егер файл аты "Без названия" болса, онда оның ішінен meetCode-ты дәл табу мүмкін емес,
+      // бірақ ең соңғы жасалған Мит ретінде уақыты бойынша алынады. 
+      // Ең дұрысы, Календарьда аты болса, Гугл Драйв міндетті түрде сол атпен не Мит кодымен сақтайды.
       if (lower.includes('расшифровка') || lower.includes('transcript') || lower.includes('отслежка')) {
         attendanceLink = f.webViewLink;
       } else {
