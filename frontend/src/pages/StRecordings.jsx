@@ -1,37 +1,23 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import api from '../services/api';
-import { SUBJECT_COLORS, months } from './scheduleData';
+import { SUBJECT_COLORS, SUBJECT_LOGOS, months } from './scheduleData';
 import { motion } from 'framer-motion';
 
-import math    from '../assets/subjects/Математика.webp';
-import kaz     from '../assets/subjects/Казахский_Язык.webp';
-import bio     from '../assets/subjects/Биология.webp';
-import inf     from '../assets/subjects/Информатика.webp';
-import geo     from '../assets/subjects/География.webp';
-import hist    from '../assets/subjects/История_Казахстана.webp';
-import rus     from '../assets/subjects/Русский_Язык.webp';
-import geom    from '../assets/subjects/Геометрия.webp';
-import chem    from '../assets/subjects/Химия.webp';
-import logic   from '../assets/subjects/Логика.webp';
-import kazLit  from '../assets/subjects/Казахская_Литература.webp';
-import eng     from '../assets/subjects/Английский_Язык.webp';
-import wHist   from '../assets/subjects/Всемирная_История.webp';
-
 const SUBJECTS = [
-  { code:'ФИЗ',   name:'Физика',               img: chem   },
-  { code:'МАТ',   name:'Математика',          img: math   },
-  { code:'ТІЛ',   name:'Қазақ тілі',           img: kaz    },
-  { code:'БИО',   name:'Биология',              img: bio    },
-  { code:'ИНФО',  name:'Информатика',           img: inf    },
-  { code:'ГЕО',   name:'География',             img: geo    },
-  { code:'ТАРИХ', name:'Қазақстан тарихы',      img: hist   },
-  { code:'РУС',   name:'Орыс тілі',             img: rus    },
-  { code:'ХИМ',   name:'Химия',                 img: chem   },
-  { code:'МС',    name:'Логика / МС',           img: logic  },
-  { code:'ӘДЕБ',  name:'Қазақ әдебиеті',        img: kazLit },
-  { code:'АНГЛ',  name:'Ағылшын тілі',          img: eng    },
-  { code:'ДЖТ',   name:'Дүниежүзі тарихы',      img: wHist  },
+  { code:'ФИЗ',   name:'Физика' },
+  { code:'МАТ',   name:'Математика' },
+  { code:'ТІЛ',   name:'Қазақ тілі' },
+  { code:'БИО',   name:'Биология' },
+  { code:'ИНФО',  name:'Информатика' },
+  { code:'ГЕО',   name:'География' },
+  { code:'ТАРИХ', name:'Қазақстан тарихы' },
+  { code:'РУС',   name:'Орыс тілі' },
+  { code:'ХИМ',   name:'Химия' },
+  { code:'МС',    name:'Логика / МС' },
+  { code:'ӘДЕБ',  name:'Қазақ әдебиеті' },
+  { code:'АНГЛ',  name:'Ағылшын тілі' },
+  { code:'ДЖТ',   name:'Дүниежүзі тарихы' },
 ];
 
 const WEEKS = [
@@ -69,16 +55,16 @@ export default function StRecordings() {
   const handleAddCurator = async () => {
     if (!newCurator.trim()) return;
     try {
-      await api.post('/st-recordings/curator', {
+      const { data } = await api.post('/st-recordings/curator', {
         subject: selectedSubject.code,
         monthId: selectedMonth,
         weekNum: selectedWeek,
         curatorName: newCurator.trim(),
       });
       setNewCurator('');
-      loadTable();
+      setRows(prev => [...prev, data]);
     } catch (err) {
-      alert('Қате: ' + (err.response?.data?.error || err.message));
+      alert('Қателік: Backend серверіне қосылу мүмкін болмады. Backend деплой сапасын тексеріңіз.');
     }
   };
 
@@ -92,7 +78,7 @@ export default function StRecordings() {
       });
       setRows(prev => prev.map(r => r.id === rowId ? data : r));
     } catch (err) {
-      alert(err.response?.data?.error || 'Мит ашуда қателік');
+      alert(err.response?.data?.error || 'Мит ашуда қателік (Google Token тексеріңіз)');
     } finally {
       setActionLoading(prev => ({ ...prev, [rowId]: null }));
     }
@@ -103,7 +89,7 @@ export default function StRecordings() {
     setActionLoading(prev => ({ ...prev, [rowId]: 'drive' }));
     try {
       const { data } = await api.post('/st-recordings/sync-drive', { recordingId: rowId, meetCode });
-      if (data.foundCount === 0) alert('Драйвтан сабақ файлы әлі табылмады. Біраз күтіп қайталаңыз.');
+      if (data.foundCount === 0) alert('Драйвтан бұл Мит кодымен файлдар әлі табылмады.');
       else setRows(prev => prev.map(r => r.id === rowId ? data.record : r));
     } catch (err) {
       alert(err.response?.data?.error || 'Драйв іздеуде қателік');
@@ -121,7 +107,7 @@ export default function StRecordings() {
   };
 
   const handleDeleteRow = async (id) => {
-    if (!confirm('Бұл куратор жолын өшіруге сенімдісіз бе?')) return;
+    if (!confirm('Кураторды тізімнен өшіруге сенімдісіз бе?')) return;
     try {
       await api.delete(`/st-recordings/${id}`);
       setRows(prev => prev.filter(r => r.id !== id));
@@ -151,11 +137,12 @@ export default function StRecordings() {
           )}
         </div>
 
-        {/* 1. ПӘНДЕР КАТАЛОГЫ */}
+        {/* 1. ПӘНДЕР КАТАЛОГЫ (Ресми Векторлық Логотиптермен) */}
         {!selectedSubject ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 16 }}>
             {SUBJECTS.map(s => {
               const col = SUBJECT_COLORS[s.code] || { primary: '#1B6E7E' };
+              const svgLogo = SUBJECT_LOGOS[s.code];
               return (
                 <motion.div
                   key={s.code}
@@ -163,13 +150,23 @@ export default function StRecordings() {
                   onClick={() => setSelectedSubject(s)}
                   className="card"
                   style={{
-                    padding: 20, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 12,
+                    padding: '24px 20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14,
                     borderTop: `4px solid ${col.primary}`,
                   }}>
-                  <img src={s.img} alt={s.name} style={{ width: 80, height: 80, objectFit: 'contain', filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.12))' }} />
+                  <div style={{
+                    width: 64, height: 64, borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${col.primary}, ${col.secondary || col.primary})`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: `0 8px 20px ${col.primary}40`, padding: 14
+                  }}>
+                    {svgLogo && (
+                      <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        dangerouslySetInnerHTML={{ __html: svgLogo }} />
+                    )}
+                  </div>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{s.name}</div>
-                    <div style={{ fontSize: 11, color: col.primary, fontWeight: 700, marginTop: 2 }}>{s.code}-01</div>
+                    <div style={{ fontSize: 11, color: col.primary, fontWeight: 700, marginTop: 3 }}>{s.code}-01</div>
                   </div>
                 </motion.div>
               );
@@ -299,7 +296,7 @@ export default function StRecordings() {
 
                           {row.meet_code && (!row.video_link || !row.attendance_link) && (
                             <button onClick={() => handleSyncDrive(row.id, row.meet_code)} disabled={actionLoading[row.id] === 'drive'}
-                              style={{ padding: '6px 8px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
+                              style={{ padding: '6px 8px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize 11, cursor: 'pointer' }}>
                               {actionLoading[row.id] === 'drive' ? '...' : '🔄 Жаңарту'}
                             </button>
                           )}
