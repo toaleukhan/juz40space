@@ -6,8 +6,6 @@ const { apiLimiter, loginLimiter, whatsappLimiter, securityHeaders, sanitizeInpu
 
 const app = express();
 
-// Дәл домен/сабдомен тексеру — substring bypass болдырмау үшін
-// (мыс. "evil-juz40.space.attacker.com".includes('juz40.space') === true болатын еді)
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
   try {
@@ -42,6 +40,7 @@ app.use('/api/whatsapp', require('./routes/whatsapp'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/parse-schedule', require('./routes/parseSchedule'));
 app.use('/api/schedule', require('./routes/schedule'));
+app.use('/api/st-recordings', require('./routes/stRecordings'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 
