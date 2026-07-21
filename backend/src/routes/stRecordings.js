@@ -56,41 +56,85 @@ function getGoogleAuth() {
   return null;
 }
 
-// 1. Кестені алу (Пән, Ағым, Ай, Апта)
+// 1. Аптаның СТ кестесін алу (Егер бос болса - Белсенді кураторларды АВТОМАТТЫ көшіреді)
 router.get('/', auth, async (req, res) => {
   const { subject, streamId, monthNum, weekNum } = req.query;
+  const subj = subject || 'ФИЗ';
+  const strId = streamId || '01';
+  const mNum = parseInt(monthNum) || 1;
+  const wNum = parseInt(weekNum) || 1;
+
   try {
-    const result = await pool.query(
+    // Аптаның жазбаларын тексеру
+    let result = await pool.query(
       `SELECT * FROM st_recordings 
        WHERE subject = $1 AND (stream_id = $2 OR month_id = $2) AND (month_num = $3 OR month_id = $3) AND week_num = $4 
        ORDER BY id ASC`,
-      [subject || 'ФИЗ', streamId || '01', parseInt(monthNum) || 1, parseInt(weekNum) || 1]
+      [subj, strId, mNum, wNum]
     );
+
+    // 💡 ЕГЕР ОСЫ АПТАДА ӘЛІ ДЕРЕКТЕР БОЛМАСА -> "curators" кестесінен АКТИВТІ кураторларды АВТО-КОПИРОВАТЬ ЕТЕДІ
+    if (result.rows.length === 0) {
+      const activeCurators = await pool.query(
+        `SELECT * FROM curators WHERE subject = $1 AND stream_id = $2 AND status = 'active' ORDER BY id ASC`,
+        [subj, strId]
+      );
+
+      if (activeCurators.rows.length > 0) {
+        for (const cur of activeCurators.rows) {
+          await pool.query(
+            `INSERT INTO st_recordings (curator_id, subject, stream_id, month_num, month_id, week_num, curator_name)
+             VALUES ($1, $2, $3, $4, $3, $5, $6)`,
+            [cur.id, subj, strId, mNum, wNum, cur.full_name]
+          );
+        }
+
+        // Қайта жүктеп алу
+        result = await pool.query(
+          `SELECT * FROM st_recordings 
+           WHERE subject = $1 AND (stream_id = $2 OR month_id = $2) AND (month_num = $3 OR month_id = $3) AND week_num = $4 
+           ORDER BY id ASC`,
+          [subj, strId, mNum, wNum]
+        );
+      }
+    }
+
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: 'База қатесі: ' + err.message });
   }
 });
 
-// 2. Жаңа куратор қосу
+// 2. Жаңа куратор қосу (Әрі "curators" базасына, әрі ағымдағы аптаға қосылады)
 router.post('/curator', auth, async (req, res) => {
   const { subject, streamId, monthNum, weekNum, curatorName } = req.body;
   if (!curatorName || !subject) {
     return res.status(400).json({ error: 'Ақпарат толық емес' });
   }
   try {
-    const result = await pool.query(
-      `INSERT INTO st_recordings (subject, stream_id, month_num, month_id, week_num, curator_name)
-       VALUES ($1, $2, $3, $2, $4, $5) RETURNING *`,
-      [subject, streamId || '01', parseInt(monthNum) || 1, parseInt(weekNum) || 1, curatorName]
+    // 1. Орталық базаға белсенді болып сақталады
+    const curRes = await pool.query(
+      `INSERT INTO curators (full_name, subject, stream_id, status)
+       VALUES ($1, $2, $3, 'active') RETURNING *`,
+      [curatorName, subject, streamId || '01']
     );
+
+    const curatorObj = curRes.rows[0];
+
+    // 2. Ағымдағы ашық тұрған аптаға сақталады
+    const result = await pool.query(
+      `INSERT INTO st_recordings (curator_id, subject, stream_id, month_num, month_id, week_num, curator_name)
+       VALUES ($1, $2, $3, $4, $3, $5, $6) RETURNING *`,
+      [curatorObj.id, subject, streamId || '01', parseInt(monthNum) || 1, parseInt(weekNum) || 1, curatorName]
+    );
+
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'Қосу қатесі: ' + err.message });
   }
 });
 
-// 3. Google Meet Сілтемесін жасау (Бир кураторға коптiк Мит ашу мүмкiндiгiмен)
+// 3. Google Meet Сілтемесін жасау
 router.post('/create-meet', auth, async (req, res) => {
   const { recordingId, curatorName, subject } = req.body;
   const authClient = getGoogleAuth();
