@@ -3,36 +3,32 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const pool = require('../config/db');
 
-// Кесте мен бағандарды тексеріп, жетіспейтінін АВТОМАТТЫ қосу (Auto-migration)
+// 💡 Егер ескі кестеде full_name бағаны болмаса, оны жойып, ТАЗАДАН құру
 async function ensureTableExists() {
   try {
+    const checkCol = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'curators' AND column_name = 'full_name'
+    `);
+
+    // Егер баған табылмаса, ескі бұзық кестені өшіріп, қайта жаңадан құрамыз
+    if (checkCol.rows.length === 0) {
+      await pool.query(`DROP TABLE IF EXISTS curators CASCADE;`);
+    }
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS curators (
         id SERIAL PRIMARY KEY,
-        full_name VARCHAR(255),
+        full_name VARCHAR(255) NOT NULL,
         subject VARCHAR(50) NOT NULL,
         stream_id VARCHAR(50) DEFAULT '01',
         status VARCHAR(50) DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-
-    // Жетіспейтін бағандарды деректер базасына мәжбүрлі түрде қосу
-    await pool.query(`ALTER TABLE curators ADD COLUMN IF NOT EXISTS full_name VARCHAR(255);`);
-    await pool.query(`ALTER TABLE curators ADD COLUMN IF NOT EXISTS stream_id VARCHAR(50) DEFAULT '01';`);
-    await pool.query(`ALTER TABLE curators ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';`);
-
-    // Егер бұрын 'name' деген баған болса, оның ішіндегіні 'full_name'-ге көшіру
-    await pool.query(`
-      DO $$ 
-      BEGIN 
-        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='curators' AND column_name='name') THEN
-          UPDATE curators SET full_name = name WHERE full_name IS NULL;
-        END IF;
-      END $$;
-    `);
   } catch (e) {
-    console.error('Curators migration info:', e.message);
+    console.error('Curators table setup error:', e.message);
   }
 }
 
@@ -63,9 +59,9 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// 2. 🚀 ТІЗІММЕН МАССОВЫЙ ҚОСУ
+// 2. 🚀 ТІЗІММЕН МАССОВЫЙ ҚОСУ (Базаға да, СТ кестесіне де сақтайды)
 router.post('/bulk', auth, async (req, res) => {
-  const { namesText, subject, streamId } = req.body;
+  const { namesText, subject, streamId, monthNum, weekNum } = req.body;
   if (!namesText || !subject) {
     return res.status(400).json({ error: 'Мәтін мен пән көрсетілмеген' });
   }
@@ -75,17 +71,30 @@ router.post('/bulk', auth, async (req, res) => {
     .map(n => n.trim())
     .filter(n => n.length > 0);
 
+  const mNum = parseInt(monthNum) || 1;
+  const wNum = parseInt(weekNum) || 1;
+  const strId = streamId || '01';
+
   try {
     await ensureTableExists();
     const added = [];
 
     for (const name of names) {
+      // 1. Орталық кураторлар базасына сақтау
       const resIns = await pool.query(
         `INSERT INTO curators (full_name, subject, stream_id, status)
          VALUES ($1, $2, $3, 'active') RETURNING *`,
-        [name, subject, streamId || '01']
+        [name, subject, strId]
       );
-      added.push(resIns.rows[0]);
+      const cur = resIns.rows[0];
+      added.push(cur);
+
+      // 2. СТ есебі кестесіне де бірден қосу
+      await pool.query(
+        `INSERT INTO st_recordings (curator_id, subject, stream_id, month_num, month_id, week_num, curator_name)
+         VALUES ($1, $2, $3, $4, $3, $5, $6)`,
+        [cur.id, subject, strId, mNum, wNum, name]
+      );
     }
 
     res.json({ success: true, count: added.length, added });
@@ -114,7 +123,7 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// 4. Статусын, ағымын, пәнін жаңарту
+// 4. Статусын жаңарту
 router.put('/:id', auth, async (req, res) => {
   const { fullName, subject, streamId, status } = req.body;
   try {
