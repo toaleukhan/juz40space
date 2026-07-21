@@ -5,7 +5,6 @@ import api from '../services/api';
 import { SUBJECT_COLORS, SUBJECT_LOGOS } from './scheduleData';
 import { motion } from 'framer-motion';
 
-// Пәндер және олардың SMART жүйесіндегі нақты ұзақтығы (Ай саны)
 const SUBJECTS = [
   { code:'ФИЗ',   name:'Физика',           months: 5 },
   { code:'МАТ',   name:'Математика',       months: 6 },
@@ -25,10 +24,19 @@ const SUBJECTS = [
 const STREAMS = ['01', '11', '21', '31', '41'];
 const WEEKS = [1, 2, 3, 4];
 
+const STATUS_MAP = {
+  active: { label: '🟢 Жұмыста', color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+  stream_changed: { label: '🟡 Ағым ауысты', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+  subject_changed: { label: '🔵 Пән ауысты', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+  fired: { label: '🔴 Жұмыстан шықты', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+};
+
 export default function StRecordings() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // URL параметрлерін оқу
+  // Режим: 'st' (СТ Есептері) немесе 'curators' (Кураторлар Базасы)
+  const [activeTab, setActiveTab] = useState('st');
+
   const currentSubjectCode = searchParams.get('subject');
   const currentStream = searchParams.get('stream') || '01';
   const currentMonth = parseInt(searchParams.get('month') || '1');
@@ -36,27 +44,21 @@ export default function StRecordings() {
 
   const selectedSubject = SUBJECTS.find(s => s.code === currentSubjectCode) || null;
 
-  // Таңдалған пәннің ұзақтығына байланысты динамикалық айлар тізімін жасау
   const maxMonths = selectedSubject ? selectedSubject.months : 5;
   const availableMonths = Array.from({ length: maxMonths }, (_, i) => i + 1);
 
   const [rows, setRows] = useState([]);
+  const [curatorsList, setCuratorsList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newCurator, setNewCurator] = useState('');
   const [actionLoading, setActionLoading] = useState({});
 
-  // Егер таңдалған ай пәннің максималды айынан асып кетсе, автоматты түрде реттеу
-  useEffect(() => {
-    if (selectedSubject && currentMonth > selectedSubject.months) {
-      updateFilters({ month: selectedSubject.months });
-    }
-  }, [currentSubjectCode]);
-
   useEffect(() => {
     if (selectedSubject) {
-      loadTable();
+      if (activeTab === 'st') loadTable();
+      else loadCuratorsBase();
     }
-  }, [currentSubjectCode, currentStream, currentMonth, currentWeek]);
+  }, [currentSubjectCode, currentStream, currentMonth, currentWeek, activeTab]);
 
   const updateFilters = (newParams) => {
     const updated = new URLSearchParams(searchParams);
@@ -81,20 +83,60 @@ export default function StRecordings() {
     }
   };
 
+  const loadCuratorsBase = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get(`/curators?subject=${currentSubjectCode}&streamId=${currentStream}`);
+      setCuratorsList(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAddCurator = async () => {
     if (!newCurator.trim()) return;
     try {
-      const { data } = await api.post('/st-recordings/curator', {
-        subject: currentSubjectCode,
-        streamId: currentStream,
-        monthNum: currentMonth,
-        weekNum: currentWeek,
-        curatorName: newCurator.trim(),
-      });
+      if (activeTab === 'st') {
+        const { data } = await api.post('/st-recordings/curator', {
+          subject: currentSubjectCode,
+          streamId: currentStream,
+          monthNum: currentMonth,
+          weekNum: currentWeek,
+          curatorName: newCurator.trim(),
+        });
+        setRows(prev => [...prev, data]);
+      } else {
+        const { data } = await api.post('/curators', {
+          fullName: newCurator.trim(),
+          subject: currentSubjectCode,
+          streamId: currentStream,
+          status: 'active'
+        });
+        setCuratorsList(prev => [data, ...prev]);
+      }
       setNewCurator('');
-      setRows(prev => [...prev, data]);
     } catch (err) {
-      alert('Қателік: Серверге қосылу мүмкін болмады.');
+      alert('Қателік орын алды');
+    }
+  };
+
+  const handleUpdateCuratorStatus = async (curatorId, newStatus) => {
+    try {
+      const { data } = await api.put(`/curators/${curatorId}`, { status: newStatus });
+      setCuratorsList(prev => prev.map(c => c.id === curatorId ? data : c));
+    } catch (err) {
+      alert('Статусты өзгертуде қателік');
+    }
+  };
+
+  const handleUpdateCuratorStream = async (curatorId, newStream) => {
+    try {
+      const { data } = await api.put(`/curators/${curatorId}`, { streamId: newStream });
+      setCuratorsList(prev => prev.map(c => c.id === curatorId ? data : c));
+    } catch (err) {
+      alert('Ағымды өзгертуде қателік');
     }
   };
 
@@ -151,11 +193,11 @@ export default function StRecordings() {
 
       <main style={{ flex: 1, padding: '24px 32px', minWidth: 0, overflowY: 'auto' }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>JUZ40 · САПА БӨЛІМІ</div>
             <h1 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text)', margin: '4px 0 0', letterSpacing: '-0.5px' }}>
-              📹 СТ Записьтері {selectedSubject ? `· ${selectedSubject.name}` : ''}
+              📹 СТ Жүйесі {selectedSubject ? `· ${selectedSubject.name}` : ''}
             </h1>
           </div>
           {selectedSubject && (
@@ -165,6 +207,30 @@ export default function StRecordings() {
             </button>
           )}
         </div>
+
+        {/* ПӘН ДАРЫ ДЕҢГЕЙІНДЕГІ ТАБ АУЫСТЫРҒЫШ (СТ Записьтері / Кураторлар Базасы) */}
+        {selectedSubject && (
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+            <button onClick={() => setActiveTab('st')}
+              style={{
+                padding: '10px 20px', borderRadius: 12, fontWeight: 800, fontSize: 13, border: 'none', cursor: 'pointer',
+                background: activeTab === 'st' ? 'var(--accent)' : 'var(--surface)',
+                color: activeTab === 'st' ? '#fff' : 'var(--text-sub)',
+                boxShadow: activeTab === 'st' ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'
+              }}>
+              📹 СТ Есептері & Записьтер
+            </button>
+            <button onClick={() => setActiveTab('curators')}
+              style={{
+                padding: '10px 20px', borderRadius: 12, fontWeight: 800, fontSize: 13, border: 'none', cursor: 'pointer',
+                background: activeTab === 'curators' ? '#8b5cf6' : 'var(--surface)',
+                color: activeTab === 'curators' ? '#fff' : 'var(--text-sub)',
+                boxShadow: activeTab === 'curators' ? '0 4px 12px rgba(139,92,246,0.2)' : 'none'
+              }}>
+              👥 Кураторлар Базасы (Басқару)
+            </button>
+          </div>
+        )}
 
         {/* 1. ПӘНДЕР КАТАЛОГЫ */}
         {!selectedSubject ? (
@@ -203,17 +269,13 @@ export default function StRecordings() {
               );
             })}
           </div>
-        ) : (
-          /* 2. ТАҢДАЛҒАН ПӘННІҢ КЕСТЕСІ СҮЗГІЛЕРІМЕН */
+        ) : activeTab === 'st' ? (
+          /* 2. СТ ЕСЕПТЕРІ КЕСТЕСІ */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            
-            {/* ФИЛЬТР БЛОКТАРЫ: АҒЫМ - АЙ - АПТА */}
             <div className="card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              
-              {/* АҒЫМ (STREAM) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АҒЫМ:</span>
-                <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
+                <div style={{ display: 'flex', gap: 6 }}>
                   {STREAMS.map(str => (
                     <button key={str} onClick={() => updateFilters({ stream: str })}
                       style={{
@@ -227,10 +289,9 @@ export default function StRecordings() {
                 </div>
               </div>
 
-              {/* АЙ (ПӘНГЕ БАЙЛАНЫСТЫ ДИНАМИКАЛЫҚ: 3, 4, 5 немесе 6 АЙ) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АЙ:</span>
-                <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
+                <div style={{ display: 'flex', gap: 6 }}>
                   {availableMonths.map(m => (
                     <button key={m} onClick={() => updateFilters({ month: m })}
                       style={{
@@ -244,10 +305,9 @@ export default function StRecordings() {
                 </div>
               </div>
 
-              {/* АПТА (WEEK: 1-4) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АПТА:</span>
-                <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
+                <div style={{ display: 'flex', gap: 6 }}>
                   {WEEKS.map(w => (
                     <button key={w} onClick={() => updateFilters({ week: w })}
                       style={{
@@ -260,20 +320,17 @@ export default function StRecordings() {
                   ))}
                 </div>
               </div>
-
             </div>
 
-            {/* Куратор қосу өрісі */}
             <div style={{ display: 'flex', gap: 10 }}>
-              <input placeholder="Жаңа куратор аты-жөні..." value={newCurator} onChange={e => setNewCurator(e.target.value)}
+              <input placeholder="Жаңа куратор қосу..." value={newCurator} onChange={e => setNewCurator(e.target.value)}
                 style={{ width: 260, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
               <button onClick={handleAddCurator}
                 style={{ padding: '9px 18px', borderRadius: 10, background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-                + Куратор қосу
+                + Қосу
               </button>
             </div>
 
-            {/* КЕСТЕ */}
             <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 12.5 }}>
                 <thead>
@@ -311,7 +368,6 @@ export default function StRecordings() {
                           />
                         </td>
 
-                        {/* КӨПТІК ЗАПИСЬТЕР */}
                         <td style={{ padding: '12px' }}>
                           {videoLinks.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -328,7 +384,6 @@ export default function StRecordings() {
                           )}
                         </td>
 
-                        {/* КӨПТІК ОТСЛЕЖКАЛАР */}
                         <td style={{ padding: '12px' }}>
                           {attendanceLinks.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -377,6 +432,93 @@ export default function StRecordings() {
                               ✕
                             </button>
                           </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          /* 3. БАСҚАРУШЫҒА АРНАЛҒАН "КУРАТОРЛАР БАЗАСЫ" ТЕРЕЗЕСІ */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)' }}>АҒЫМ СҮЗГІСІ:</span>
+              {STREAMS.map(str => (
+                <button key={str} onClick={() => updateFilters({ stream: str })}
+                  style={{
+                    padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentStream === str ? 800 : 500,
+                    background: currentStream === str ? '#8b5cf6' : 'var(--surface2)',
+                    color: currentStream === str ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
+                  }}>
+                  {selectedSubject.code}-{str}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <input placeholder="Орталық базаға куратор аты-жөнін қосу..." value={newCurator} onChange={e => setNewCurator(e.target.value)}
+                style={{ width: 320, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
+              <button onClick={handleAddCurator}
+                style={{ padding: '9px 18px', borderRadius: 10, background: '#8b5cf6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                + Базаға қосу
+              </button>
+            </div>
+
+            <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: 'var(--surface2)', borderBottom: '1px solid var(--border)', color: 'var(--text-sub)', fontWeight: 700 }}>
+                    <th style={{ padding: '14px 16px' }}>Куратор аты-жөні</th>
+                    <th style={{ padding: '14px 16px' }}>Пәні</th>
+                    <th style={{ padding: '14px 16px' }}>Ағымы</th>
+                    <th style={{ padding: '14px 16px' }}>Жұмыс Статусы</th>
+                    <th style={{ padding: '14px 16px', width: 80 }}>Әрекет</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Жүктелуде...</td></tr>
+                  ) : curatorsList.length === 0 ? (
+                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Кураторлар табылмады</td></tr>
+                  ) : curatorsList.map((cur) => {
+                    const stInfo = STATUS_MAP[cur.status] || STATUS_MAP.active;
+                    return (
+                      <tr key={cur.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--text)' }}>
+                          {cur.full_name}
+                        </td>
+                        <td style={{ padding: '14px 16px', fontWeight: 600 }}>
+                          {cur.subject}
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <select value={cur.stream_id || '01'} onChange={(e) => handleUpdateCuratorStream(cur.id, e.target.value)}
+                            style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontWeight: 600 }}>
+                            {STREAMS.map(s => <option key={s} value={s}>{selectedSubject.code}-{s}</option>)}
+                          </select>
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <select value={cur.status || 'active'} onChange={(e) => handleUpdateCuratorStatus(cur.id, e.target.value)}
+                            style={{
+                              padding: '6px 12px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer',
+                              background: stInfo.bg, color: stInfo.color
+                            }}>
+                            <option value="active">🟢 Жұмыста</option>
+                            <option value="stream_changed">🟡 Ағым ауысты</option>
+                            <option value="subject_changed">🔵 Пән ауысты</option>
+                            <option value="fired">🔴 Жұмыстан шықты</option>
+                          </select>
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <button onClick={async () => {
+                            if (confirm('Базадан өшіруге сенімдісіз бе?')) {
+                              await api.delete(`/curators/${cur.id}`);
+                              setCuratorsList(prev => prev.filter(c => c.id !== cur.id));
+                            }
+                          }} style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: 'none', cursor: 'pointer' }}>
+                            ✕
+                          </button>
                         </td>
                       </tr>
                     );
