@@ -1,6 +1,5 @@
 const pool = require('./db');
 
-// Нақты ФИЗ-01 ағымының 22 кураторы
 const PHYS_CURATORS = [
   'Орынбек Меруерт',
   'Жұбатбек Алия',
@@ -107,8 +106,7 @@ const createTables = async () => {
   );
 
   const count = parseInt(checkPhys.rows[0].count);
-  // Егер ескі кураторлар тұрса немесе бос болса, тазалап, жаңа 22 кураторды саламыз
-  if (count === 0 || count === 27) {
+  if (count === 0 || count !== PHYS_CURATORS.length) {
     await pool.query("DELETE FROM st_recordings WHERE subject = 'ФИЗ' AND month_id = '01' AND week_num = 1");
     for (const name of PHYS_CURATORS) {
       await pool.query(
