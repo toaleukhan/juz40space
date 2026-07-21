@@ -116,14 +116,14 @@ export default function StRecordings() {
       }
       setNewCurator('');
     } catch (err) {
-      alert('Қателік орын алды');
+      alert('Қателік: ' + (err.response?.data?.error || err.message));
     }
   };
 
   const handleBulkAdd = async () => {
     if (!bulkText.trim()) return;
     try {
-      await api.post('/curators/bulk', {
+      const { data } = await api.post('/curators/bulk', {
         namesText: bulkText,
         subject: currentSubjectCode,
         streamId: currentStream,
@@ -132,9 +132,9 @@ export default function StRecordings() {
       setShowBulk(false);
       if (activeTab === 'st') loadTable();
       else loadCuratorsBase();
-      alert('Тізімдегі барлық кураторлар сәтті қосылды!');
+      alert(`Сәтті қосылды! Базаға ${data.count} куратор тіркелді.`);
     } catch (err) {
-      alert('Массовый қосуда қателік');
+      alert('Қателік орын алды: ' + (err.response?.data?.error || err.message));
     }
   };
 
