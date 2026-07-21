@@ -89,7 +89,7 @@ export default function StRecordings() {
     setActionLoading(prev => ({ ...prev, [rowId]: 'drive' }));
     try {
       const { data } = await api.post('/st-recordings/sync-drive', { recordingId: rowId, meetCode });
-      if (data.foundCount === 0) alert('Драйвтан бұл Мит кодымен файлдар әлі табылмады.');
+      if (data.foundCount === 0) alert('Драйвтан файлдар әлі табылмады.');
       else setRows(prev => prev.map(r => r.id === rowId ? data.record : r));
     } catch (err) {
       alert(err.response?.data?.error || 'Драйв іздеуде қателік');
@@ -121,7 +121,6 @@ export default function StRecordings() {
       <Sidebar />
 
       <main style={{ flex: 1, padding: '24px 32px', minWidth: 0, overflowY: 'auto' }}>
-        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>JUZ40 · САПА БӨЛІМІ</div>
@@ -137,7 +136,6 @@ export default function StRecordings() {
           )}
         </div>
 
-        {/* 1. ПӘНДЕР КАТАЛОГЫ */}
         {!selectedSubject ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 16 }}>
             {SUBJECTS.map(s => {
@@ -173,9 +171,7 @@ export default function StRecordings() {
             })}
           </div>
         ) : (
-          /* 2. ТАҢДАЛҒАН ПӘННІҢ КЕСТЕСІ */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* Ағымдар мен Апталар фильтрі */}
             <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
               <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
                 {months.slice(0, 5).map(m => (
@@ -205,7 +201,6 @@ export default function StRecordings() {
               </div>
             </div>
 
-            {/* Куратор қосу жолы */}
             <div style={{ display: 'flex', gap: 10 }}>
               <input placeholder="Жаңа куратор аты-жөні..." value={newCurator} onChange={e => setNewCurator(e.target.value)}
                 style={{ width: 260, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
@@ -215,7 +210,6 @@ export default function StRecordings() {
               </button>
             </div>
 
-            {/* КЕСТЕ */}
             <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 12.5 }}>
                 <thead>
@@ -292,7 +286,8 @@ export default function StRecordings() {
                             </a>
                           )}
 
-                          {row.meet_code && (!row.video_link || !row.attendance_link) && (
+                          {/* 💡 ТЕСТ КЕЗІНДЕ "🔄 Жаңарту" БАТЫРМАСЫ ЕШҚАШАН ЖОҒАЛМАЙДЫ */}
+                          {row.meet_code && (
                             <button onClick={() => handleSyncDrive(row.id, row.meet_code)} disabled={actionLoading[row.id] === 'drive'}
                               style={{ padding: '6px 8px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
                               {actionLoading[row.id] === 'drive' ? '...' : '🔄 Жаңарту'}
