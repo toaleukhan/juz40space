@@ -3,18 +3,37 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const pool = require('../config/db');
 
-// Кесте жоқ болса, автоматты түрде құру
+// Кесте мен бағандарды тексеріп, жетіспейтінін АВТОМАТТЫ қосу (Auto-migration)
 async function ensureTableExists() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS curators (
-      id SERIAL PRIMARY KEY,
-      full_name VARCHAR(255) NOT NULL,
-      subject VARCHAR(50) NOT NULL,
-      stream_id VARCHAR(50) DEFAULT '01',
-      status VARCHAR(50) DEFAULT 'active',
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS curators (
+        id SERIAL PRIMARY KEY,
+        full_name VARCHAR(255),
+        subject VARCHAR(50) NOT NULL,
+        stream_id VARCHAR(50) DEFAULT '01',
+        status VARCHAR(50) DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // Жетіспейтін бағандарды деректер базасына мәжбүрлі түрде қосу
+    await pool.query(`ALTER TABLE curators ADD COLUMN IF NOT EXISTS full_name VARCHAR(255);`);
+    await pool.query(`ALTER TABLE curators ADD COLUMN IF NOT EXISTS stream_id VARCHAR(50) DEFAULT '01';`);
+    await pool.query(`ALTER TABLE curators ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'active';`);
+
+    // Егер бұрын 'name' деген баған болса, оның ішіндегіні 'full_name'-ге көшіру
+    await pool.query(`
+      DO $$ 
+      BEGIN 
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='curators' AND column_name='name') THEN
+          UPDATE curators SET full_name = name WHERE full_name IS NULL;
+        END IF;
+      END $$;
+    `);
+  } catch (e) {
+    console.error('Curators migration info:', e.message);
+  }
 }
 
 // 1. Орталық базадағы кураторларды алу
