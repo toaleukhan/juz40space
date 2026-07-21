@@ -5,8 +5,9 @@ import juz40Logo from '../assets/juz40-logo.png';
 import { SUBJECT_COLORS, smartScheduleByMonth, smartAdditionalScheduleByMonth, juniorScheduleByMonth } from '../pages/scheduleData';
 
 const NAV = [
-  { id: 'dashboard', label: 'Басты бет',     icon: '⊞', path: '/dashboard',  desc: 'Пәндер & шолу' },
-  { id: 'schedule',  label: 'Сабақ кестесі', icon: '📅', path: '/schedule',   desc: 'Апталық кесте' },
+  { id: 'dashboard',    label: 'Басты бет',     icon: '⊞', path: '/dashboard',     desc: 'Пәндер & шолу' },
+  { id: 'schedule',     label: 'Сабақ кестесі', icon: '📅', path: '/schedule',      desc: 'Апталық кесте' },
+  { id: 'st-recordings',label: 'СТ запись',     icon: '📹', path: '/st-recordings', desc: 'Прокторинг жазбалары' },
 ];
 
 const SUBJECT_COUNT = Object.keys(SUBJECT_COLORS).length;
@@ -170,7 +171,7 @@ export default function Sidebar() {
           </button>
         ))}
 
-        {/* Stats mini-card (Power BI style) */}
+        {/* Stats mini-card */}
         <div className="sb-divider" style={{ marginTop: 14 }} />
         <div className="sb-section-label">Статистика</div>
         <div style={{
