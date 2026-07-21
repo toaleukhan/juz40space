@@ -20,7 +20,7 @@ router.get('/', auth, async (req, res) => {
       params.push(streamId);
     }
 
-    query += ` ORDER BY id DESC`;
+    query += ` ORDER BY id ASC`;
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
@@ -46,7 +46,31 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// 3. Куратор статусын, ағымын немесе пәнін өзгерту
+// 3. БҰРЫНҒЫ 22 КУРАТОРДЫ АВТОМАТТЫ ТАУЫП ҚОСУ (SYNC)
+router.post('/sync-old', auth, async (req, res) => {
+  try {
+    const oldCurators = await pool.query(`SELECT DISTINCT curator_name, subject FROM st_recordings WHERE curator_name IS NOT NULL`);
+    let addedCount = 0;
+
+    for (const cur of oldCurators.rows) {
+      // Бұл куратор базада бар ма тексеру
+      const exists = await pool.query(`SELECT id FROM curators WHERE full_name = $1 AND subject = $2`, [cur.curator_name, cur.subject]);
+      
+      if (exists.rows.length === 0) {
+        await pool.query(
+          `INSERT INTO curators (full_name, subject, stream_id, status) VALUES ($1, $2, '01', 'active')`,
+          [cur.curator_name, cur.subject]
+        );
+        addedCount++;
+      }
+    }
+    res.json({ success: true, addedCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 4. Куратор статусын, ағымын немесе пәнін өзгерту
 router.put('/:id', auth, async (req, res) => {
   const { fullName, subject, streamId, status } = req.body;
   try {
@@ -65,7 +89,7 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// 4. Өшіру
+// 5. Өшіру
 router.delete('/:id', auth, async (req, res) => {
   try {
     await pool.query('DELETE FROM curators WHERE id = $1', [req.params.id]);
