@@ -91,7 +91,7 @@ router.post('/curator', auth, async (req, res) => {
   }
 });
 
-// 3. Google Meet Сілтемесін жасау (СТ: ФИЗ - Орынбек Меруерт форматында)
+// 3. Google Meet Сілтемесін жасау
 router.post('/create-meet', auth, async (req, res) => {
   const { recordingId, curatorName, subject } = req.body;
   const authClient = getGoogleAuth();
@@ -106,7 +106,7 @@ router.post('/create-meet', auth, async (req, res) => {
     const endTime = new Date(Date.now() + 3600000).toISOString();
 
     const event = {
-      summary: `СТ: ${subject} - ${curatorName}`,
+      summary: `СТ: ${subject || 'ПӘН'} - ${curatorName || ''}`,
       description: 'JUZ40 - Сабақ Тапсыру Миті',
       start: { dateTime: startTime },
       end: { dateTime: endTime },
@@ -140,7 +140,7 @@ router.post('/create-meet', auth, async (req, res) => {
   }
 });
 
-// 4. Драйвтан видеоны ҮШ ҚАБАТТЫ іздеу арқылы табу
+// 4. Драйвтан ВИДЕО мен ОТСЛЕЖКА-ны НАҚТЫ ФАЙЛ ТҮРІ МЕН MIMITYPE БОЙЫНША АЙЫРУ
 router.post('/sync-drive', auth, async (req, res) => {
   const { recordingId } = req.body;
 
@@ -159,18 +159,15 @@ router.post('/sync-drive', auth, async (req, res) => {
   try {
     const drive = google.drive({ version: 'v3', auth: authClient });
 
-    // 💡 Іздеу: Мит коды ИӘ Куратор аты ИӘ Без названия
     let searchConditions = [];
     if (meetCode) searchConditions.push(`name contains '${meetCode}'`);
     if (curatorName) searchConditions.push(`name contains '${curatorName}'`);
-    searchConditions.push(`name contains 'без названия'`);
-    searchConditions.push(`name contains 'Untitled'`);
 
     const query = `(${searchConditions.join(' or ')}) and trashed = false`;
 
     const driveRes = await drive.files.list({
       q: query,
-      fields: 'files(id, name, webViewLink, createdTime)',
+      fields: 'files(id, name, webViewLink, mimeType, createdTime)',
       orderBy: 'createdTime desc'
     });
 
@@ -179,14 +176,27 @@ router.post('/sync-drive', auth, async (req, res) => {
     let attendanceLink = null;
 
     files.forEach(f => {
-      const lower = f.name.toLowerCase();
-      // Егер файл аты "Без названия" болса, онда оның ішінен meetCode-ты дәл табу мүмкін емес,
-      // бірақ ең соңғы жасалған Мит ретінде уақыты бойынша алынады. 
-      // Ең дұрысы, Календарьда аты болса, Гугл Драйв міндетті түрде сол атпен не Мит кодымен сақтайды.
-      if (lower.includes('расшифровка') || lower.includes('transcript') || lower.includes('отслежка')) {
-        attendanceLink = f.webViewLink;
+      const lowerName = (f.name || '').toLowerCase();
+      const mime = (f.mimeType || '').toLowerCase();
+      const link = f.webViewLink || '';
+
+      // ОТСЛЕЖКА ТЕКСЕРУІ (Spreadsheets / Documents / Расшифровка / Чат / Отслежка)
+      const isAttendance = 
+        mime.includes('spreadsheet') || 
+        mime.includes('document') || 
+        mime.includes('text') ||
+        link.includes('/spreadsheets/') || 
+        link.includes('/document/') ||
+        lowerName.includes('расшифровка') || 
+        lowerName.includes('transcript') || 
+        lowerName.includes('отслежка') || 
+        lowerName.includes('чат');
+
+      if (isAttendance) {
+        attendanceLink = link;
       } else {
-        videoLink = f.webViewLink;
+        // Егер видео болса (MP4, Drive video link, /file/d/...)
+        videoLink = link;
       }
     });
 
