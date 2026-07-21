@@ -6,7 +6,6 @@ const { google } = require('googleapis');
 const path = require('path');
 const fs = require('fs');
 
-// Google OAuth авторизация
 function getGoogleAuth() {
   try {
     let tokens = null;
@@ -140,7 +139,7 @@ router.post('/create-meet', auth, async (req, res) => {
   }
 });
 
-// 4. Драйвтан ВИДЕО мен ОТСЛЕЖКА-ны НАҚТЫ ФАЙЛ ТҮРІ МЕН MIMITYPE БОЙЫНША АЙЫРУ
+// 4. Драйвтан ВИДЕО мен ОТСЛЕЖКА-ны КАТАҢ ТЕКСЕРУ
 router.post('/sync-drive', auth, async (req, res) => {
   const { recordingId } = req.body;
 
@@ -180,23 +179,30 @@ router.post('/sync-drive', auth, async (req, res) => {
       const mime = (f.mimeType || '').toLowerCase();
       const link = f.webViewLink || '';
 
-      // ОТСЛЕЖКА ТЕКСЕРУІ (Spreadsheets / Documents / Расшифровка / Чат / Отслежка)
-      const isAttendance = 
-        mime.includes('spreadsheet') || 
-        mime.includes('document') || 
-        mime.includes('text') ||
-        link.includes('/spreadsheets/') || 
-        link.includes('/document/') ||
-        lowerName.includes('расшифровка') || 
-        lowerName.includes('transcript') || 
-        lowerName.includes('отслежка') || 
-        lowerName.includes('чат');
+      // 💡 1. ТЕК ТАЗА ВИДЕО ФАЙЛДАР
+      const isVideo = mime.startsWith('video/') ||
+                      lowerName.endsWith('.mp4') ||
+                      lowerName.endsWith('.mkv') ||
+                      lowerName.endsWith('.mov') ||
+                      lowerName.endsWith('.webm');
 
-      if (isAttendance) {
-        attendanceLink = link;
-      } else {
-        // Егер видео болса (MP4, Drive video link, /file/d/...)
+      // 💡 2. ОТСЛЕЖКА / ТАБЛИЦА / ТЕКСТ / PDF ФАЙЛДАР
+      const isAttendance = mime.includes('spreadsheet') ||
+                           mime.includes('document') ||
+                           mime.includes('pdf') ||
+                           mime.includes('text') ||
+                           link.includes('/spreadsheets/') ||
+                           link.includes('/document/') ||
+                           lowerName.includes('расшифровка') ||
+                           lowerName.includes('transcript') ||
+                           lowerName.includes('отслежка') ||
+                           lowerName.includes('чат') ||
+                           lowerName.endsWith('.pdf');
+
+      if (isVideo) {
         videoLink = link;
+      } else if (isAttendance) {
+        attendanceLink = link;
       }
     });
 
