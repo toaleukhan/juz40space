@@ -52,11 +52,25 @@ const createTables = async () => {
       sent_at TIMESTAMP
     );
 
-    -- Барлық кураторлар үшін ортақ, "Басқару → Енгізу" арқылы қолмен қосылған сабақтар.
-    -- Бір ғана жол (singleton) — бұрын браузердің localStorage-інде ғана сақталушы еді.
     CREATE TABLE IF NOT EXISTS schedule_overrides (
       id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
       data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS st_recordings (
+      id SERIAL PRIMARY KEY,
+      subject VARCHAR(50) NOT NULL,
+      month_id VARCHAR(10) NOT NULL,
+      week_num INTEGER NOT NULL DEFAULT 1,
+      curator_name VARCHAR(255) NOT NULL,
+      students_count VARCHAR(50) DEFAULT '0',
+      meet_code VARCHAR(50),
+      meet_link TEXT,
+      video_link TEXT,
+      attendance_link TEXT,
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );
   `);
