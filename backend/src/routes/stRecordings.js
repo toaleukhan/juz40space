@@ -6,7 +6,7 @@ const { google } = require('googleapis');
 const path = require('path');
 const fs = require('fs');
 
-// Google OAuth авторизацияны жүктеу (Env немесе Файлдардан)
+// Google OAuth авторизация
 function getGoogleAuth() {
   try {
     let tokens = null;
@@ -91,7 +91,7 @@ router.post('/curator', auth, async (req, res) => {
   }
 });
 
-// 3. Google Meet Сілтемесін жасау ("Мит ашу" - куратор атысыз, таза 10 әріптік стандартпен)
+// 3. Google Meet Сілтемесін жасау (МҮЛДЕМ ЕШҚАНДАЙ АТАУСЫЗ, ТЕК 10 ӘРІПТІК КОД)
 router.post('/create-meet', auth, async (req, res) => {
   const { recordingId } = req.body;
   const authClient = getGoogleAuth();
@@ -106,8 +106,6 @@ router.post('/create-meet', auth, async (req, res) => {
     const endTime = new Date(Date.now() + 3600000).toISOString();
 
     const event = {
-      summary: 'СТ', // Жай ғана СТ (Куратор аты сүйретілмейді)
-      description: 'JUZ40 - Сабақ Тапсыру Миті',
       start: { dateTime: startTime },
       end: { dateTime: endTime },
       conferenceData: {
@@ -140,7 +138,7 @@ router.post('/create-meet', auth, async (req, res) => {
   }
 });
 
-// 4. Драйвтан видео мен отслежканы ТЕК 10 әріптік Мит кодымен табу
+// 4. Драйвтан видеоны ТЕК 10 әріптік Мит коды арқылы табу
 router.post('/sync-drive', auth, async (req, res) => {
   const { recordingId, meetCode } = req.body;
   if (!meetCode) return res.status(400).json({ error: 'Мит коды көрсетілмеген' });
@@ -152,8 +150,6 @@ router.post('/sync-drive', auth, async (req, res) => {
 
   try {
     const drive = google.drive({ version: 'v3', auth: authClient });
-
-    // 💡 Тек 10 әріптік Мит коды арқылы іздеу
     const query = `name contains '${meetCode}' and trashed = false`;
 
     const driveRes = await drive.files.list({
