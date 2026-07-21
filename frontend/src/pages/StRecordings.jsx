@@ -282,25 +282,25 @@ export default function StRecordings() {
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                           {!row.meet_link ? (
                             <button onClick={() => handleCreateMeet(row.id, row.curator_name)} disabled={actionLoading[row.id] === 'meet'}
-                              style={{ padding: '6px 10px', borderRadius: 8, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize 11, cursor: 'pointer' }}>
+                              style={{ padding: '6px 10px', borderRadius: 8, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
                               {actionLoading[row.id] === 'meet' ? '...' : '🎥 Мит ашу'}
                             </button>
                           ) : (
                             <a href={row.meet_link} target="_blank" rel="noreferrer"
-                              style={{ padding: '5px 8px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize 10, textDecoration: 'none' }}>
+                              style={{ padding: '5px 8px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 10, textDecoration: 'none' }}>
                               🔗 {row.meet_code}
                             </a>
                           )}
 
                           {row.meet_code && (!row.video_link || !row.attendance_link) && (
                             <button onClick={() => handleSyncDrive(row.id, row.meet_code)} disabled={actionLoading[row.id] === 'drive'}
-                              style={{ padding: '6px 8px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight 700, fontSize 11, cursor: 'pointer' }}>
+                              style={{ padding: '6px 8px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
                               {actionLoading[row.id] === 'drive' ? '...' : '🔄 Жаңарту'}
                             </button>
                           )}
 
                           <button onClick={() => handleDeleteRow(row.id)}
-                            style={{ padding: '5px 8px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: 'none', fontSize 11, cursor: 'pointer', marginLeft: 'auto' }}>
+                            style={{ padding: '5px 8px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: 'none', fontSize: 11, cursor: 'pointer', marginLeft: 'auto' }}>
                             ✕
                           </button>
                         </div>
