@@ -47,6 +47,8 @@ export default function StRecordings() {
   const [curatorsList, setCuratorsList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newCurator, setNewCurator] = useState('');
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkText, setBulkText] = useState('');
   const [actionLoading, setActionLoading] = useState({});
 
   useEffect(() => {
@@ -118,15 +120,22 @@ export default function StRecordings() {
     }
   };
 
-  // 💡 БҰРЫНҒЫ КУРАТОРЛАРДЫ БАЗАДАН ТАРТУ (АВТОМАТТЫ)
-  const handleSyncOldCurators = async () => {
+  // 🚀 ТІЗІММЕН ТАПСОМПЕ МАССОВЫЙ ҚОСУ
+  const handleBulkAdd = async () => {
+    if (!bulkText.trim()) return;
     try {
-      const { data } = await api.post('/curators/sync-old');
-      alert(`Қалпына келтірілді! Бұрынғы ${data.addedCount} куратор орталық базаға қосылды.`);
+      await api.post('/curators/bulk', {
+        namesText: bulkText,
+        subject: currentSubjectCode,
+        streamId: currentStream,
+      });
+      setBulkText('');
+      setShowBulk(false);
       if (activeTab === 'st') loadTable();
       else loadCuratorsBase();
+      alert('Тізімдегі барлық кураторлар сәтті қосылды!');
     } catch (err) {
-      alert('Қателік: ' + err.message);
+      alert('Массовый қосуда қателік');
     }
   };
 
@@ -186,7 +195,7 @@ export default function StRecordings() {
   };
 
   const handleDeleteRow = async (id) => {
-    if (!confirm('Кураторды өшіруге сенімдісіз бе?')) return;
+    if (!confirm('Өшіруге сенімдісіз бе?')) return;
     try {
       await api.delete(`/st-recordings/${id}`);
       setRows(prev => prev.filter(r => r.id !== id));
@@ -236,14 +245,40 @@ export default function StRecordings() {
               👥 Кураторлар Базасы (Басқару)
             </button>
 
-            {/* 💡 ЖОҒАЛҒАН 22 КУРАТОРДЫ ҚАЙТАРУ БАТЫРМАСЫ */}
-            <button onClick={handleSyncOldCurators}
+            <button onClick={() => setShowBulk(!showBulk)}
               style={{
-                padding: '10px 20px', marginLeft: 'auto', borderRadius: 12, fontWeight: 800, fontSize: 12, border: '1px solid #10b981', cursor: 'pointer',
-                background: 'rgba(16,185,129,0.1)', color: '#10b981',
+                padding: '10px 20px', marginLeft: 'auto', borderRadius: 12, fontWeight: 800, fontSize: 12, border: 'none', cursor: 'pointer',
+                background: '#3b82f6', color: '#fff',
               }}>
-              🛠 Бұрынғы кураторларды қалпына келтіру
+              📋 Тізіммен кураторларды бірден қосу
             </button>
+          </div>
+        )}
+
+        {/* ТІЗІММЕН БІРДЕН ҚОСУ БОКСЫ */}
+        {showBulk && selectedSubject && (
+          <div className="card" style={{ padding: 20, marginBottom: 20, border: '2px solid #3b82f6' }}>
+            <h3 style={{ margin: '0 0 10px', fontSize: 15, fontWeight: 800 }}>
+              📋 Тізіммен кураторларды массовый енгізу ({selectedSubject.name} · {selectedSubject.code}-{currentStream})
+            </h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
+              Әр куратордың аты-жөнін **жаңа жолдан (Enter арқылы)** жазыңыз немесе Excel/Word-тан көшіріп алып қойыңыз:
+            </p>
+            <textarea
+              rows={6}
+              value={bulkText}
+              onChange={e => setBulkText(e.target.value)}
+              placeholder="Орынбек Меруерт&#10;Жұбатбек Алия&#10;Мұратқызы Сағыныш..."
+              style={{ width: '100%', padding: 12, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 13, fontFamily: 'inherit' }}
+            />
+            <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+              <button onClick={handleBulkAdd} style={{ padding: '8px 20px', borderRadius: 10, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 800, cursor: 'pointer' }}>
+                🚀 Барлық кураторларды базаға қосу
+              </button>
+              <button onClick={() => setShowBulk(false)} style={{ padding: '8px 16px', borderRadius: 10, background: 'var(--surface2)', color: 'var(--text)', border: 'none', cursor: 'pointer' }}>
+                Жабу
+              </button>
+            </div>
           </div>
         )}
 
@@ -324,7 +359,7 @@ export default function StRecordings() {
                   {WEEKS.map(w => (
                     <button key={w} onClick={() => updateFilters({ week: w })}
                       style={{
-                        padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentWeek === w ? 800 : 500,
+                        padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight currentWeek === w ? 800 : 500,
                         background: currentWeek === w ? '#3b82f6' : 'var(--surface2)',
                         color: currentWeek === w ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
                       }}>
