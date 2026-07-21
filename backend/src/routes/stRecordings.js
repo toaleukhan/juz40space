@@ -40,7 +40,7 @@ router.get('/', auth, async (req, res) => {
     const result = await pool.query(
       `SELECT * FROM st_recordings 
        WHERE subject = $1 AND month_id = $2 AND week_num = $3 
-       ORDER BY curator_name ASC, id ASC`,
+       ORDER BY id ASC`,
       [subject, monthId, parseInt(weekNum) || 1]
     );
     res.json(result.rows);
