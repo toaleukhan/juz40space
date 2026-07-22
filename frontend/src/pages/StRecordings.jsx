@@ -479,7 +479,7 @@ export default function StRecordings() {
                                   🔗 {code}
                                 </a>
                                 <button onClick={() => handleSyncDrive(row.id, code)} disabled={actionLoading[row.id] === 'drive'}
-                                  style={{ padding: '4px 6px', borderRadius: 6, background: '#3b82f6', color: '#fff', border: 'none', fontWeight 700, fontSize: 10, cursor: 'pointer' }}>
+                                  style={{ padding: '4px 6px', borderRadius: 6, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 10, cursor: 'pointer' }}>
                                   🔄
                                 </button>
                               </div>
