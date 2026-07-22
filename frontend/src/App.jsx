@@ -1,44 +1,26 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
-import { ThemeProvider } from './context/ThemeContext';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
-import WhatsAppConnect from './pages/WhatsAppConnect';
-import CuratorPanel from './pages/Dashboard';
-import DashboardHome from './pages/DashboardHome';
+import Dashboard from './pages/Dashboard';
 import Schedule from './pages/Schedule';
 import StRecordings from './pages/StRecordings';
-import './index.css';
-
-const PrivateRoute = ({ children }) => {
-  const { curator, loading } = useAuth();
-  if (loading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#F0F8FA', color:'#1B6E7E', fontSize:14 }}>
-      Жүктелуде...
-    </div>
-  );
-  return curator ? children : <Navigate to="/login" />;
-};
+import Profile from './pages/Profile';
+import MyRecordings from './pages/MyRecordings';
+import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
   return (
-    <ThemeProvider>
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login"         element={<Login />} />
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
+      <Route path="/st-recordings" element={<ProtectedRoute><StRecordings /></ProtectedRoute>} />
+      
+      {/* 👤 КУРАТОРҒА АРНАЛҒАН ЖАҢА БЕТТЕР */}
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/my-recordings" element={<ProtectedRoute><MyRecordings /></ProtectedRoute>} />
 
-          <Route path="/"              element={<PrivateRoute><DashboardHome /></PrivateRoute>} />
-          <Route path="/dashboard"     element={<PrivateRoute><DashboardHome /></PrivateRoute>} />
-          <Route path="/schedule"      element={<PrivateRoute><Schedule onGoToCabinet={() => window.location.href='/curator'} /></PrivateRoute>} />
-          <Route path="/st-recordings" element={<PrivateRoute><StRecordings /></PrivateRoute>} />
-
-          <Route path="/whatsapp"      element={<PrivateRoute><WhatsAppConnect /></PrivateRoute>} />
-          <Route path="/curator"       element={<PrivateRoute><CuratorPanel /></PrivateRoute>} />
-
-          <Route path="*" element={<Navigate to="/login" />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
-    </ThemeProvider>
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
   );
 }
