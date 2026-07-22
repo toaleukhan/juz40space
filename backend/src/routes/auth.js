@@ -9,9 +9,21 @@ const JWT_SECRET = process.env.JWT_SECRET || 'juz40_secret_key';
 
 // 1. Кіру (Login)
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+  // Фронтендтен қандай атаумен келсе де қабылдау (username, phone, login)
+  const loginInput = req.body.username || req.body.phone || req.body.login;
+  const password = req.body.password;
+
+  if (!loginInput || !password) {
+    return res.status(400).json({ error: 'Логин мен парольді толық енгізіңіз' });
+  }
+
   try {
-    const userRes = await pool.query('SELECT * FROM users WHERE username = $1', [username.toLowerCase().trim()]);
+    const cleanLogin = loginInput.toString().toLowerCase().trim();
+    const userRes = await pool.query(
+      'SELECT * FROM users WHERE LOWER(username) = $1 OR phone = $1', 
+      [cleanLogin]
+    );
+
     if (userRes.rows.length === 0) {
       return res.status(400).json({ error: 'Логин немесе пароль қате' });
     }
@@ -26,7 +38,7 @@ router.post('/login', async (req, res) => {
       { 
         id: user.id, 
         username: user.username, 
-        role: user.role || 'curator',
+        role: user.role || (user.username === 'admin' ? 'admin' : 'curator'),
         subject: user.subject,
         streamId: user.stream_id,
         fullName: user.full_name
@@ -41,7 +53,7 @@ router.post('/login', async (req, res) => {
         id: user.id,
         username: user.username,
         fullName: user.full_name,
-        role: user.role || 'curator',
+        role: user.role || (user.username === 'admin' ? 'admin' : 'curator'),
         subject: user.subject,
         streamId: user.stream_id,
         studentsCount: user.students_count || '0',
@@ -56,7 +68,10 @@ router.post('/login', async (req, res) => {
 // 2. Менің профилім ( Get /me )
 router.get('/me', auth, async (req, res) => {
   try {
-    const userRes = await pool.query('SELECT id, username, full_name, role, subject, stream_id, students_count, avatar_url FROM users WHERE id = $1', [req.user.id]);
+    const userRes = await pool.query(
+      'SELECT id, username, full_name, role, subject, stream_id, students_count, avatar_url FROM users WHERE id = $1', 
+      [req.user.id]
+    );
     if (userRes.rows.length === 0) return res.status(404).json({ error: 'Пайдаланушы табылмады' });
     res.json(userRes.rows[0]);
   } catch (err) {
