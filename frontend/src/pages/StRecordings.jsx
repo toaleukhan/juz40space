@@ -533,7 +533,7 @@ export default function StRecordings() {
                     const stInfo = STATUS_MAP[cur.status] || STATUS_MAP.active;
                     return (
                       <tr key={cur.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '14px 16px', fontWeight 700, color: 'var(--text)' }}>
+                        <td style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--text)' }}>
                           {cur.full_name}
                         </td>
                         <td style={{ padding: '14px 16px', fontWeight: 600 }}>
