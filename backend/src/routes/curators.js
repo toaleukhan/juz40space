@@ -2,41 +2,13 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const pool = require('../config/db');
-
-// 💡 Егер ескі кестеде full_name бағаны болмаса, оны жойып, ТАЗАДАН құру
-async function ensureTableExists() {
-  try {
-    const checkCol = await pool.query(`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'curators' AND column_name = 'full_name'
-    `);
-
-    // Егер баған табылмаса, ескі бұзық кестені өшіріп, қайта жаңадан құрамыз
-    if (checkCol.rows.length === 0) {
-      await pool.query(`DROP TABLE IF EXISTS curators CASCADE;`);
-    }
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS curators (
-        id SERIAL PRIMARY KEY,
-        full_name VARCHAR(255) NOT NULL,
-        subject VARCHAR(50) NOT NULL,
-        stream_id VARCHAR(50) DEFAULT '01',
-        status VARCHAR(50) DEFAULT 'active',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-  } catch (e) {
-    console.error('Curators table setup error:', e.message);
-  }
-}
+const createTables = require('../config/schema');
 
 // 1. Орталық базадағы кураторларды алу
 router.get('/', auth, async (req, res) => {
   const { subject, streamId } = req.query;
   try {
-    await ensureTableExists();
+    await createTables();
 
     let query = `SELECT * FROM curators WHERE 1=1`;
     let params = [];
@@ -59,7 +31,7 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// 2. 🚀 ТІЗІММЕН МАССОВЫЙ ҚОСУ (Базаға да, СТ кестесіне де сақтайды)
+// 2. 🚀 ТІЗІММЕН МАССОВЫЙ ҚОСУ
 router.post('/bulk', auth, async (req, res) => {
   const { namesText, subject, streamId, monthNum, weekNum } = req.body;
   if (!namesText || !subject) {
@@ -76,7 +48,7 @@ router.post('/bulk', auth, async (req, res) => {
   const strId = streamId || '01';
 
   try {
-    await ensureTableExists();
+    await createTables();
     const added = [];
 
     for (const name of names) {
@@ -89,7 +61,7 @@ router.post('/bulk', auth, async (req, res) => {
       const cur = resIns.rows[0];
       added.push(cur);
 
-      // 2. СТ есебі кестесіне де бірден қосу
+      // 2. СТ есебі кестесіне де қосу
       await pool.query(
         `INSERT INTO st_recordings (curator_id, subject, stream_id, month_num, month_id, week_num, curator_name)
          VALUES ($1, $2, $3, $4, $3, $5, $6)`,
@@ -111,7 +83,7 @@ router.post('/', auth, async (req, res) => {
     return res.status(400).json({ error: 'Куратор аты мен пәні міндетті' });
   }
   try {
-    await ensureTableExists();
+    await createTables();
     const result = await pool.query(
       `INSERT INTO curators (full_name, subject, stream_id, status)
        VALUES ($1, $2, $3, $4) RETURNING *`,
