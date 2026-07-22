@@ -37,8 +37,8 @@ export default function StRecordings() {
 
   const currentSubjectCode = searchParams.get('subject');
   const currentStream = searchParams.get('stream') || '01';
-  const currentMonth = parseInt(searchParams.get('month') || '1');
-  const currentWeek = parseInt(searchParams.get('week') || '1');
+  const currentMonth = parseInt(searchParams.get('month') || '1', 10);
+  const currentWeek = parseInt(searchParams.get('week') || '1', 10);
 
   const selectedSubject = SUBJECTS.find(s => s.code === currentSubjectCode) || null;
   const availableMonths = Array.from({ length: selectedSubject ? selectedSubject.months : 5 }, (_, i) => i + 1);
@@ -134,7 +134,7 @@ export default function StRecordings() {
       setShowBulk(false);
       loadTable();
       loadCuratorsBase();
-      alert(`Сәтті! ${data.count} жаңа куратор қосылды. ${data.skippedCount} куратор бұрыннан бар болғандықтан өткізіп жіберілді.`);
+      alert(`Сәтті! ${data.count} жаңа куратор қосылды. ${data.skippedCount || 0} куратор бұрыннан бар болғандықтан өткізіп жіберілді.`);
     } catch (err) {
       alert('Қателік орын алды: ' + (err.response?.data?.error || err.message));
     }
@@ -217,7 +217,9 @@ export default function StRecordings() {
       <main style={{ flex: 1, padding: '24px 32px', minWidth: 0, overflowY: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>JUZ40 · САПА БӨЛІМІ</div>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              JUZ40 · САПА БӨЛІМІ
+            </div>
             <h1 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text)', margin: '4px 0 0', letterSpacing: '-0.5px' }}>
               📹 СТ Жүйесі {selectedSubject ? `· ${selectedSubject.name}` : ''}
             </h1>
@@ -547,9 +549,7 @@ export default function StRecordings() {
                         <td style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--text)' }}>
                           {cur.full_name}
                         </td>
-                        <td style={{ padding: '14px 16px', fontWeight: 600 }}>
-                          {cur.subject}
-                        </td>
+                        <td style={{ padding: '14px 16px', fontWeight: 600 }}>{cur.subject}</td>
                         <td style={{ padding: '14px 16px' }}>
                           <select value={cur.stream_id || '01'} onChange={(e) => handleUpdateCuratorStream(cur.id, e.target.value)}
                             style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontWeight: 600 }}>
