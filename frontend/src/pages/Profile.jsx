@@ -153,7 +153,7 @@ export default function Profile() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize 12.5, fontWeight: 800, color: '#475569', marginBottom: 8 }}>
+              <label style={{ display: 'block', fontSize: 12.5, fontWeight: 800, color: '#475569', marginBottom: 8 }}>
                 🔑 Жаңа құпия сөз (Парольді ауыстырғыңыз келсе ғана жазыңыз):
               </label>
               <input

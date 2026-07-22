@@ -20,7 +20,7 @@ router.post('/login', async (req, res) => {
   try {
     const cleanLogin = loginInput.toString().toLowerCase().trim();
     const userRes = await pool.query(
-      'SELECT * FROM users WHERE LOWER(username) = $1 OR phone = $1', 
+      'SELECT * FROM users WHERE LOWER(username) = $1',
       [cleanLogin]
     );
 

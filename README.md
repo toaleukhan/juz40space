@@ -56,7 +56,8 @@ npm run dev
 
 ```bash
 cd backend
-node scripts/create-curator.js "Аты-жөні" "+77001234567" "құпия_сөз" "Топ атауы"
+node scripts/create-curator.js "Аты-жөні" "логин" "құпия_сөз" "Пән" ["Ағым"]
+# мыс: node scripts/create-curator.js "Асель Ержанова" "asel_math" "kupiya123" "МАТ" "01"
 ```
 
 ### 4. Frontend

@@ -9,7 +9,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const saved = localStorage.getItem('curator');
+    const saved = localStorage.getItem('user');
     if (token && saved) {
       setCurator(JSON.parse(saved));
     }
@@ -19,27 +19,19 @@ export const AuthProvider = ({ children }) => {
   const login = async (phone, password) => {
     const { data } = await api.post('/auth/login', { phone, password });
     localStorage.setItem('token', data.token);
-    localStorage.setItem('curator', JSON.stringify(data.curator));
-    setCurator(data.curator);
-    return data;
-  };
-
-  const register = async (form) => {
-    const { data } = await api.post('/auth/register', form);
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('curator', JSON.stringify(data.curator));
-    setCurator(data.curator);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    setCurator(data.user);
     return data;
   };
 
   const logout = () => {
     localStorage.removeItem('token');
-    localStorage.removeItem('curator');
+    localStorage.removeItem('user');
     setCurator(null);
   };
 
   return (
-    <AuthContext.Provider value={{ curator, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ curator, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
