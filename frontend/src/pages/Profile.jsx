@@ -80,7 +80,6 @@ export default function Profile() {
         )}
 
         <div className="card" style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 24, borderRadius: 16 }}>
-          {/* Аватар мен Басты ақпарат */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 20, paddingBottom: 20, borderBottom: '1px solid var(--border)' }}>
             <div style={{
               width: 80, height: 80, borderRadius: '50%', background: '#8b5cf6', color: '#fff',
@@ -102,7 +101,7 @@ export default function Profile() {
                 <span style={{ padding: '4px 10px', borderRadius: 8, background: 'rgba(59,130,246,0.12)', color: '#2563eb', fontWeight: 700, fontSize: 11 }}>
                   Пән: {user.subject || '—'}
                 </span>
-                <span style={{ padding: '4px 10px', borderRadius: 8, background: 'rgba(139,92,246,0.12)', color: '#7c3aed', fontWeight: 700, fontSize 11 }}>
+                <span style={{ padding: '4px 10px', borderRadius: 8, background: 'rgba(139,92,246,0.12)', color: '#7c3aed', fontWeight: 700, fontSize: 11 }}>
                   Ағым: {user.subject || 'ПӘН'}-{user.stream_id || '01'}
                 </span>
               </div>
@@ -110,10 +109,9 @@ export default function Profile() {
           </div>
 
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-            {/* Оқушылар саны */}
             <div>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: 'var(--text-sub)', marginBottom: 6 }}>
-                👨‍🎓 Мекемедегі оқушыларыңыздың жалпы саны:
+                👨‍🎓 Оқушыларыңыздың жалпы саны:
               </label>
               <input
                 type="number"
@@ -127,7 +125,6 @@ export default function Profile() {
               />
             </div>
 
-            {/* Профиль фотосының сілтемесі */}
             <div>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: 'var(--text-sub)', marginBottom: 6 }}>
                 🖼 Профиль фотосының сілтемесі (Avatar URL):
@@ -144,7 +141,6 @@ export default function Profile() {
               />
             </div>
 
-            {/* Пароль өзгерту */}
             <div>
               <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: 'var(--text-sub)', marginBottom: 6 }}>
                 🔑 Жаңа құпия сөз (Парольді ауыстырғыңыз келсе ғана жазыңыз):
