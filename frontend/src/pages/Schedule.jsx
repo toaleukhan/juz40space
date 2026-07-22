@@ -1633,7 +1633,7 @@ export default function Schedule({ onGoToCabinet }) {
   ];
 
   return (
-    <div style={{minHeight:'100vh',background:C.pageBg,color:C.text,position:'relative',display:'flex'}}>
+    <div className="app-shell" style={{background:C.pageBg,color:C.text,position:'relative'}}>
       <style>{G}</style>
       <Sidebar />
       <div style={{flex:1,display:'flex',flexDirection:'column',minWidth:0}}>

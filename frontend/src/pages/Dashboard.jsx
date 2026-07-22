@@ -146,7 +146,7 @@ export default function Dashboard() {
   const getInitials    = (name) => name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', background: '#f5f7fa', fontFamily: "'Inter',system-ui,sans-serif" }}>
+    <div className="app-shell" style={{ background: '#f5f7fa', fontFamily: "'Inter',system-ui,sans-serif" }}>
 
       <Sidebar />
 
