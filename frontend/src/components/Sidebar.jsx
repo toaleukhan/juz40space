@@ -14,9 +14,8 @@ export default function Sidebar() {
   return (
     <aside style={{
       width: 240, background: 'var(--surface)', borderRight: '1px solid var(--border)',
-      display: 'flex', flexDirection: 'column', height: '100vh', sticky: 'top', position: 'sticky', top: 0, padding: 20
+      display: 'flex', flexDirection: 'column', height: '100vh', position: 'sticky', top: 0, padding: 20
     }}>
-      {/* Логотип */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
         <div style={{
           width: 38, height: 38, borderRadius: 10, background: 'var(--accent)', color: '#fff',
@@ -32,10 +31,8 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Менюлар тізімі */}
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
         {isCurator ? (
-          /* 👤 КУРАТОРҒА АРНАЛҒАН ТЕК 3 БӨЛІМ */
           <>
             <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', padding: '8px 12px 4px', textTransform: 'uppercase' }}>
               Жеке Кабинет
@@ -66,7 +63,6 @@ export default function Sidebar() {
             </NavLink>
           </>
         ) : (
-          /* 👑 БАСҚАРУШЫҒА (ADMIN) АРНАЛҒАН БАРЛЫҚ МЕНЮЛАР */
           <>
             <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', padding: '8px 12px 4px', textTransform: 'uppercase' }}>
               Бөлімдер
@@ -99,8 +95,7 @@ export default function Sidebar() {
         )}
       </nav>
 
-      {/* Астындағы Пайдаланушы ақпараты */}
-      <div style={{ borderTop: '1px solid var(--border)', pt: 16, paddingTop: 16 }}>
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
           <div style={{
             width: 36, height: 36, borderRadius: '50%', background: isCurator ? '#8b5cf6' : '#10b981', color: '#fff',
