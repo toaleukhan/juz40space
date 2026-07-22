@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 
 const createTables = async () => {
   try {
-    // 1. users кестесі (Кураторлық бағандармен)
+    // 1. users кестесі
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -19,13 +19,26 @@ const createTables = async () => {
       );
     `);
 
-    // Жетіспейтін бағандарды мәжбүрлі қосу
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255);`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'curator';`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS subject VARCHAR(50);`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS stream_id VARCHAR(50) DEFAULT '01';`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS students_count VARCHAR(50) DEFAULT '0';`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;`);
+
+    // 👑 ADMIN АКТИВАЦИЯСЫ: admin / admin123
+    const adminCheck = await pool.query(`SELECT id FROM users WHERE username = 'admin'`);
+    if (adminCheck.rows.length === 0) {
+      const adminPassword = await bcrypt.hash('admin123', 10);
+      await pool.query(
+        `INSERT INTO users (username, password, full_name, role, subject, stream_id)
+         VALUES ('admin', $1, 'Басқарушы Admin', 'admin', 'ALL', '01')`,
+        [adminPassword]
+      );
+      console.log('👑 Admin аккаунты автоматты жасалды: admin / admin123');
+    } else {
+      await pool.query(`UPDATE users SET role = 'admin' WHERE username = 'admin'`);
+    }
 
     // 2. curators кестесі
     await pool.query(`
@@ -65,14 +78,12 @@ const createTables = async () => {
       );
     `);
 
-    // 💡 ФИЗИКА КУРАТОРЛАРЫНА АВТОМАТТЫ ЛОГИН/ПАРОЛЬ СИД ЖАСАУ
+    // 💡 ФИЗИКА КУРАТОРЛАРЫНА АВТОМАТТЫ ЛОГИН/ПАРОЛЬ
     const curatorsRes = await pool.query(`SELECT full_name FROM curators WHERE subject = 'ФИЗ'`);
     const defaultPassword = await bcrypt.hash('fiz123456', 10);
 
     for (const cur of curatorsRes.rows) {
       if (!cur.full_name) continue;
-      
-      // Логин мысалы: "Амит Алтынай" -> "fiz_altynai" немесе транслит
       const firstName = cur.full_name.split(' ')[0].toLowerCase();
       const username = `fiz_${firstName}`;
 
@@ -84,13 +95,12 @@ const createTables = async () => {
            VALUES ($1, $2, $3, 'curator', 'ФИЗ', '01', '0')`,
           [username, defaultPassword, cur.full_name]
         );
-        console.log(`👤 Куратор аккаунты ашылды: ${username} / fiz123456 (${cur.full_name})`);
       }
     }
 
-    console.log('✅ Кестелер мен Куратор аккаунттары 100% дайын!');
+    console.log('✅ Деректер базасы мен пайдаланушылар толық дайын!');
   } catch (err) {
-    console.error('❌ Schema setup error:', err.message);
+    console.error('❌ Schema error:', err.message);
   }
 };
 
