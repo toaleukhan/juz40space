@@ -1539,10 +1539,22 @@ export default function Schedule({ onGoToCabinet }) {
   const [overrides, setOverrides] = useState(EMPTY_OVERRIDES);
   useEffect(()=>{ loadOverrides().then(setOverrides); }, []);
 
+  const currentUser = useMemo(()=>JSON.parse(localStorage.getItem('user')||'{}'), []);
+  const isCurator = currentUser.role === 'curator';
+  const [showAllSubjects, setShowAllSubjects] = useState(!isCurator);
+
   const [filters, setFilters] = useState({
-    dir:'Барлығы', subjects:[], month:'01',
+    dir:'Барлығы',
+    subjects: (isCurator && currentUser.subject) ? [currentUser.subject] : [],
+    month:'01',
     timeFrom:'13:00', timeTo:'19:00', kinds:['live','additional'],
   });
+
+  useEffect(()=>{
+    if (!isCurator) return;
+    setFilters(f=>({...f, subjects: showAllSubjects ? [] : (currentUser.subject ? [currentUser.subject] : [])}));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[showAllSubjects]);
 
   const juniorMergedByMonth = useMemo(()=>({
     [filters.month]: mergeDays(juniorScheduleByMonth[filters.month]||[], overrides.junior?.[filters.month]||[])
@@ -1794,6 +1806,12 @@ export default function Schedule({ onGoToCabinet }) {
                   onClick={()=>setFilters(f=>({...f,subjects:f.subjects.filter(x=>x!==s)}))}>×</span>
               </span>
             ))}
+            {isCurator && (
+              <label style={{display:'flex',alignItems:'center',gap:6,fontSize:12,fontWeight:600,color:C.textSub,cursor:'pointer',marginLeft:'auto'}}>
+                <input type="checkbox" checked={showAllSubjects} onChange={e=>setShowAllSubjects(e.target.checked)} />
+                Басқа пәндерді де көрсету
+              </label>
+            )}
           </div>
 
           {showFilter&&(

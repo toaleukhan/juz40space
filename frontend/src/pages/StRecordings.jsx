@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import api from '../services/api';
 import { SUBJECT_COLORS, SUBJECT_LOGOS } from './scheduleData';
 import { motion } from 'framer-motion';
+import { MEET_LOGO, SHEETS_LOGO } from '../components/brandLogos';
 
 const SUBJECTS = [
   { code:'ФИЗ',   name:'Физика',           months: 5 },
@@ -33,7 +34,7 @@ const STATUS_MAP = {
 
 export default function StRecordings() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState('st');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'curators' ? 'curators' : 'st');
 
   const currentSubjectCode = searchParams.get('subject');
   const currentStream = searchParams.get('stream') || '01';
@@ -50,6 +51,7 @@ export default function StRecordings() {
   const [showBulk, setShowBulk] = useState(false);
   const [bulkText, setBulkText] = useState('');
   const [actionLoading, setActionLoading] = useState({});
+  const [newCreds, setNewCreds] = useState(null); // [{full_name, username, password}] — жаңадан жасалған логиндер
 
   useEffect(() => {
     if (selectedSubject) {
@@ -112,7 +114,9 @@ export default function StRecordings() {
           streamId: currentStream,
           status: 'active'
         });
-        setCuratorsList(prev => [...prev, data]);
+        const { username, password, ...curatorRow } = data;
+        setCuratorsList(prev => [...prev, curatorRow]);
+        if (username) setNewCreds([{ full_name: curatorRow.full_name, username, password }]);
       }
       setNewCurator('');
     } catch (err) {
@@ -134,7 +138,10 @@ export default function StRecordings() {
       setShowBulk(false);
       loadTable();
       loadCuratorsBase();
-      alert(`Сәтті! ${data.count} жаңа куратор қосылды. ${data.skippedCount || 0} куратор бұрыннан бар болғандықтан өткізіп жіберілді.`);
+      if (data.added?.length) {
+        setNewCreds(data.added.map(c => ({ full_name: c.full_name, username: c.username, password: c.password })));
+      }
+      if (data.skippedCount) alert(`${data.skippedCount} куратор бұрыннан бар болғандықтан өткізіп жіберілді: ${data.skipped.join(', ')}`);
     } catch (err) {
       alert('Қателік орын алды: ' + (err.response?.data?.error || err.message));
     }
@@ -286,6 +293,48 @@ export default function StRecordings() {
                 Жабу
               </button>
             </div>
+          </div>
+        )}
+
+        {newCreds && (
+          <div className="card" style={{ padding: 20, marginBottom: 20, border: '2px solid #10b981' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>
+                🔑 Жаңа логин/парольдер ({newCreds.length})
+              </h3>
+              <button onClick={() => setNewCreds(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--text-muted)' }}>✕</button>
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
+              Бұл парольдер тек қазір көрсетіледі — жоғалтпас үшін дереу көшіріп, кураторларға жіберіңіз.
+            </p>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 420 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)', textAlign: 'left' }}>
+                    <th style={{ padding: '6px 10px' }}>Аты-жөні</th>
+                    <th style={{ padding: '6px 10px' }}>Логин</th>
+                    <th style={{ padding: '6px 10px' }}>Құпия сөз</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {newCreds.map((c, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '6px 10px' }}>{c.full_name}</td>
+                      <td style={{ padding: '6px 10px', fontFamily: 'monospace' }}>{c.username}</td>
+                      <td style={{ padding: '6px 10px', fontFamily: 'monospace', fontWeight: 700 }}>{c.password}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <button
+              onClick={() => {
+                const text = newCreds.map(c => `${c.full_name}: логин — ${c.username}, құпия сөз — ${c.password}`).join('\n');
+                navigator.clipboard?.writeText(text);
+              }}
+              style={{ marginTop: 12, padding: '8px 18px', borderRadius: 10, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: 12.5 }}>
+              Барлығын көшіру
+            </button>
           </div>
         )}
 
@@ -444,10 +493,12 @@ export default function StRecordings() {
 
                         <td style={{ padding: '12px' }}>
                           {attendanceLinks.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                               {attendanceLinks.map((a, idx) => (
-                                <a key={idx} href={a} target="_blank" rel="noreferrer" style={{ color: '#059669', fontWeight: 600, textDecoration: 'none', fontSize: 11.5 }}>
-                                  📊 Отслежка {attendanceLinks.length > 1 ? idx + 1 : ''}
+                                <a key={idx} href={a} target="_blank" rel="noreferrer" title="Отслежка">
+                                  {SHEETS_LOGO
+                                    ? <img src={SHEETS_LOGO} alt="Отслежка" style={{ width: 18, height: 18 }} />
+                                    : <span style={{ color: '#059669', fontWeight: 600, fontSize: 11.5 }}>📊 Отслежка {attendanceLinks.length > 1 ? idx + 1 : ''}</span>}
                                 </a>
                               ))}
                             </div>
@@ -468,15 +519,17 @@ export default function StRecordings() {
                         <td style={{ padding: '12px 16px' }}>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                             <button onClick={() => handleCreateMeet(row.id, row.curator_name)} disabled={actionLoading[row.id] === 'meet'}
-                              style={{ padding: '6px 10px', borderRadius: 8, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
-                              {actionLoading[row.id] === 'meet' ? '...' : meetCodes.length > 0 ? '+ Жаңа Мит' : '🎥 Мит ашу'}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
+                              <img src={MEET_LOGO} alt="" style={{ width: 14, height: 14 }} />
+                              {actionLoading[row.id] === 'meet' ? '...' : meetCodes.length > 0 ? '+ Жаңа Мит' : 'Мит ашу'}
                             </button>
 
                             {meetCodes.map((code, idx) => (
                               <div key={idx} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                                 <a href={meetLinks[idx]} target="_blank" rel="noreferrer"
-                                  style={{ padding: '4px 6px', borderRadius: 6, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 10, textDecoration: 'none' }}>
-                                  🔗 {code}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 6px', borderRadius: 6, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 10, textDecoration: 'none' }}>
+                                  <img src={MEET_LOGO} alt="" style={{ width: 12, height: 12 }} />
+                                  {code}
                                 </a>
                                 <button onClick={() => handleSyncDrive(row.id, code)} disabled={actionLoading[row.id] === 'drive'}
                                   style={{ padding: '4px 6px', borderRadius: 6, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 10, cursor: 'pointer' }}>

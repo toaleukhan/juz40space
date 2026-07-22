@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import useIsMobile from '../hooks/useIsMobile';
-import { IconMenu, IconClose, IconUser, IconChart, IconCalendar, IconVideo, IconLogout } from './icons';
+import { IconMenu, IconClose, IconUser, IconCalendar, IconVideo, IconUsers, IconLogout } from './icons';
 
 const NAV_STYLE = ({ isActive }) => ({
   display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderRadius: 14,
@@ -25,13 +25,14 @@ function SidebarContent({ onNavigate }) {
   };
 
   const curatorLinks = [
-    { to: '/profile', label: 'Менің кабинетім', Icon: IconUser },
+    { to: '/profile', label: 'Менің профилім', Icon: IconUser },
     { to: `/st-recordings?subject=${user.subject || 'ФИЗ'}&stream=${user.streamId || '01'}&month=1&week=1`, label: 'СТ запись', Icon: IconVideo },
+    { to: '/schedule', label: 'Сабақ кестесі', Icon: IconCalendar },
   ];
   const adminLinks = [
-    { to: '/dashboard', label: 'Басты бет', Icon: IconChart },
     { to: '/schedule', label: 'Сабақ кестесі', Icon: IconCalendar },
-    { to: '/st-recordings', label: 'СТ запись', Icon: IconVideo },
+    { to: '/st-recordings', label: 'СТ жазбалар', Icon: IconVideo },
+    { to: '/st-recordings?tab=curators', label: 'Кураторлар базасы', Icon: IconUsers },
   ];
   const links = isCurator ? curatorLinks : adminLinks;
 

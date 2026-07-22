@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import api from '../services/api';
 import { IconUser, IconTable, IconVideo, IconLink, IconCheck, IconAlert } from '../components/icons';
+import { MEET_LOGO, SHEETS_LOGO } from '../components/brandLogos';
 
 // Куратордың жеке кабинеті: профиль ақпараты + өз СТ-жазбаларының тарихы бір бетте.
 export default function CuratorCabinet() {
@@ -207,7 +208,8 @@ export default function CuratorCabinet() {
                         {meetCodes.length > 0 ? (
                           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                             {meetCodes.map((code, i) => (
-                              <span key={i} style={{ padding: '3px 8px', borderRadius: 8, background: 'rgba(16,185,129,0.10)', color: '#059669', fontWeight: 600, fontSize: 11 }}>
+                              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 8, background: 'rgba(16,185,129,0.10)', color: '#059669', fontWeight: 600, fontSize: 11 }}>
+                                <img src={MEET_LOGO} alt="Meet" style={{ width: 13, height: 13 }} />
                                 {code}
                               </span>
                             ))}
@@ -228,11 +230,12 @@ export default function CuratorCabinet() {
                       </td>
                       <td style={{ padding: '11px 12px' }}>
                         {attendanceLinks.length > 0 ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                             {attendanceLinks.map((a, i) => (
-                              <a key={i} href={a} target="_blank" rel="noreferrer"
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#059669', fontWeight: 600, textDecoration: 'none', fontSize: 12 }}>
-                                <IconLink style={{ width: 14, height: 14 }} /> Отслежка {attendanceLinks.length > 1 ? i + 1 : ''}
+                              <a key={i} href={a} target="_blank" rel="noreferrer" title="Отслежка">
+                                {SHEETS_LOGO
+                                  ? <img src={SHEETS_LOGO} alt="Отслежка" style={{ width: 18, height: 18 }} />
+                                  : <IconLink style={{ width: 14, height: 14, color: '#059669' }} />}
                               </a>
                             ))}
                           </div>

@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const createTables = require('./config/schema');
-const { apiLimiter, loginLimiter, whatsappLimiter, securityHeaders, sanitizeInput } = require('./middleware/security');
+const { apiLimiter, loginLimiter, securityHeaders, sanitizeInput } = require('./middleware/security');
 
 const app = express();
 
@@ -34,9 +34,6 @@ app.use(apiLimiter);
 
 app.use('/api/auth/login', loginLimiter);
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/groups', require('./routes/groups'));
-app.use('/api/whatsapp/send', whatsappLimiter);
-app.use('/api/whatsapp', require('./routes/whatsapp'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/parse-schedule', require('./routes/parseSchedule'));
 app.use('/api/schedule', require('./routes/schedule'));

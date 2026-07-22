@@ -24,15 +24,6 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// WhatsApp жіберу: 20 рет / минут (спам болдырмау)
-const whatsappLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 20,
-  message: { error: 'WhatsApp жіберу лимиті асты. Бір минуттан кейін қайталаңыз.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 // ── Security headers ──────────────────────────────────────────────────────────
 const securityHeaders = (req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -68,4 +59,4 @@ const sanitizeInput = (req, res, next) => {
   next();
 };
 
-module.exports = { loginLimiter, apiLimiter, whatsappLimiter, securityHeaders, sanitizeInput };
+module.exports = { loginLimiter, apiLimiter, securityHeaders, sanitizeInput };

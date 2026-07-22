@@ -2,6 +2,33 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const pool = require('../config/db');
+const { makeUsername, makePassword, hashPassword } = require('../utils/credentials');
+
+const requireAdmin = (req, res, next) => {
+  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Тек admin рұқсаты бар' });
+  next();
+};
+
+// Куратор роступа + сол атпен логин аккаунт (users) бірге жасайды
+async function createCuratorWithLogin({ fullName, subject, streamId }) {
+  const strId = streamId || '01';
+  const curRes = await pool.query(
+    `INSERT INTO curators (full_name, subject, stream_id, status) VALUES ($1, $2, $3, 'active') RETURNING *`,
+    [fullName, subject, strId]
+  );
+  const curator = curRes.rows[0];
+
+  const username = await makeUsername(fullName, pool);
+  const password = makePassword();
+  const hash = await hashPassword(password);
+  await pool.query(
+    `INSERT INTO users (username, password, full_name, role, subject, stream_id)
+     VALUES ($1, $2, $3, 'curator', $4, $5)`,
+    [username, hash, fullName, subject, strId]
+  );
+
+  return { ...curator, username, password };
+}
 
 // 1. Орталық базадағы кураторларды алу
 router.get('/', auth, async (req, res) => {
@@ -28,8 +55,8 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// 2. 🚀 ТІЗІММЕН МАССОВЫЙ ҚОСУ (Дубликаттардан қорғалған)
-router.post('/bulk', auth, async (req, res) => {
+// 2. 🚀 ТІЗІММЕН МАССОВЫЙ ҚОСУ + әр куратор үшін логин/пароль дереу жасалады
+router.post('/bulk', auth, requireAdmin, async (req, res) => {
   const { namesText, subject, streamId } = req.body;
   if (!namesText || !subject) {
     return res.status(400).json({ error: 'Мәтін мен пән көрсетілмеген' });
@@ -54,23 +81,18 @@ router.post('/bulk', auth, async (req, res) => {
       );
 
       if (check.rows.length === 0) {
-        const resIns = await pool.query(
-          `INSERT INTO curators (full_name, subject, stream_id, status)
-           VALUES ($1, $2, $3, 'active') RETURNING *`,
-          [name, subject, strId]
-        );
-        added.push(resIns.rows[0]);
+        added.push(await createCuratorWithLogin({ fullName: name, subject, streamId: strId }));
       } else {
         skipped.push(name);
       }
     }
 
-    res.json({ 
-      success: true, 
-      count: added.length, 
-      skippedCount: skipped.length, 
-      added, 
-      skipped 
+    res.json({
+      success: true,
+      count: added.length,
+      skippedCount: skipped.length,
+      added,
+      skipped
     });
   } catch (err) {
     console.error('Bulk error:', err);
@@ -78,8 +100,8 @@ router.post('/bulk', auth, async (req, res) => {
   }
 });
 
-// 3. Жалғыз куратор қосу
-router.post('/', auth, async (req, res) => {
+// 3. Жалғыз куратор қосу + логин/пароль дереу жасалады
+router.post('/', auth, requireAdmin, async (req, res) => {
   const { fullName, subject, streamId, status } = req.body;
   if (!fullName || !subject) {
     return res.status(400).json({ error: 'Куратор аты мен пәні міндетті' });
@@ -96,12 +118,8 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ error: 'Бұл куратор осы ағымда бар!' });
     }
 
-    const result = await pool.query(
-      `INSERT INTO curators (full_name, subject, stream_id, status)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [fullName, subject, strId, status || 'active']
-    );
-    res.json(result.rows[0]);
+    const result = await createCuratorWithLogin({ fullName, subject, streamId: strId });
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

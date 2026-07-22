@@ -7,6 +7,9 @@ export const IconMenu = (p) => (
 export const IconClose = (p) => (
   <svg {...base} {...p}><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
 );
+export const IconUsers = (p) => (
+  <svg {...base} {...p}><circle cx="9" cy="8" r="3" /><path d="M3 19c1.1-3 3.4-4.5 6-4.5s4.9 1.5 6 4.5" /><circle cx="17" cy="8.5" r="2.3" /><path d="M15.5 14c2 .2 3.5 1.6 4.3 3.6" /></svg>
+);
 export const IconUser = (p) => (
   <svg {...base} {...p}><circle cx="12" cy="8" r="3.5" /><path d="M4.5 20c1.4-3.6 4.2-5.5 7.5-5.5s6.1 1.9 7.5 5.5" /></svg>
 );
