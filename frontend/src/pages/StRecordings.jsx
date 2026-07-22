@@ -134,7 +134,7 @@ export default function StRecordings() {
       setShowBulk(false);
       loadTable();
       loadCuratorsBase();
-      alert(`Сәтті қосылды! Базаға ${data.count} куратор тіркелді.`);
+      alert(`Сәтті! ${data.count} жаңа куратор қосылды. ${data.skippedCount} куратор бұрыннан бар болғандықтан өткізіп жіберілді.`);
     } catch (err) {
       alert('Қателік орын алды: ' + (err.response?.data?.error || err.message));
     }
@@ -198,8 +198,13 @@ export default function StRecordings() {
   const handleDeleteRow = async (id) => {
     if (!confirm('Өшіруге сенімдісіз бе?')) return;
     try {
-      await api.delete(`/st-recordings/${id}`);
-      setRows(prev => prev.filter(r => r.id !== id));
+      if (activeTab === 'st') {
+        await api.delete(`/st-recordings/${id}`);
+        setRows(prev => prev.filter(r => r.id !== id));
+      } else {
+        await api.delete(`/curators/${id}`);
+        setCuratorsList(prev => prev.filter(c => c.id !== id));
+      }
     } catch (err) {
       alert('Өшіруде қателік орын алды');
     }
@@ -370,13 +375,16 @@ export default function StRecordings() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <input placeholder="Жаңа куратор қосу..." value={newCurator} onChange={e => setNewCurator(e.target.value)}
                 style={{ width: 260, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
               <button onClick={handleAddCurator}
                 style={{ padding: '9px 18px', borderRadius: 10, background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
                 + Қосу
               </button>
+              <div style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: 'var(--text-sub)' }}>
+                Осы аптада: <span style={{ color: 'var(--text)' }}>{rows.length}</span> куратор
+              </div>
             </div>
 
             <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
@@ -469,7 +477,7 @@ export default function StRecordings() {
                                   🔗 {code}
                                 </a>
                                 <button onClick={() => handleSyncDrive(row.id, code)} disabled={actionLoading[row.id] === 'drive'}
-                                  style={{ padding: '4px 6px', borderRadius: 6, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 10, cursor: 'pointer' }}>
+                                  style={{ padding: '4px 6px', borderRadius: 6, background: '#3b82f6', color: '#fff', border: 'none', fontWeight 700, fontSize: 10, cursor: 'pointer' }}>
                                   🔄
                                 </button>
                               </div>
@@ -504,13 +512,16 @@ export default function StRecordings() {
               ))}
             </div>
 
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <input placeholder="Орталық базаға куратор аты-жөнін қосу..." value={newCurator} onChange={e => setNewCurator(e.target.value)}
                 style={{ width: 320, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
               <button onClick={handleAddCurator}
                 style={{ padding: '9px 18px', borderRadius: 10, background: '#8b5cf6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
                 + Базаға қосу
               </button>
+              <div style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: 'var(--text-sub)' }}>
+                Осы ағымда: <span style={{ color: 'var(--text)' }}>{curatorsList.length}</span> куратор
+              </div>
             </div>
 
             <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
@@ -558,12 +569,8 @@ export default function StRecordings() {
                           </select>
                         </td>
                         <td style={{ padding: '14px 16px' }}>
-                          <button onClick={async () => {
-                            if (confirm('Базадан өшіруге сенімдісіз бе?')) {
-                              await api.delete(`/curators/${cur.id}`);
-                              setCuratorsList(prev => prev.filter(c => c.id !== cur.id));
-                            }
-                          }} style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: 'none', cursor: 'pointer' }}>
+                          <button onClick={() => handleDeleteRow(cur.id)}
+                            style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: 'none', cursor: 'pointer' }}>
                             ✕
                           </button>
                         </td>
