@@ -2,14 +2,11 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const pool = require('../config/db');
-const createTables = require('../config/schema');
 
 // 1. Орталық базадағы кураторларды алу
 router.get('/', auth, async (req, res) => {
   const { subject, streamId } = req.query;
   try {
-    await createTables();
-
     let query = `SELECT * FROM curators WHERE 1=1`;
     let params = [];
     let idx = 1;
@@ -31,9 +28,9 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// 2. 🚀 ТІЗІММЕН МАССОВЫЙ ҚОСУ
+// 2. 🚀 ТІЗІММЕН МАССОВЫЙ ҚОСУ (Дубликаттардан қорғалған)
 router.post('/bulk', auth, async (req, res) => {
-  const { namesText, subject, streamId, monthNum, weekNum } = req.body;
+  const { namesText, subject, streamId } = req.body;
   if (!namesText || !subject) {
     return res.status(400).json({ error: 'Мәтін мен пән көрсетілмеген' });
   }
@@ -43,33 +40,38 @@ router.post('/bulk', auth, async (req, res) => {
     .map(n => n.trim())
     .filter(n => n.length > 0);
 
-  const mNum = parseInt(monthNum) || 1;
-  const wNum = parseInt(weekNum) || 1;
   const strId = streamId || '01';
 
   try {
-    await createTables();
     const added = [];
+    const skipped = [];
 
     for (const name of names) {
-      // 1. Орталық кураторлар базасына сақтау
-      const resIns = await pool.query(
-        `INSERT INTO curators (full_name, subject, stream_id, status)
-         VALUES ($1, $2, $3, 'active') RETURNING *`,
+      // 💡 Бұл куратор бұрыннан бар ма?
+      const check = await pool.query(
+        `SELECT id FROM curators WHERE full_name = $1 AND subject = $2 AND stream_id = $3`,
         [name, subject, strId]
       );
-      const cur = resIns.rows[0];
-      added.push(cur);
 
-      // 2. СТ есебі кестесіне де қосу
-      await pool.query(
-        `INSERT INTO st_recordings (curator_id, subject, stream_id, month_num, month_id, week_num, curator_name)
-         VALUES ($1, $2, $3, $4, $3, $5, $6)`,
-        [cur.id, subject, strId, mNum, wNum, name]
-      );
+      if (check.rows.length === 0) {
+        const resIns = await pool.query(
+          `INSERT INTO curators (full_name, subject, stream_id, status)
+           VALUES ($1, $2, $3, 'active') RETURNING *`,
+          [name, subject, strId]
+        );
+        added.push(resIns.rows[0]);
+      } else {
+        skipped.push(name);
+      }
     }
 
-    res.json({ success: true, count: added.length, added });
+    res.json({ 
+      success: true, 
+      count: added.length, 
+      skippedCount: skipped.length, 
+      added, 
+      skipped 
+    });
   } catch (err) {
     console.error('Bulk error:', err);
     res.status(500).json({ error: 'Базаға тізіммен сақтау қатесі: ' + err.message });
@@ -83,11 +85,21 @@ router.post('/', auth, async (req, res) => {
     return res.status(400).json({ error: 'Куратор аты мен пәні міндетті' });
   }
   try {
-    await createTables();
+    const strId = streamId || '01';
+
+    const check = await pool.query(
+      `SELECT id FROM curators WHERE full_name = $1 AND subject = $2 AND stream_id = $3`,
+      [fullName, subject, strId]
+    );
+
+    if (check.rows.length > 0) {
+      return res.status(400).json({ error: 'Бұл куратор осы ағымда бар!' });
+    }
+
     const result = await pool.query(
       `INSERT INTO curators (full_name, subject, stream_id, status)
        VALUES ($1, $2, $3, $4) RETURNING *`,
-      [fullName, subject, streamId || '01', status || 'active']
+      [fullName, subject, strId, status || 'active']
     );
     res.json(result.rows[0]);
   } catch (err) {
