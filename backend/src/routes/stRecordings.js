@@ -56,7 +56,7 @@ function getGoogleAuth() {
   return null;
 }
 
-// 1. СТ Кестесін алу (Орталық базамен 100% АВТОМАТТЫ СИНХРОНИЗАЦИЯ)
+// 1. СТ Кестесін алу (Орталық Базамен АВТОМАТТЫ СИНХРОНИЗАЦИЯ)
 router.get('/', auth, async (req, res) => {
   const { subject, streamId, monthNum, weekNum } = req.query;
   const subj = subject || 'ФИЗ';
@@ -65,7 +65,7 @@ router.get('/', auth, async (req, res) => {
   const wNum = parseInt(weekNum) || 1;
 
   try {
-    // 1. Осы аптаның СТ кестесінде бар кураторлар тізімі
+    // 1. Осы аптаның СТ кестесінде бұрыннан бар кураторлар
     const existingSt = await pool.query(
       `SELECT curator_name FROM st_recordings 
        WHERE subject = $1 AND (stream_id = $2 OR month_id = $2) AND (month_num = $3 OR month_id = $3) AND week_num = $4`,
@@ -73,25 +73,25 @@ router.get('/', auth, async (req, res) => {
     );
     const existingNames = existingSt.rows.map(r => r.curator_name);
 
-    // 2. Орталық базадан белсенді кураторларды тарту
+    // 2. Кураторлар базасынан белсенді кураторларды іздеп алу
     const activeCurators = await pool.query(
       `SELECT * FROM curators 
-       WHERE subject = $1 AND stream_id = $2 AND status = 'active'`,
+       WHERE subject = $1 AND (stream_id = $2 OR stream_id IS NULL OR stream_id = '') AND (status = 'active' OR status IS NULL)`,
       [subj, strId]
     );
 
-    // 3. Жетіспейтіндерін СТ кестесіне авто-жазу
+    // 3. Жетіспейтін кураторларды СТ кестесіне автоматты енгізу (Параметрлері 100% түзетілген)
     for (const cur of activeCurators.rows) {
-      if (!existingNames.includes(cur.full_name)) {
+      if (cur.full_name && !existingNames.includes(cur.full_name)) {
         await pool.query(
           `INSERT INTO st_recordings (curator_id, subject, stream_id, month_num, month_id, week_num, curator_name)
-           VALUES ($1, $2, $3, $4, $3, $5, $6)`,
-          [cur.id, subj, strId, mNum, wNum, cur.full_name]
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [cur.id, subj, strId, mNum, strId, wNum, cur.full_name]
         );
       }
     }
 
-    // 4. Тізімді қайтару
+    // 4. Дайын СТ тізімін қайтару
     const result = await pool.query(
       `SELECT * FROM st_recordings 
        WHERE subject = $1 AND (stream_id = $2 OR month_id = $2) AND (month_num = $3 OR month_id = $3) AND week_num = $4 
@@ -101,6 +101,7 @@ router.get('/', auth, async (req, res) => {
 
     res.json(result.rows);
   } catch (err) {
+    console.error('st-recordings GET error:', err.message);
     res.status(500).json({ error: 'База қатесі: ' + err.message });
   }
 });
@@ -114,7 +115,6 @@ router.post('/curator', auth, async (req, res) => {
   try {
     const strId = streamId || '01';
 
-    // Базаға тіркеу (жоқ болса)
     const curCheck = await pool.query(
       `SELECT id FROM curators WHERE full_name = $1 AND subject = $2 AND stream_id = $3`,
       [curatorName, subject, strId]
@@ -132,11 +132,10 @@ router.post('/curator', auth, async (req, res) => {
       curId = curCheck.rows[0].id;
     }
 
-    // СТ кестесіне қосу
     const result = await pool.query(
       `INSERT INTO st_recordings (curator_id, subject, stream_id, month_num, month_id, week_num, curator_name)
-       VALUES ($1, $2, $3, $4, $3, $5, $6) RETURNING *`,
-      [curId, subject, strId, parseInt(monthNum) || 1, parseInt(weekNum) || 1, curatorName]
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [curId, subject, strId, parseInt(monthNum) || 1, strId, parseInt(weekNum) || 1, curatorName]
     );
 
     res.json(result.rows[0]);
