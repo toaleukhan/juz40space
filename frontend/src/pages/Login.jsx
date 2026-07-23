@@ -266,14 +266,19 @@ export default function Login() {
         }
         .login-btn:active:not(:disabled) { transform:translateY(0); }
         .show-btn:hover { color:#1B6E7E !important; }
+        @media (max-width: 860px) {
+          .login-row { flex-direction: column !important; height: auto !important; }
+          .login-form-col { flex: 1 1 auto !important; min-height: auto !important; border-right: none !important; padding: 36px 24px !important; }
+          .login-illustration-col { display: none; }
+        }
       `}</style>
 
-      <div style={{
+      <div className="login-row" style={{
         display:'flex', width:'100%', height:'100vh',
         animation:'slideUp 0.45s cubic-bezier(0.16,1,0.3,1) both',
       }}>
         {/* ── Left: Form ── */}
-        <div style={{
+        <div className="login-form-col" style={{
           flex:'0 0 460px', background:'var(--surface)', padding:'52px 48px', display:'flex',
           flexDirection:'column', justifyContent:'center', minHeight:'100vh',
           borderRight:'1px solid var(--border)',
@@ -385,7 +390,9 @@ export default function Login() {
         </div>
 
         {/* ── Right: Illustration ── */}
-        <IllustrationPanel />
+        <div className="login-illustration-col" style={{ flex: 1, display: 'flex', minWidth: 0 }}>
+          <IllustrationPanel />
+        </div>
       </div>
     </div>
   );

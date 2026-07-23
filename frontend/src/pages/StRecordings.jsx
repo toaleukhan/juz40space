@@ -4,6 +4,8 @@ import Sidebar from '../components/Sidebar';
 import api from '../services/api';
 import { SUBJECT_COLORS, SUBJECT_LOGOS } from './scheduleData';
 import { motion } from 'framer-motion';
+import { SHEETS_LOGO } from '../components/brandLogos';
+import { IconMeetLogo } from '../components/icons';
 
 const SUBJECTS = [
   { code:'ФИЗ',   name:'Физика',           months: 5 },
@@ -24,19 +26,14 @@ const SUBJECTS = [
 const STREAMS = ['01', '11', '21', '31', '41'];
 const WEEKS = [1, 2, 3, 4];
 
-const STATUS_MAP = {
-  active: { label: '🟢 Жұмыста', color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
-  stream_changed: { label: '🟡 Ағым ауысты', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-  subject_changed: { label: '🔵 Пән ауысты', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
-  fired: { label: '🔴 Жұмыстан шықты', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
-};
-
 export default function StRecordings() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState('st');
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const isCurator = currentUser.role === 'curator';
 
-  const currentSubjectCode = searchParams.get('subject');
-  const currentStream = searchParams.get('stream') || '01';
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const currentSubjectCode = searchParams.get('subject') || (isCurator ? currentUser.subject : null);
+  const currentStream = searchParams.get('stream') || (isCurator ? (currentUser.streamId || '01') : '01');
   const currentMonth = parseInt(searchParams.get('month') || '1', 10);
   const currentWeek = parseInt(searchParams.get('week') || '1', 10);
 
@@ -44,19 +41,15 @@ export default function StRecordings() {
   const availableMonths = Array.from({ length: selectedSubject ? selectedSubject.months : 5 }, (_, i) => i + 1);
 
   const [rows, setRows] = useState([]);
-  const [curatorsList, setCuratorsList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newCurator, setNewCurator] = useState('');
-  const [showBulk, setShowBulk] = useState(false);
-  const [bulkText, setBulkText] = useState('');
   const [actionLoading, setActionLoading] = useState({});
+  const [showFilter, setShowFilter] = useState(false);
 
   useEffect(() => {
-    if (selectedSubject) {
-      if (activeTab === 'st') loadTable();
-      else loadCuratorsBase();
-    }
-  }, [currentSubjectCode, currentStream, currentMonth, currentWeek, activeTab]);
+    if (selectedSubject) loadTable();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentSubjectCode, currentStream, currentMonth, currentWeek]);
 
   const updateFilters = (newParams) => {
     const updated = new URLSearchParams(searchParams);
@@ -81,80 +74,20 @@ export default function StRecordings() {
     }
   };
 
-  const loadCuratorsBase = async () => {
-    setLoading(true);
-    try {
-      const { data } = await api.get(`/curators?subject=${currentSubjectCode}&streamId=${currentStream}`);
-      setCuratorsList(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleAddCurator = async () => {
     if (!newCurator.trim()) return;
     try {
-      if (activeTab === 'st') {
-        const { data } = await api.post('/st-recordings/curator', {
-          subject: currentSubjectCode,
-          streamId: currentStream,
-          monthNum: currentMonth,
-          weekNum: currentWeek,
-          curatorName: newCurator.trim(),
-        });
-        setRows(prev => [...prev, data]);
-      } else {
-        const { data } = await api.post('/curators', {
-          fullName: newCurator.trim(),
-          subject: currentSubjectCode,
-          streamId: currentStream,
-          status: 'active'
-        });
-        setCuratorsList(prev => [...prev, data]);
-      }
-      setNewCurator('');
-    } catch (err) {
-      alert('Қателік: ' + (err.response?.data?.error || err.message));
-    }
-  };
-
-  const handleBulkAdd = async () => {
-    if (!bulkText.trim()) return;
-    try {
-      const { data } = await api.post('/curators/bulk', {
-        namesText: bulkText,
+      const { data } = await api.post('/st-recordings/curator', {
         subject: currentSubjectCode,
         streamId: currentStream,
         monthNum: currentMonth,
         weekNum: currentWeek,
+        curatorName: newCurator.trim(),
       });
-      setBulkText('');
-      setShowBulk(false);
-      loadTable();
-      loadCuratorsBase();
-      alert(`Сәтті! ${data.count} жаңа куратор қосылды. ${data.skippedCount || 0} куратор бұрыннан бар болғандықтан өткізіп жіберілді.`);
+      setRows(prev => [...prev, data]);
+      setNewCurator('');
     } catch (err) {
-      alert('Қателік орын алды: ' + (err.response?.data?.error || err.message));
-    }
-  };
-
-  const handleUpdateCuratorStatus = async (curatorId, newStatus) => {
-    try {
-      const { data } = await api.put(`/curators/${curatorId}`, { status: newStatus });
-      setCuratorsList(prev => prev.map(c => c.id === curatorId ? data : c));
-    } catch (err) {
-      alert('Статусты өзгертуде қателік');
-    }
-  };
-
-  const handleUpdateCuratorStream = async (curatorId, newStream) => {
-    try {
-      const { data } = await api.put(`/curators/${curatorId}`, { streamId: newStream });
-      setCuratorsList(prev => prev.map(c => c.id === curatorId ? data : c));
-    } catch (err) {
-      alert('Ағымды өзгертуде қателік');
+      alert('Қателік: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -171,6 +104,28 @@ export default function StRecordings() {
       alert(err.response?.data?.error || 'Мит ашуда қателік');
     } finally {
       setActionLoading(prev => ({ ...prev, [rowId]: null }));
+    }
+  };
+
+  // Куратордың осы аптаға жазбасы әлі жоқ болса — "Мит ашу" басу арқылы
+  // жазбаны дереу жасап, содан кейін митті ашамыз (авто-синхрония орнына
+  // куратордың өз әрекетімен басталады, анығырақ).
+  const handleStartMyWeek = async () => {
+    setActionLoading(prev => ({ ...prev, self: 'meet' }));
+    try {
+      const { data } = await api.post('/st-recordings/curator', {
+        subject: currentSubjectCode,
+        streamId: currentStream,
+        monthNum: currentMonth,
+        weekNum: currentWeek,
+        curatorName: currentUser.fullName,
+      });
+      setRows([data]);
+      await handleCreateMeet(data.id, data.curator_name);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Мит ашуда қателік');
+    } finally {
+      setActionLoading(prev => ({ ...prev, self: null }));
     }
   };
 
@@ -198,20 +153,15 @@ export default function StRecordings() {
   const handleDeleteRow = async (id) => {
     if (!confirm('Өшіруге сенімдісіз бе?')) return;
     try {
-      if (activeTab === 'st') {
-        await api.delete(`/st-recordings/${id}`);
-        setRows(prev => prev.filter(r => r.id !== id));
-      } else {
-        await api.delete(`/curators/${id}`);
-        setCuratorsList(prev => prev.filter(c => c.id !== id));
-      }
+      await api.delete(`/st-recordings/${id}`);
+      setRows(prev => prev.filter(r => r.id !== id));
     } catch (err) {
       alert('Өшіруде қателік орын алды');
     }
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)', fontFamily: "'Inter', sans-serif" }}>
+    <div className="app-shell" style={{ background: 'var(--bg)', fontFamily: "'Inter', sans-serif" }}>
       <Sidebar />
 
       <main style={{ flex: 1, padding: '24px 32px', minWidth: 0, overflowY: 'auto' }}>
@@ -221,10 +171,10 @@ export default function StRecordings() {
               JUZ40 · САПА БӨЛІМІ
             </div>
             <h1 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text)', margin: '4px 0 0', letterSpacing: '-0.5px' }}>
-              📹 СТ Жүйесі {selectedSubject ? `· ${selectedSubject.name}` : ''}
+              СТ Жүйесі {selectedSubject ? `· ${selectedSubject.name}` : ''}
             </h1>
           </div>
-          {selectedSubject && (
+          {selectedSubject && !isCurator && (
             <button onClick={() => updateFilters({ subject: null })}
               style={{ padding: '8px 16px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-sub)', fontWeight: 600, fontSize: 12 }}>
               ← Барлық пәндер
@@ -232,151 +182,216 @@ export default function StRecordings() {
           )}
         </div>
 
-        {selectedSubject && (
-          <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-            <button onClick={() => setActiveTab('st')}
-              style={{
-                padding: '10px 20px', borderRadius: 12, fontWeight: 800, fontSize: 13, border: 'none', cursor: 'pointer',
-                background: activeTab === 'st' ? 'var(--accent)' : 'var(--surface)',
-                color: activeTab === 'st' ? '#fff' : 'var(--text-sub)',
-                boxShadow: activeTab === 'st' ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'
-              }}>
-              📹 СТ Есептері & Записьтер
-            </button>
-            <button onClick={() => setActiveTab('curators')}
-              style={{
-                padding: '10px 20px', borderRadius: 12, fontWeight: 800, fontSize: 13, border: 'none', cursor: 'pointer',
-                background: activeTab === 'curators' ? '#8b5cf6' : 'var(--surface)',
-                color: activeTab === 'curators' ? '#fff' : 'var(--text-sub)',
-                boxShadow: activeTab === 'curators' ? '0 4px 12px rgba(139,92,246,0.2)' : 'none'
-              }}>
-              👥 Кураторлар Базасы (Басқару)
-            </button>
-
-            <button onClick={() => setShowBulk(!showBulk)}
-              style={{
-                padding: '10px 20px', marginLeft: 'auto', borderRadius: 12, fontWeight: 800, fontSize: 12, border: 'none', cursor: 'pointer',
-                background: '#3b82f6', color: '#fff',
-              }}>
-              📋 Тізіммен кураторларды бірден қосу
-            </button>
-          </div>
-        )}
-
-        {showBulk && selectedSubject && (
-          <div className="card" style={{ padding: 20, marginBottom: 20, border: '2px solid #3b82f6' }}>
-            <h3 style={{ margin: '0 0 10px', fontSize: 15, fontWeight: 800 }}>
-              📋 Тізіммен кураторларды массовый енгізу ({selectedSubject.name} · {selectedSubject.code}-{currentStream})
-            </h3>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
-              Әр куратордың аты-жөнін жаңа жолдан (Enter арқылы) жазыңыз немесе көшіріп алып қойыңыз:
-            </p>
-            <textarea
-              rows={6}
-              value={bulkText}
-              onChange={e => setBulkText(e.target.value)}
-              placeholder="Орынбек Меруерт&#10;Жұбатбек Алия&#10;Мұратқызы Сағыныш..."
-              style={{ width: '100%', padding: 12, borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 13, fontFamily: 'inherit' }}
-            />
-            <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
-              <button onClick={handleBulkAdd} style={{ padding: '8px 20px', borderRadius: 10, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 800, cursor: 'pointer' }}>
-                🚀 Барлық кураторларды базаға қосу
-              </button>
-              <button onClick={() => setShowBulk(false)} style={{ padding: '8px 16px', borderRadius: 10, background: 'var(--surface2)', color: 'var(--text)', border: 'none', cursor: 'pointer' }}>
-                Жабу
-              </button>
-            </div>
-          </div>
-        )}
-
         {!selectedSubject ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 18 }}>
             {SUBJECTS.map(s => {
               const col = SUBJECT_COLORS[s.code] || { primary: '#1B6E7E' };
               const svgLogo = SUBJECT_LOGOS[s.code];
               return (
                 <motion.div
                   key={s.code}
-                  whileHover={{ scale: 1.03, y: -4 }}
+                  whileHover={{ y: -6, boxShadow: `0 16px 32px ${col.primary}30` }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => updateFilters({ subject: s.code, stream: '01', month: '1', week: '1' })}
                   className="card"
                   style={{
-                    padding: '24px 20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14,
-                    borderTop: `4px solid ${col.primary}`,
+                    padding: '28px 22px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16,
+                    position: 'relative', overflow: 'hidden',
                   }}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg, ${col.primary}, ${col.secondary || col.primary})` }} />
                   <div style={{
-                    width: 64, height: 64, borderRadius: '50%',
+                    width: 72, height: 72, borderRadius: 22,
                     background: `linear-gradient(135deg, ${col.primary}, ${col.secondary || col.primary})`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: `0 8px 20px ${col.primary}40`, padding: 14
+                    boxShadow: `0 10px 24px ${col.primary}40`, padding: 16
                   }}>
                     {svgLogo && (
-                      <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         dangerouslySetInnerHTML={{ __html: svgLogo }} />
                     )}
                   </div>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{s.name}</div>
-                    <div style={{ fontSize: 11, color: col.primary, fontWeight: 700, marginTop: 3 }}>
-                      {s.code}-01 · ({s.months} ай)
+                    <div style={{ fontSize: 11.5, color: col.primary, fontWeight: 700, marginTop: 4 }}>
+                      {s.code}-01 · {s.months} ай
                     </div>
                   </div>
                 </motion.div>
               );
             })}
           </div>
-        ) : activeTab === 'st' ? (
+        ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div className="card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АҒЫМ:</span>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {STREAMS.map(str => (
-                    <button key={str} onClick={() => updateFilters({ stream: str })}
-                      style={{
-                        padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentStream === str ? 800 : 500,
-                        background: currentStream === str ? 'var(--accent)' : 'var(--surface2)',
-                        color: currentStream === str ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
-                      }}>
-                      {selectedSubject.code}-{str}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div style={{ position: 'relative', display: 'flex' }}>
+              <button onClick={() => setShowFilter(v => !v)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 20,
+                  border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-sub)',
+                  fontWeight: 700, fontSize: 12.5, cursor: 'pointer',
+                }}>
+                ⚡ {selectedSubject.code}-{currentStream} · {currentMonth}-ай · {currentWeek}-апта
+                <span style={{ opacity: 0.6, fontSize: 11 }}>▾</span>
+              </button>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АЙ:</span>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {availableMonths.map(m => (
-                    <button key={m} onClick={() => updateFilters({ month: m })}
-                      style={{
-                        padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentMonth === m ? 800 : 500,
-                        background: currentMonth === m ? '#10b981' : 'var(--surface2)',
-                        color: currentMonth === m ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
-                      }}>
-                      {m}-ай
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {showFilter && (
+                <>
+                  <div onClick={() => setShowFilter(false)} style={{ position: 'fixed', inset: 0, zIndex: 39 }} />
+                  <div className="card" style={{
+                    position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 40,
+                    padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14, width: 'max-content', maxWidth: '90vw',
+                  }}>
+                    {!isCurator && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АҒЫМ:</span>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {STREAMS.map(str => (
+                          <button key={str} onClick={() => updateFilters({ stream: str })}
+                            style={{
+                              padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentStream === str ? 800 : 500,
+                              background: currentStream === str ? 'var(--accent)' : 'var(--surface2)',
+                              color: currentStream === str ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
+                            }}>
+                            {selectedSubject.code}-{str}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АПТА:</span>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {WEEKS.map(w => (
-                    <button key={w} onClick={() => updateFilters({ week: w })}
-                      style={{
-                        padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentWeek === w ? 800 : 500,
-                        background: currentWeek === w ? '#3b82f6' : 'var(--surface2)',
-                        color: currentWeek === w ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
-                      }}>
-                      {w}-апта
-                    </button>
-                  ))}
-                </div>
-              </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АЙ:</span>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {availableMonths.map(m => (
+                          <button key={m} onClick={() => updateFilters({ month: m })}
+                            style={{
+                              padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentMonth === m ? 800 : 500,
+                              background: currentMonth === m ? '#10b981' : 'var(--surface2)',
+                              color: currentMonth === m ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
+                            }}>
+                            {m}-ай
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АПТА:</span>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {WEEKS.map(w => (
+                          <button key={w} onClick={() => updateFilters({ week: w })}
+                            style={{
+                              padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentWeek === w ? 800 : 500,
+                              background: currentWeek === w ? '#3b82f6' : 'var(--surface2)',
+                              color: currentWeek === w ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
+                            }}>
+                            {w}-апта
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
+            {isCurator ? (
+              // ── Куратордың жеке карточкасы: кесте емес, тек өз жазбасы ──
+              loading ? (
+                <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Жүктелуде...</div>
+              ) : !rows[0] ? (
+                <div className="card" style={{ padding: 32, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+                  <div style={{ color: 'var(--text-muted)' }}>Бұл аптаға жазба әлі жоқ — Мит ашсаңыз, осы аптаға жазба сол сәтте жасалады.</div>
+                  <button onClick={handleStartMyWeek} disabled={actionLoading.self === 'meet'}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}>
+                    <IconMeetLogo style={{ width: 16, height: 16 }} />
+                    {actionLoading.self === 'meet' ? 'Ашылуда...' : 'Мит ашу'}
+                  </button>
+                </div>
+              ) : (() => {
+                const row = rows[0];
+                const videoLinks = row.video_links || (row.video_link ? [row.video_link] : []);
+                const attendanceLinks = row.attendance_links || (row.attendance_link ? [row.attendance_link] : []);
+                const meetCodes = row.meet_codes || (row.meet_code ? [row.meet_code] : []);
+                const meetLinks = row.meet_links || (row.meet_link ? [row.meet_link] : []);
+                return (
+                  <div className="card" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Оқушы саны</label>
+                        <input
+                          defaultValue={row.students_count || '0'}
+                          onBlur={(e) => handleUpdateRow(row.id, 'studentsCount', e.target.value)}
+                          style={{ width: 100, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', textAlign: 'center' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Ескеру керек жағдайлар</label>
+                        <input
+                          defaultValue={row.notes || ''}
+                          placeholder="Мыс: ауырып тұр..."
+                          onBlur={(e) => handleUpdateRow(row.id, 'notes', e.target.value)}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+                      <button onClick={() => handleCreateMeet(row.id, row.curator_name)} disabled={actionLoading[row.id] === 'meet'}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 10, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                        <IconMeetLogo style={{ width: 16, height: 16 }} />
+                        {actionLoading[row.id] === 'meet' ? '...' : meetCodes.length > 0 ? '+ Жаңа Мит' : 'Мит ашу'}
+                      </button>
+
+                      {meetCodes.map((code, idx) => (
+                        <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <a href={meetLinks[idx]} target="_blank" rel="noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 12, textDecoration: 'none' }}>
+                            <IconMeetLogo style={{ width: 14, height: 14 }} />
+                            {code}
+                          </a>
+                          <button onClick={() => handleSyncDrive(row.id, code)} disabled={actionLoading[row.id] === 'drive'}
+                            style={{ padding: '7px 10px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                            🔄 Синхрондау
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {(videoLinks.length > 0 || attendanceLinks.length > 0) && (
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexWrap: 'wrap', gap: 24 }}>
+                        {videoLinks.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Видео жазба</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {videoLinks.map((v, idx) => (
+                                <a key={idx} href={v} target="_blank" rel="noreferrer" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none', fontSize: 12.5 }}>
+                                  🎬 Запись {videoLinks.length > 1 ? idx + 1 : ''}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {attendanceLinks.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Отслежка</div>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              {attendanceLinks.map((a, idx) => (
+                                <a key={idx} href={a} target="_blank" rel="noreferrer" title="Отслежка">
+                                  {SHEETS_LOGO
+                                    ? <img src={SHEETS_LOGO} alt="Отслежка" style={{ width: 20, height: 20 }} />
+                                    : <span style={{ color: '#059669', fontWeight: 600, fontSize: 12.5 }}>📊 Отслежка {attendanceLinks.length > 1 ? idx + 1 : ''}</span>}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
+            ) : (
+            <>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               <input placeholder="Жаңа куратор қосу..." value={newCurator} onChange={e => setNewCurator(e.target.value)}
                 style={{ width: 260, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
@@ -390,7 +405,8 @@ export default function StRecordings() {
             </div>
 
             <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 12.5 }}>
+              <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 12.5, minWidth: 760 }}>
                 <thead>
                   <tr style={{ background: 'var(--surface2)', borderBottom: '1px solid var(--border)', color: 'var(--text-sub)', fontWeight: 700 }}>
                     <th style={{ padding: '14px 16px' }}>Куратор аты-жөні</th>
@@ -444,10 +460,12 @@ export default function StRecordings() {
 
                         <td style={{ padding: '12px' }}>
                           {attendanceLinks.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                               {attendanceLinks.map((a, idx) => (
-                                <a key={idx} href={a} target="_blank" rel="noreferrer" style={{ color: '#059669', fontWeight: 600, textDecoration: 'none', fontSize: 11.5 }}>
-                                  📊 Отслежка {attendanceLinks.length > 1 ? idx + 1 : ''}
+                                <a key={idx} href={a} target="_blank" rel="noreferrer" title="Отслежка">
+                                  {SHEETS_LOGO
+                                    ? <img src={SHEETS_LOGO} alt="Отслежка" style={{ width: 18, height: 18 }} />
+                                    : <span style={{ color: '#059669', fontWeight: 600, fontSize: 11.5 }}>📊 Отслежка {attendanceLinks.length > 1 ? idx + 1 : ''}</span>}
                                 </a>
                               ))}
                             </div>
@@ -468,15 +486,17 @@ export default function StRecordings() {
                         <td style={{ padding: '12px 16px' }}>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                             <button onClick={() => handleCreateMeet(row.id, row.curator_name)} disabled={actionLoading[row.id] === 'meet'}
-                              style={{ padding: '6px 10px', borderRadius: 8, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
-                              {actionLoading[row.id] === 'meet' ? '...' : meetCodes.length > 0 ? '+ Жаңа Мит' : '🎥 Мит ашу'}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
+                              <IconMeetLogo style={{ width: 14, height: 14 }} />
+                              {actionLoading[row.id] === 'meet' ? '...' : meetCodes.length > 0 ? '+ Жаңа Мит' : 'Мит ашу'}
                             </button>
 
                             {meetCodes.map((code, idx) => (
                               <div key={idx} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                                 <a href={meetLinks[idx]} target="_blank" rel="noreferrer"
-                                  style={{ padding: '4px 6px', borderRadius: 6, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 10, textDecoration: 'none' }}>
-                                  🔗 {code}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 6px', borderRadius: 6, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 10, textDecoration: 'none' }}>
+                                  <IconMeetLogo style={{ width: 12, height: 12 }} />
+                                  {code}
                                 </a>
                                 <button onClick={() => handleSyncDrive(row.id, code)} disabled={actionLoading[row.id] === 'drive'}
                                   style={{ padding: '4px 6px', borderRadius: 6, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 10, cursor: 'pointer' }}>
@@ -496,90 +516,10 @@ export default function StRecordings() {
                   })}
                 </tbody>
               </table>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div className="card" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)' }}>АҒЫМ СҮЗГІСІ:</span>
-              {STREAMS.map(str => (
-                <button key={str} onClick={() => updateFilters({ stream: str })}
-                  style={{
-                    padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentStream === str ? 800 : 500,
-                    background: currentStream === str ? '#8b5cf6' : 'var(--surface2)',
-                    color: currentStream === str ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
-                  }}>
-                  {selectedSubject.code}-{str}
-                </button>
-              ))}
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              <input placeholder="Орталық базаға куратор аты-жөнін қосу..." value={newCurator} onChange={e => setNewCurator(e.target.value)}
-                style={{ width: 320, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
-              <button onClick={handleAddCurator}
-                style={{ padding: '9px 18px', borderRadius: 10, background: '#8b5cf6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-                + Базаға қосу
-              </button>
-              <div style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: 'var(--text-sub)' }}>
-                Осы ағымда: <span style={{ color: 'var(--text)' }}>{curatorsList.length}</span> куратор
               </div>
             </div>
-
-            <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: 'var(--surface2)', borderBottom: '1px solid var(--border)', color: 'var(--text-sub)', fontWeight: 700 }}>
-                    <th style={{ padding: '14px 16px' }}>Куратор аты-жөні</th>
-                    <th style={{ padding: '14px 16px' }}>Пәні</th>
-                    <th style={{ padding: '14px 16px' }}>Ағымы</th>
-                    <th style={{ padding: '14px 16px' }}>Жұмыс Статусы</th>
-                    <th style={{ padding: '14px 16px', width: 80 }}>Әрекет</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Жүктелуде...</td></tr>
-                  ) : curatorsList.length === 0 ? (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Кураторлар табылмады</td></tr>
-                  ) : curatorsList.map((cur) => {
-                    const stInfo = STATUS_MAP[cur.status] || STATUS_MAP.active;
-                    return (
-                      <tr key={cur.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '14px 16px', fontWeight: 700, color: 'var(--text)' }}>
-                          {cur.full_name}
-                        </td>
-                        <td style={{ padding: '14px 16px', fontWeight: 600 }}>{cur.subject}</td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <select value={cur.stream_id || '01'} onChange={(e) => handleUpdateCuratorStream(cur.id, e.target.value)}
-                            style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontWeight: 600 }}>
-                            {STREAMS.map(s => <option key={s} value={s}>{selectedSubject.code}-{s}</option>)}
-                          </select>
-                        </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <select value={cur.status || 'active'} onChange={(e) => handleUpdateCuratorStatus(cur.id, e.target.value)}
-                            style={{
-                              padding: '6px 12px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer',
-                              background: stInfo.bg, color: stInfo.color
-                            }}>
-                            <option value="active">🟢 Жұмыста</option>
-                            <option value="stream_changed">🟡 Ағым ауысты</option>
-                            <option value="subject_changed">🔵 Пән ауысты</option>
-                            <option value="fired">🔴 Жұмыстан шықты</option>
-                          </select>
-                        </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <button onClick={() => handleDeleteRow(cur.id)}
-                            style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: 'none', cursor: 'pointer' }}>
-                            ✕
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            </>
+            )}
           </div>
         )}
       </main>

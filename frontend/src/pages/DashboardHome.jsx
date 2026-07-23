@@ -94,7 +94,7 @@ export default function DashboardHome() {
   const col = SUBJECT_COLORS[subj.code] || { primary: '#1B6E7E' };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: "'Inter',system-ui,sans-serif", background: 'var(--bg)' }}>
+    <div className="app-shell" style={{ fontFamily: "'Inter',system-ui,sans-serif", background: 'var(--bg)' }}>
       <Sidebar />
 
       <main

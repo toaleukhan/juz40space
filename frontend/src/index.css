@@ -2,6 +2,8 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+html, body { overflow-x: hidden; }
+
 /* ── LIGHT THEME ─────────────────────────────────── */
 :root, [data-theme="light"] {
   --bg:           #d8eef4;
@@ -65,6 +67,20 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   transition: background 0.35s, color 0.25s;
+}
+
+/* ── APP SHELL (sidebar + content) ──────────────────
+   Sidebar.jsx switches to a top bar + drawer under 768px;
+   the shell must stack vertically at that point too. ── */
+.app-shell { display: flex; min-height: 100vh; }
+@media (min-width: 769px) {
+  /* Sidebar.jsx-тегі рельс position:fixed болғандықтан аққынан шығады —
+     мазмұн жиналған рельс енінің астында қалмас үшін орын қалдырамыз.
+     Рельс hover-де кеңейгенде мазмұнның үстіне қалқып шығады, итермейді. */
+  .app-shell { padding-left: 76px; }
+}
+@media (max-width: 768px) {
+  .app-shell { flex-direction: column; }
 }
 
 /* ── SCROLLBAR ───────────────────────────────────── */
