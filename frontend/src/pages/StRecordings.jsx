@@ -53,6 +53,14 @@ export default function StRecordings() {
   const [actionLoading, setActionLoading] = useState({});
   const [newCreds, setNewCreds] = useState(null); // [{full_name, username, password}] — жаңадан жасалған логиндер
 
+  // ?tab=curators параметрі кез келген уақытта (тіпті компонент қайта mount
+  // болмай, сол бет ішінде навигация болса да) activeTab-ты дұрыс ауыстыруы керек.
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'curators' || tab === 'st') setActiveTab(tab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get('tab')]);
+
   useEffect(() => {
     if (selectedSubject) {
       if (activeTab === 'st') loadTable();
@@ -241,7 +249,7 @@ export default function StRecordings() {
 
         {selectedSubject && (
           <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-            <button onClick={() => setActiveTab('st')}
+            <button onClick={() => { setActiveTab('st'); updateFilters({ tab: null }); }}
               style={{
                 padding: '10px 20px', borderRadius: 12, fontWeight: 800, fontSize: 13, border: 'none', cursor: 'pointer',
                 background: activeTab === 'st' ? 'var(--accent)' : 'var(--surface)',
@@ -250,7 +258,7 @@ export default function StRecordings() {
               }}>
               📹 СТ Есептері & Записьтер
             </button>
-            <button onClick={() => setActiveTab('curators')}
+            <button onClick={() => { setActiveTab('curators'); updateFilters({ tab: 'curators' }); }}
               style={{
                 padding: '10px 20px', borderRadius: 12, fontWeight: 800, fontSize: 13, border: 'none', cursor: 'pointer',
                 background: activeTab === 'curators' ? '#8b5cf6' : 'var(--surface)',
