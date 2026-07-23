@@ -34,6 +34,8 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Логин немесе пароль қате' });
     }
 
+    await pool.query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
+
     const token = jwt.sign(
       { 
         id: user.id, 

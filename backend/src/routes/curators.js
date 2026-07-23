@@ -30,24 +30,30 @@ async function createCuratorWithLogin({ fullName, subject, streamId }) {
   return { ...curator, username, password };
 }
 
-// 1. Орталық базадағы кураторларды алу
+// 1. Орталық базадағы кураторларды алу — логин мен соңғы кіру уақытымен қоса
+// (users кестесімен аты-жөні+пән+ағым бойынша сәйкестендіріледі)
 router.get('/', auth, requireAdmin, async (req, res) => {
   const { subject, streamId } = req.query;
   try {
-    let query = `SELECT * FROM curators WHERE 1=1`;
+    let query = `
+      SELECT c.*, u.username AS username, u.last_login AS last_login
+      FROM curators c
+      LEFT JOIN users u
+        ON u.full_name = c.full_name AND u.subject = c.subject AND u.stream_id = c.stream_id
+      WHERE 1=1`;
     let params = [];
     let idx = 1;
 
     if (subject) {
-      query += ` AND subject = $${idx++}`;
+      query += ` AND c.subject = $${idx++}`;
       params.push(subject);
     }
     if (streamId) {
-      query += ` AND stream_id = $${idx++}`;
+      query += ` AND c.stream_id = $${idx++}`;
       params.push(streamId);
     }
 
-    query += ` ORDER BY id ASC`;
+    query += ` ORDER BY c.id ASC`;
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {

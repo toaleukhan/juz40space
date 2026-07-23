@@ -25,6 +25,7 @@ const createTables = async () => {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS stream_id VARCHAR(50) DEFAULT '01';`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS students_count VARCHAR(50) DEFAULT '0';`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;`);
 
     // 👑 ADMIN АКТИВАЦИЯСЫ: admin / admin123
     const adminCheck = await pool.query(`SELECT id FROM users WHERE username = 'admin'`);
@@ -77,26 +78,6 @@ const createTables = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
-
-    // 💡 ФИЗИКА КУРАТОРЛАРЫНА АВТОМАТТЫ ЛОГИН/ПАРОЛЬ
-    const curatorsRes = await pool.query(`SELECT full_name FROM curators WHERE subject = 'ФИЗ'`);
-    const defaultPassword = await bcrypt.hash('fiz123456', 10);
-
-    for (const cur of curatorsRes.rows) {
-      if (!cur.full_name) continue;
-      const firstName = cur.full_name.split(' ')[0].toLowerCase();
-      const username = `fiz_${firstName}`;
-
-      const userCheck = await pool.query(`SELECT id FROM users WHERE full_name = $1 OR username = $2`, [cur.full_name, username]);
-      
-      if (userCheck.rows.length === 0) {
-        await pool.query(
-          `INSERT INTO users (username, password, full_name, role, subject, stream_id, students_count)
-           VALUES ($1, $2, $3, 'curator', 'ФИЗ', '01', '0')`,
-          [username, defaultPassword, cur.full_name]
-        );
-      }
-    }
 
     console.log('✅ Деректер базасы мен пайдаланушылар толық дайын!');
   } catch (err) {
