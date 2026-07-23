@@ -743,15 +743,17 @@ export default function StRecordings() {
                     <th style={{ padding: '14px 16px' }}>Куратор аты-жөні</th>
                     <th style={{ padding: '14px 16px' }}>Пәні</th>
                     <th style={{ padding: '14px 16px' }}>Ағымы</th>
+                    <th style={{ padding: '14px 16px' }}>Логин</th>
+                    <th style={{ padding: '14px 16px' }}>Соңғы кіру</th>
                     <th style={{ padding: '14px 16px' }}>Жұмыс Статусы</th>
                     <th style={{ padding: '14px 16px', width: 80 }}>Әрекет</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Жүктелуде...</td></tr>
+                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Жүктелуде...</td></tr>
                   ) : curatorsList.length === 0 ? (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Кураторлар табылмады</td></tr>
+                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Кураторлар табылмады</td></tr>
                   ) : curatorsList.map((cur) => {
                     const stInfo = STATUS_MAP[cur.status] || STATUS_MAP.active;
                     return (
@@ -765,6 +767,12 @@ export default function StRecordings() {
                             style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontWeight: 600 }}>
                             {STREAMS.map(s => <option key={s} value={s}>{selectedSubject.code}-{s}</option>)}
                           </select>
+                        </td>
+                        <td style={{ padding: '14px 16px', fontFamily: 'monospace', fontSize: 12.5, color: cur.username ? 'var(--text)' : 'var(--text-muted)' }}>
+                          {cur.username || '— логин жоқ —'}
+                        </td>
+                        <td style={{ padding: '14px 16px', fontSize: 12.5, color: 'var(--text-sub)' }}>
+                          {cur.last_login ? new Date(cur.last_login).toLocaleString('kk-KZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Кірген жоқ'}
                         </td>
                         <td style={{ padding: '14px 16px' }}>
                           <select value={cur.status || 'active'} onChange={(e) => handleUpdateCuratorStatus(cur.id, e.target.value)}
