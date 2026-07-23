@@ -6,6 +6,11 @@ const { apiLimiter, loginLimiter, securityHeaders, sanitizeInput } = require('./
 
 const app = express();
 
+// Railway (және көптеген PaaS) сұраныстарды бір реверс-прокси арқылы жібереді де,
+// X-Forwarded-For тақырыбын қосады. Бұл орнатылмаса, express-rate-limit әр сұраныста
+// ValidationError лақтырып, сұраныс жауапсыз қалады (логин де осыдан істемей тұрды).
+app.set('trust proxy', 1);
+
 const isAllowedOrigin = (origin) => {
   if (!origin) return true;
   try {
