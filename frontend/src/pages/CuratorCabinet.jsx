@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import api from '../services/api';
-import { IconUser, IconTable, IconVideo, IconLink, IconCheck, IconAlert } from '../components/icons';
-import { MEET_LOGO, SHEETS_LOGO } from '../components/brandLogos';
+import { IconUser, IconTable, IconVideo, IconLink, IconCheck, IconAlert, IconMeetLogo } from '../components/icons';
+import { SHEETS_LOGO } from '../components/brandLogos';
 
 // Куратордың жеке кабинеті: профиль ақпараты + өз СТ-жазбаларының тарихы бір бетте.
 export default function CuratorCabinet() {
@@ -209,7 +209,7 @@ export default function CuratorCabinet() {
                           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                             {meetCodes.map((code, i) => (
                               <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 8, background: 'rgba(16,185,129,0.10)', color: '#059669', fontWeight: 600, fontSize: 11 }}>
-                                <img src={MEET_LOGO} alt="Meet" style={{ width: 13, height: 13 }} />
+                                <IconMeetLogo style={{ width: 13, height: 13 }} />
                                 {code}
                               </span>
                             ))}

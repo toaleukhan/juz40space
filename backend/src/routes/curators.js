@@ -31,12 +31,15 @@ async function createCuratorWithLogin({ fullName, subject, streamId }) {
 }
 
 // 1. Орталық базадағы кураторларды алу — логин мен соңғы кіру уақытымен қоса
-// (users кестесімен аты-жөні+пән+ағым бойынша сәйкестендіріледі)
+// (users кестесімен аты-жөні+пән+ағым бойынша сәйкестендіріледі).
+// DISTINCT ON (c.id): full_name бойынша бір куратордың атына сай бірнеше
+// users жолы табылып қалса (ескі/қайталанған аккаунт), куратор бір-ақ рет
+// шығады — ең соңғы жасалған логин таңдалады.
 router.get('/', auth, requireAdmin, async (req, res) => {
   const { subject, streamId } = req.query;
   try {
     let query = `
-      SELECT c.*, u.username AS username, u.last_login AS last_login
+      SELECT DISTINCT ON (c.id) c.*, u.username AS username, u.last_login AS last_login
       FROM curators c
       LEFT JOIN users u
         ON u.full_name = c.full_name AND u.subject = c.subject AND u.stream_id = c.stream_id
@@ -53,11 +56,41 @@ router.get('/', auth, requireAdmin, async (req, res) => {
       params.push(streamId);
     }
 
-    query += ` ORDER BY c.id ASC`;
+    query += ` ORDER BY c.id ASC, u.id DESC`;
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: 'Базадан оқу қатесі: ' + err.message });
+  }
+});
+
+// 1b. Бұрыннан роступа қосылған, бірақ логині жоқ куратор үшін логин жасау
+router.post('/:id/generate-login', auth, requireAdmin, async (req, res) => {
+  try {
+    const curRes = await pool.query('SELECT * FROM curators WHERE id = $1', [req.params.id]);
+    if (curRes.rows.length === 0) return res.status(404).json({ error: 'Куратор табылмады' });
+    const cur = curRes.rows[0];
+
+    const existing = await pool.query(
+      'SELECT id FROM users WHERE full_name = $1 AND subject = $2 AND stream_id = $3',
+      [cur.full_name, cur.subject, cur.stream_id]
+    );
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Бұл куратордың логині бұрыннан бар' });
+    }
+
+    const username = await makeUsername(cur.full_name, pool);
+    const password = makePassword();
+    const hash = await hashPassword(password);
+    await pool.query(
+      `INSERT INTO users (username, password, full_name, role, subject, stream_id)
+       VALUES ($1, $2, $3, 'curator', $4, $5)`,
+      [username, hash, cur.full_name, cur.subject, cur.stream_id]
+    );
+
+    res.json({ ...cur, username, password });
+  } catch (err) {
+    res.status(500).json({ error: 'Логин жасау қатесі: ' + err.message });
   }
 });
 

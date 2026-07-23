@@ -43,6 +43,18 @@ export const IconLink = (p) => (
 export const IconTable = (p) => (
   <svg {...base} {...p}><rect x="4" y="4.5" width="16" height="15" rx="2" /><line x1="4" y1="9.5" x2="20" y2="9.5" /><line x1="10" y1="4.5" x2="10" y2="19.5" /></svg>
 );
+// Google Meet белгісі — тек камера пиктограммасы, жазусыз (4 түсті стиль)
+export const IconMeetLogo = ({ style, ...p }) => (
+  <svg viewBox="0 0 36 36" style={{ width: 16, height: 16, flexShrink: 0, ...style }} {...p}>
+    <path fill="#00832d" d="M20.5 11.5v6.7l4.9 3.8V15z" />
+    <path fill="#0066da" d="M20.5 24.9H8.6a2 2 0 0 1-2-2V15h13.9z" />
+    <path fill="#e94235" d="M6.6 15V9.6a2 2 0 0 1 2-2h11.9v7.4z" />
+    <path fill="#2684fc" d="M25.4 12.9l-4.9 3.8v3.2l4.9 3.8a1.1 1.1 0 0 0 1.8-.85V13.75a1.1 1.1 0 0 0-1.8-.85z" />
+    <path fill="#ffba00" d="M20.5 18l-13.9 3v3.9a2 2 0 0 0 2 2h11.9z" />
+    <path fill="#00ac47" d="M20.5 11.5H6.6v6.5h13.9z" />
+  </svg>
+);
+
 export const IconSettings = (p) => (
   <svg {...base} {...p}><circle cx="12" cy="12" r="3" /><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3H9.8l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9c.6.5 1.3.9 2 1.2l.4 2.6h4.4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z" /></svg>
 );

@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Schedule from './pages/Schedule';
 import StRecordings from './pages/StRecordings';
+import CuratorsDatabase from './pages/CuratorsDatabase';
 import CuratorCabinet from './pages/CuratorCabinet';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
@@ -14,6 +15,7 @@ export default function App() {
 
         <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
         <Route path="/st-recordings" element={<ProtectedRoute><StRecordings /></ProtectedRoute>} />
+        <Route path="/curators" element={<ProtectedRoute><CuratorsDatabase /></ProtectedRoute>} />
 
         {/* 👤 Куратордың жеке кабинеті — профиль + СТ-жазба тарихы бір бетте */}
         <Route path="/profile" element={<ProtectedRoute><CuratorCabinet /></ProtectedRoute>} />

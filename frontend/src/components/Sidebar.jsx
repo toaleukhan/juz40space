@@ -40,7 +40,7 @@ function SidebarContent({ collapsed, onNavigate }) {
   const adminLinks = [
     { to: '/schedule', label: 'Сабақ кестесі', Icon: IconCalendar },
     { to: '/st-recordings', label: 'СТ жазбалар', Icon: IconVideo },
-    { to: '/st-recordings?tab=curators', label: 'Кураторлар базасы', Icon: IconUsers },
+    { to: '/curators', label: 'Кураторлар базасы', Icon: IconUsers },
   ];
   const links = isCurator ? curatorLinks : adminLinks;
 
