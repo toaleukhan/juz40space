@@ -33,11 +33,14 @@ const STATUS_MAP = {
 };
 
 export default function StRecordings() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'curators' ? 'curators' : 'st');
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const isCurator = currentUser.role === 'curator';
 
-  const currentSubjectCode = searchParams.get('subject');
-  const currentStream = searchParams.get('stream') || '01';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(isCurator ? 'st' : (searchParams.get('tab') === 'curators' ? 'curators' : 'st'));
+
+  const currentSubjectCode = searchParams.get('subject') || (isCurator ? currentUser.subject : null);
+  const currentStream = searchParams.get('stream') || (isCurator ? (currentUser.streamId || '01') : '01');
   const currentMonth = parseInt(searchParams.get('month') || '1', 10);
   const currentWeek = parseInt(searchParams.get('week') || '1', 10);
 
@@ -56,6 +59,7 @@ export default function StRecordings() {
   // ?tab=curators параметрі кез келген уақытта (тіпті компонент қайта mount
   // болмай, сол бет ішінде навигация болса да) activeTab-ты дұрыс ауыстыруы керек.
   useEffect(() => {
+    if (isCurator) return; // куратор үшін "Кураторлар Базасы" tab-ы мүлдем жоқ
     const tab = searchParams.get('tab');
     if (tab === 'curators' || tab === 'st') setActiveTab(tab);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -239,7 +243,7 @@ export default function StRecordings() {
               📹 СТ Жүйесі {selectedSubject ? `· ${selectedSubject.name}` : ''}
             </h1>
           </div>
-          {selectedSubject && (
+          {selectedSubject && !isCurator && (
             <button onClick={() => updateFilters({ subject: null })}
               style={{ padding: '8px 16px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-sub)', fontWeight: 600, fontSize: 12 }}>
               ← Барлық пәндер
@@ -247,7 +251,7 @@ export default function StRecordings() {
           )}
         </div>
 
-        {selectedSubject && (
+        {selectedSubject && !isCurator && (
           <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
             <button onClick={() => { setActiveTab('st'); updateFilters({ tab: null }); }}
               style={{
@@ -278,7 +282,7 @@ export default function StRecordings() {
           </div>
         )}
 
-        {showBulk && selectedSubject && (
+        {showBulk && selectedSubject && !isCurator && (
           <div className="card" style={{ padding: 20, marginBottom: 20, border: '2px solid #3b82f6' }}>
             <h3 style={{ margin: '0 0 10px', fontSize: 15, fontWeight: 800 }}>
               📋 Тізіммен кураторларды массовый енгізу ({selectedSubject.name} · {selectedSubject.code}-{currentStream})
@@ -435,12 +439,16 @@ export default function StRecordings() {
             </div>
 
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              <input placeholder="Жаңа куратор қосу..." value={newCurator} onChange={e => setNewCurator(e.target.value)}
-                style={{ width: 260, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
-              <button onClick={handleAddCurator}
-                style={{ padding: '9px 18px', borderRadius: 10, background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-                + Қосу
-              </button>
+              {!isCurator && (
+                <>
+                  <input placeholder="Жаңа куратор қосу..." value={newCurator} onChange={e => setNewCurator(e.target.value)}
+                    style={{ width: 260, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
+                  <button onClick={handleAddCurator}
+                    style={{ padding: '9px 18px', borderRadius: 10, background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                    + Қосу
+                  </button>
+                </>
+              )}
               <div style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: 'var(--text-sub)' }}>
                 Осы аптада: <span style={{ color: 'var(--text)' }}>{rows.length}</span> куратор
               </div>
@@ -546,10 +554,12 @@ export default function StRecordings() {
                               </div>
                             ))}
 
-                            <button onClick={() => handleDeleteRow(row.id)}
-                              style={{ padding: '5px 8px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: 'none', fontSize: 11, cursor: 'pointer', marginLeft: 'auto' }}>
-                              ✕
-                            </button>
+                            {!isCurator && (
+                              <button onClick={() => handleDeleteRow(row.id)}
+                                style={{ padding: '5px 8px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: 'none', fontSize: 11, cursor: 'pointer', marginLeft: 'auto' }}>
+                                ✕
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

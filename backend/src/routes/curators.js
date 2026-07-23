@@ -31,7 +31,7 @@ async function createCuratorWithLogin({ fullName, subject, streamId }) {
 }
 
 // 1. Орталық базадағы кураторларды алу
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, requireAdmin, async (req, res) => {
   const { subject, streamId } = req.query;
   try {
     let query = `SELECT * FROM curators WHERE 1=1`;
@@ -126,7 +126,7 @@ router.post('/', auth, requireAdmin, async (req, res) => {
 });
 
 // 4. Статусын жаңарту
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', auth, requireAdmin, async (req, res) => {
   const { fullName, subject, streamId, status } = req.body;
   try {
     const result = await pool.query(
@@ -145,7 +145,7 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // 5. Өшіру
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, requireAdmin, async (req, res) => {
   try {
     await pool.query('DELETE FROM curators WHERE id = $1', [req.params.id]);
     res.json({ success: true });
