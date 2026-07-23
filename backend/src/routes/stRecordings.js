@@ -77,7 +77,7 @@ router.get('/', auth, async (req, res) => {
 
     const existingSt = await pool.query(
       `SELECT curator_name FROM st_recordings 
-       WHERE subject = $1 AND (stream_id = $2 OR month_id = $2) AND (month_num = $3 OR month_id = $3) AND week_num = $4`,
+       WHERE subject = $1 AND (stream_id = $2 OR month_id = $2) AND (month_num = $3::int OR month_id = $3::text) AND week_num = $4`,
       [subj, strId, mNum, wNum]
     );
     const existingNames = existingSt.rows.map(r => r.curator_name);
@@ -93,7 +93,7 @@ router.get('/', auth, async (req, res) => {
     }
 
     // 2. Сұранысты жіберу: Куратор болса ТЕК ӨЗІНІҢ атымен сүзеді!
-    let query = `SELECT * FROM st_recordings WHERE subject = $1 AND (stream_id = $2 OR month_id = $2) AND (month_num = $3 OR month_id = $3) AND week_num = $4`;
+    let query = `SELECT * FROM st_recordings WHERE subject = $1 AND (stream_id = $2 OR month_id = $2) AND (month_num = $3::int OR month_id = $3::text) AND week_num = $4`;
     let params = [subj, strId, mNum, wNum];
 
     if (isCurator) {
