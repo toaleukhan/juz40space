@@ -54,6 +54,7 @@ export default function StRecordings() {
   const [showBulk, setShowBulk] = useState(false);
   const [bulkText, setBulkText] = useState('');
   const [actionLoading, setActionLoading] = useState({});
+  const [showFilter, setShowFilter] = useState(false);
   const [newCreds, setNewCreds] = useState(null); // [{full_name, username, password}] — жаңадан жасалған логиндер
 
   // ?tab=curators параметрі кез келген уақытта (тіпті компонент қайта mount
@@ -388,67 +389,176 @@ export default function StRecordings() {
           </div>
         ) : activeTab === 'st' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div className="card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АҒЫМ:</span>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {STREAMS.map(str => (
-                    <button key={str} onClick={() => updateFilters({ stream: str })}
-                      style={{
-                        padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentStream === str ? 800 : 500,
-                        background: currentStream === str ? 'var(--accent)' : 'var(--surface2)',
-                        color: currentStream === str ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
-                      }}>
-                      {selectedSubject.code}-{str}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div style={{ position: 'relative', display: 'flex' }}>
+              <button onClick={() => setShowFilter(v => !v)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 20,
+                  border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-sub)',
+                  fontWeight: 700, fontSize: 12.5, cursor: 'pointer',
+                }}>
+                ⚡ {selectedSubject.code}-{currentStream} · {currentMonth}-ай · {currentWeek}-апта
+                <span style={{ opacity: 0.6, fontSize: 11 }}>▾</span>
+              </button>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АЙ:</span>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {availableMonths.map(m => (
-                    <button key={m} onClick={() => updateFilters({ month: m })}
-                      style={{
-                        padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentMonth === m ? 800 : 500,
-                        background: currentMonth === m ? '#10b981' : 'var(--surface2)',
-                        color: currentMonth === m ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
-                      }}>
-                      {m}-ай
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АПТА:</span>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  {WEEKS.map(w => (
-                    <button key={w} onClick={() => updateFilters({ week: w })}
-                      style={{
-                        padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentWeek === w ? 800 : 500,
-                        background: currentWeek === w ? '#3b82f6' : 'var(--surface2)',
-                        color: currentWeek === w ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
-                      }}>
-                      {w}-апта
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-              {!isCurator && (
+              {showFilter && (
                 <>
-                  <input placeholder="Жаңа куратор қосу..." value={newCurator} onChange={e => setNewCurator(e.target.value)}
-                    style={{ width: 260, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
-                  <button onClick={handleAddCurator}
-                    style={{ padding: '9px 18px', borderRadius: 10, background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-                    + Қосу
-                  </button>
+                  <div onClick={() => setShowFilter(false)} style={{ position: 'fixed', inset: 0, zIndex: 39 }} />
+                  <div className="card" style={{
+                    position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 40,
+                    padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14, width: 'max-content', maxWidth: '90vw',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АҒЫМ:</span>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {STREAMS.map(str => (
+                          <button key={str} onClick={() => updateFilters({ stream: str })}
+                            style={{
+                              padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentStream === str ? 800 : 500,
+                              background: currentStream === str ? 'var(--accent)' : 'var(--surface2)',
+                              color: currentStream === str ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
+                            }}>
+                            {selectedSubject.code}-{str}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АЙ:</span>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {availableMonths.map(m => (
+                          <button key={m} onClick={() => updateFilters({ month: m })}
+                            style={{
+                              padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentMonth === m ? 800 : 500,
+                              background: currentMonth === m ? '#10b981' : 'var(--surface2)',
+                              color: currentMonth === m ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
+                            }}>
+                            {m}-ай
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АПТА:</span>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        {WEEKS.map(w => (
+                          <button key={w} onClick={() => updateFilters({ week: w })}
+                            style={{
+                              padding: '6px 14px', borderRadius: 10, fontSize: 12, fontWeight: currentWeek === w ? 800 : 500,
+                              background: currentWeek === w ? '#3b82f6' : 'var(--surface2)',
+                              color: currentWeek === w ? '#fff' : 'var(--text)', border: 'none', cursor: 'pointer',
+                            }}>
+                            {w}-апта
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </>
               )}
+            </div>
+
+            {isCurator ? (
+              // ── Куратордың жеке карточкасы: кесте емес, тек өз жазбасы ──
+              loading ? (
+                <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Жүктелуде...</div>
+              ) : !rows[0] ? (
+                <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
+                  Бұл аптаға жазба әлі жасалмады. Парақты қайта жаңартып көріңіз — жоқ болса, басқарушыға хабарласыңыз.
+                </div>
+              ) : (() => {
+                const row = rows[0];
+                const videoLinks = row.video_links || (row.video_link ? [row.video_link] : []);
+                const attendanceLinks = row.attendance_links || (row.attendance_link ? [row.attendance_link] : []);
+                const meetCodes = row.meet_codes || (row.meet_code ? [row.meet_code] : []);
+                const meetLinks = row.meet_links || (row.meet_link ? [row.meet_link] : []);
+                return (
+                  <div className="card" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Оқушы саны</label>
+                        <input
+                          defaultValue={row.students_count || '0'}
+                          onBlur={(e) => handleUpdateRow(row.id, 'studentsCount', e.target.value)}
+                          style={{ width: 100, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', textAlign: 'center' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Ескеру керек жағдайлар</label>
+                        <input
+                          defaultValue={row.notes || ''}
+                          placeholder="Мыс: ауырып тұр..."
+                          onBlur={(e) => handleUpdateRow(row.id, 'notes', e.target.value)}
+                          style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+                      <button onClick={() => handleCreateMeet(row.id, row.curator_name)} disabled={actionLoading[row.id] === 'meet'}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 10, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                        <img src={MEET_LOGO} alt="" style={{ width: 16, height: 16 }} />
+                        {actionLoading[row.id] === 'meet' ? '...' : meetCodes.length > 0 ? '+ Жаңа Мит' : 'Мит ашу'}
+                      </button>
+
+                      {meetCodes.map((code, idx) => (
+                        <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <a href={meetLinks[idx]} target="_blank" rel="noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 12, textDecoration: 'none' }}>
+                            <img src={MEET_LOGO} alt="" style={{ width: 14, height: 14 }} />
+                            {code}
+                          </a>
+                          <button onClick={() => handleSyncDrive(row.id, code)} disabled={actionLoading[row.id] === 'drive'}
+                            style={{ padding: '7px 10px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                            🔄 Синхрондау
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {(videoLinks.length > 0 || attendanceLinks.length > 0) && (
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexWrap: 'wrap', gap: 24 }}>
+                        {videoLinks.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Видео жазба</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              {videoLinks.map((v, idx) => (
+                                <a key={idx} href={v} target="_blank" rel="noreferrer" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none', fontSize: 12.5 }}>
+                                  🎬 Запись {videoLinks.length > 1 ? idx + 1 : ''}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {attendanceLinks.length > 0 && (
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Отслежка</div>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              {attendanceLinks.map((a, idx) => (
+                                <a key={idx} href={a} target="_blank" rel="noreferrer" title="Отслежка">
+                                  {SHEETS_LOGO
+                                    ? <img src={SHEETS_LOGO} alt="Отслежка" style={{ width: 20, height: 20 }} />
+                                    : <span style={{ color: '#059669', fontWeight: 600, fontSize: 12.5 }}>📊 Отслежка {attendanceLinks.length > 1 ? idx + 1 : ''}</span>}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
+            ) : (
+            <>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <input placeholder="Жаңа куратор қосу..." value={newCurator} onChange={e => setNewCurator(e.target.value)}
+                style={{ width: 260, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
+              <button onClick={handleAddCurator}
+                style={{ padding: '9px 18px', borderRadius: 10, background: 'var(--accent)', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                + Қосу
+              </button>
               <div style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: 'var(--text-sub)' }}>
                 Осы аптада: <span style={{ color: 'var(--text)' }}>{rows.length}</span> куратор
               </div>
@@ -554,12 +664,10 @@ export default function StRecordings() {
                               </div>
                             ))}
 
-                            {!isCurator && (
-                              <button onClick={() => handleDeleteRow(row.id)}
-                                style={{ padding: '5px 8px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: 'none', fontSize: 11, cursor: 'pointer', marginLeft: 'auto' }}>
-                                ✕
-                              </button>
-                            )}
+                            <button onClick={() => handleDeleteRow(row.id)}
+                              style={{ padding: '5px 8px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: 'none', fontSize: 11, cursor: 'pointer', marginLeft: 'auto' }}>
+                              ✕
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -568,6 +676,8 @@ export default function StRecordings() {
                 </tbody>
               </table>
             </div>
+            </>
+            )}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
