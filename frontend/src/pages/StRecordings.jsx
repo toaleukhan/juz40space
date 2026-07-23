@@ -194,6 +194,28 @@ export default function StRecordings() {
     }
   };
 
+  // Куратордың осы аптаға жазбасы әлі жоқ болса — "Мит ашу" басу арқылы
+  // жазбаны дереу жасап, содан кейін митті ашамыз (авто-синхрония орнына
+  // куратордың өз әрекетімен басталады, анығырақ).
+  const handleStartMyWeek = async () => {
+    setActionLoading(prev => ({ ...prev, self: 'meet' }));
+    try {
+      const { data } = await api.post('/st-recordings/curator', {
+        subject: currentSubjectCode,
+        streamId: currentStream,
+        monthNum: currentMonth,
+        weekNum: currentWeek,
+        curatorName: currentUser.fullName,
+      });
+      setRows([data]);
+      await handleCreateMeet(data.id, data.curator_name);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Мит ашуда қателік');
+    } finally {
+      setActionLoading(prev => ({ ...prev, self: null }));
+    }
+  };
+
   const handleSyncDrive = async (rowId, meetCode) => {
     setActionLoading(prev => ({ ...prev, [rowId]: 'drive' }));
     try {
@@ -407,6 +429,7 @@ export default function StRecordings() {
                     position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 40,
                     padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14, width: 'max-content', maxWidth: '90vw',
                   }}>
+                    {!isCurator && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АҒЫМ:</span>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -422,6 +445,7 @@ export default function StRecordings() {
                         ))}
                       </div>
                     </div>
+                    )}
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АЙ:</span>
@@ -464,8 +488,13 @@ export default function StRecordings() {
               loading ? (
                 <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Жүктелуде...</div>
               ) : !rows[0] ? (
-                <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
-                  Бұл аптаға жазба әлі жасалмады. Парақты қайта жаңартып көріңіз — жоқ болса, басқарушыға хабарласыңыз.
+                <div className="card" style={{ padding: 32, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+                  <div style={{ color: 'var(--text-muted)' }}>Бұл аптаға жазба әлі жоқ — Мит ашсаңыз, осы аптаға жазба сол сәтте жасалады.</div>
+                  <button onClick={handleStartMyWeek} disabled={actionLoading.self === 'meet'}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}>
+                    <img src={MEET_LOGO} alt="" style={{ width: 16, height: 16 }} />
+                    {actionLoading.self === 'meet' ? 'Ашылуда...' : 'Мит ашу'}
+                  </button>
                 </div>
               ) : (() => {
                 const row = rows[0];
