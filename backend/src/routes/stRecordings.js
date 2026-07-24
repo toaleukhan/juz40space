@@ -13,15 +13,30 @@ const SUBJECT_ENV_KEY = {
   ТАРИХ: 'TARIH', РУС: 'RUS', ХИМ: 'HIM', МС: 'MS', ӘДЕБ: 'ADEB', АНГЛ: 'ANGL', ДЖТ: 'DZHT',
 };
 
-// subject берілсе, сол пәннің жеке домен аккаунтын (Railway-де
-// GOOGLE_TOKEN_JSON_<КОД> / GOOGLE_CREDENTIALS_JSON_<КОД>) іздейді;
-// табылмаса — бұрынғыдай ортақ аккаунтқа (GOOGLE_TOKEN_JSON) түседі.
+const SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/drive'];
+
+// subject берілсе, сол пәннің жеке домен аккаунтын іздейді — алдымен сервис
+// аккаунт (GOOGLE_SERVICE_ACCOUNT_JSON_<КОД>, delegation керек емес, тек
+// ӨЗ күнтізбесінде әрекет етеді), содан кейін OAuth жұп
+// (GOOGLE_TOKEN_JSON_<КОД> / GOOGLE_CREDENTIALS_JSON_<КОД>); екеуі де
+// табылмаса — бұрынғыдай ортақ аккаунтқа түседі.
 function getGoogleAuth(subject) {
   try {
+    const envKey = subject && SUBJECT_ENV_KEY[subject];
+
+    const saJson = envKey && process.env[`GOOGLE_SERVICE_ACCOUNT_JSON_${envKey}`];
+    if (saJson) {
+      const sa = JSON.parse(saJson);
+      return new google.auth.JWT({
+        email: sa.client_email,
+        key: sa.private_key,
+        scopes: SCOPES,
+      });
+    }
+
     let tokens = null;
     let creds = null;
 
-    const envKey = subject && SUBJECT_ENV_KEY[subject];
     if (envKey && process.env[`GOOGLE_TOKEN_JSON_${envKey}`] && process.env[`GOOGLE_CREDENTIALS_JSON_${envKey}`]) {
       tokens = JSON.parse(process.env[`GOOGLE_TOKEN_JSON_${envKey}`]);
       creds = JSON.parse(process.env[`GOOGLE_CREDENTIALS_JSON_${envKey}`]);
