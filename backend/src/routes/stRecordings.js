@@ -258,22 +258,42 @@ router.post('/sync-drive', auth, async (req, res) => {
     const files = driveRes.data.files || [];
     const vLinks = record.video_links || (record.video_link ? [record.video_link] : []);
     const aLinks = record.attendance_links || (record.attendance_link ? [record.attendance_link] : []);
+    const newFiles = [];
 
     // Осы аптада бірнеше Мит ашылған болуы мүмкін (мыс. алғашқысына толық
     // кірмей, "+ Жаңа Мит" басылса) — сондықтан бір ғана емес, осы уақыт
     // аралығында табылған БАРЛЫҚ видео/отслежка файлын жинаймыз.
+    //
+    // Отслежка — нақты ҚАТЫСУ ЕСЕБІ (Google Sheets), Gemini жасайтын жалпы
+    // қорытынды құжат (Google Docs) емес, сондықтан тек spreadsheet-ті
+    // санаймыз.
     files.forEach(f => {
-      const lowerName = (f.name || '').toLowerCase();
       const mime = (f.mimeType || '').toLowerCase();
+      const lowerName = (f.name || '').toLowerCase();
       const link = f.webViewLink || '';
       if (!link) return;
 
       const isVideo = mime.startsWith('video/') || lowerName.endsWith('.mp4') || lowerName.endsWith('.mkv');
-      const isAttendance = mime.includes('spreadsheet') || mime.includes('document') || mime.includes('pdf') || lowerName.includes('расшифровка') || lowerName.includes('отслежка');
+      const isAttendance = mime.includes('spreadsheet');
 
-      if (isVideo && !vLinks.includes(link)) vLinks.push(link);
-      else if (isAttendance && !aLinks.includes(link)) aLinks.push(link);
+      if (isVideo && !vLinks.includes(link)) { vLinks.push(link); newFiles.push(f); }
+      else if (isAttendance && !aLinks.includes(link)) { aLinks.push(link); newFiles.push(f); }
     });
+
+    // Жаңадан табылған файлдар әдепкіде тек оны жасаған Google аккаунтқа
+    // ғана көрінеді — сілтемесі барға ашық қыламыз, әйтпесе қолданушылар
+    // "Access denied" көреді. Бір файлдың рұқсаты орнамай қалса да қалғаны
+    // сақталуы үшін қатені жұтамыз, тек логқа жазамыз.
+    for (const f of newFiles) {
+      try {
+        await drive.permissions.create({
+          fileId: f.id,
+          requestBody: { role: 'reader', type: 'anyone' },
+        });
+      } catch (permErr) {
+        console.error(`Drive рұқсат қатесі (${f.id}):`, permErr.message);
+      }
+    }
 
     const updated = await pool.query(
       `UPDATE st_recordings
