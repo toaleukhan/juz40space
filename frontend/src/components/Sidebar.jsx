@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import useIsMobile from '../hooks/useIsMobile';
 import juz40Logo from '../assets/juz40-logo.png';
-import { IconMenu, IconClose, IconUser, IconCalendar, IconVideo, IconUsers, IconLogout } from './icons';
+import { IconMenu, IconClose, IconUser, IconCalendar, IconVideo, IconUsers, IconLogout, IconChart } from './icons';
 import StarField from './StarField';
 
 export const RAIL_WIDTH = 76;
@@ -42,6 +42,7 @@ function SidebarContent({ collapsed, onNavigate }) {
     { to: '/schedule', label: 'Сабақ кестесі', Icon: IconCalendar },
     { to: '/st-recordings', label: 'СТ жазбалар', Icon: IconVideo },
     { to: '/curators', label: 'Кураторлар базасы', Icon: IconUsers },
+    { to: '/dashboard', label: 'Дэшборд', Icon: IconChart },
   ];
   const links = isCurator ? curatorLinks : adminLinks;
 
