@@ -3,11 +3,9 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const pool = require('../config/db');
 const { google } = require('googleapis');
-const path = require('path');
-const fs = require('fs');
 
 // Пән коды (кириллица) -> ортам айнымалысының ASCII жалғауы,
-// мыс. GOOGLE_TOKEN_JSON_FIZ / GOOGLE_CREDENTIALS_JSON_FIZ
+// мыс. GOOGLE_SERVICE_ACCOUNT_JSON_FIZ / GOOGLE_TOKEN_JSON_FIZ
 const SUBJECT_ENV_KEY = {
   ФИЗ: 'FIZ', МАТ: 'MAT', ТІЛ: 'TIL', БИО: 'BIO', ИНФО: 'INFO', ГЕО: 'GEO',
   ТАРИХ: 'TARIH', РУС: 'RUS', ХИМ: 'HIM', МС: 'MS', ӘДЕБ: 'ADEB', АНГЛ: 'ANGL', ДЖТ: 'DZHT',
@@ -15,16 +13,17 @@ const SUBJECT_ENV_KEY = {
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/drive'];
 
-// subject берілсе, сол пәннің жеке домен аккаунтын іздейді — алдымен сервис
-// аккаунт (GOOGLE_SERVICE_ACCOUNT_JSON_<КОД>, delegation керек емес, тек
-// ӨЗ күнтізбесінде әрекет етеді), содан кейін OAuth жұп
-// (GOOGLE_TOKEN_JSON_<КОД> / GOOGLE_CREDENTIALS_JSON_<КОД>); екеуі де
-// табылмаса — бұрынғыдай ортақ аккаунтқа түседі.
+// Пәннің ӨЗ домен аккаунты болмаса — null қайтарады (алдыңғы нұсқада сапа
+// бөлімінің ортақ аккаунтына түсіп кете беретін еді, ол дұрыс емес: сапа
+// бөлімінің есептік жазбасы басқа пәннің атынан Мит ашпауы керек).
+// Пән өз аккаунтын алғанша, сол пәннің кураторлары "Мит ашу" баса алмайды —
+// бұл әдейі істелген тежеу, қате хабарламасы соны түсіндіреді.
 function getGoogleAuth(subject) {
   try {
     const envKey = subject && SUBJECT_ENV_KEY[subject];
+    if (!envKey) return null;
 
-    const saJson = envKey && process.env[`GOOGLE_SERVICE_ACCOUNT_JSON_${envKey}`];
+    const saJson = process.env[`GOOGLE_SERVICE_ACCOUNT_JSON_${envKey}`];
     if (saJson) {
       const sa = JSON.parse(saJson);
       return new google.auth.JWT({
@@ -34,40 +33,12 @@ function getGoogleAuth(subject) {
       });
     }
 
-    let tokens = null;
-    let creds = null;
-
-    if (envKey && process.env[`GOOGLE_TOKEN_JSON_${envKey}`] && process.env[`GOOGLE_CREDENTIALS_JSON_${envKey}`]) {
-      tokens = JSON.parse(process.env[`GOOGLE_TOKEN_JSON_${envKey}`]);
-      creds = JSON.parse(process.env[`GOOGLE_CREDENTIALS_JSON_${envKey}`]);
-    } else if (process.env.GOOGLE_TOKEN_JSON && process.env.GOOGLE_CREDENTIALS_JSON) {
-      tokens = JSON.parse(process.env.GOOGLE_TOKEN_JSON);
-      creds = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
-    } else {
-      const tokenPaths = [
-        path.join(process.cwd(), 'token.json'),
-        path.join(process.cwd(), 'sapa_bot/token.json'),
-        path.join(__dirname, '../../../sapa_bot/token.json')
-      ];
-      const credsPaths = [
-        path.join(process.cwd(), 'credentials.json'),
-        path.join(process.cwd(), 'sapa_bot/credentials.json'),
-        path.join(__dirname, '../../../sapa_bot/credentials.json')
-      ];
-
-      const tPath = tokenPaths.find(p => fs.existsSync(p));
-      const cPath = credsPaths.find(p => fs.existsSync(p));
-
-      if (tPath && cPath) {
-        tokens = JSON.parse(fs.readFileSync(tPath, 'utf8'));
-        creds = JSON.parse(fs.readFileSync(cPath, 'utf8'));
-      }
-    }
-
-    if (tokens && creds) {
-      if (tokens.token && !tokens.access_token) {
-        tokens.access_token = tokens.token;
-      }
+    const tokenJson = process.env[`GOOGLE_TOKEN_JSON_${envKey}`];
+    const credsJson = process.env[`GOOGLE_CREDENTIALS_JSON_${envKey}`];
+    if (tokenJson && credsJson) {
+      const tokens = JSON.parse(tokenJson);
+      const creds = JSON.parse(credsJson);
+      if (tokens.token && !tokens.access_token) tokens.access_token = tokens.token;
 
       const config = creds.installed || creds.web;
       const { client_id, client_secret, redirect_uris } = config;
