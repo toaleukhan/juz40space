@@ -6,12 +6,26 @@ const { google } = require('googleapis');
 const path = require('path');
 const fs = require('fs');
 
-function getGoogleAuth() {
+// Пән коды (кириллица) -> ортам айнымалысының ASCII жалғауы,
+// мыс. GOOGLE_TOKEN_JSON_FIZ / GOOGLE_CREDENTIALS_JSON_FIZ
+const SUBJECT_ENV_KEY = {
+  ФИЗ: 'FIZ', МАТ: 'MAT', ТІЛ: 'TIL', БИО: 'BIO', ИНФО: 'INFO', ГЕО: 'GEO',
+  ТАРИХ: 'TARIH', РУС: 'RUS', ХИМ: 'HIM', МС: 'MS', ӘДЕБ: 'ADEB', АНГЛ: 'ANGL', ДЖТ: 'DZHT',
+};
+
+// subject берілсе, сол пәннің жеке домен аккаунтын (Railway-де
+// GOOGLE_TOKEN_JSON_<КОД> / GOOGLE_CREDENTIALS_JSON_<КОД>) іздейді;
+// табылмаса — бұрынғыдай ортақ аккаунтқа (GOOGLE_TOKEN_JSON) түседі.
+function getGoogleAuth(subject) {
   try {
     let tokens = null;
     let creds = null;
 
-    if (process.env.GOOGLE_TOKEN_JSON && process.env.GOOGLE_CREDENTIALS_JSON) {
+    const envKey = subject && SUBJECT_ENV_KEY[subject];
+    if (envKey && process.env[`GOOGLE_TOKEN_JSON_${envKey}`] && process.env[`GOOGLE_CREDENTIALS_JSON_${envKey}`]) {
+      tokens = JSON.parse(process.env[`GOOGLE_TOKEN_JSON_${envKey}`]);
+      creds = JSON.parse(process.env[`GOOGLE_CREDENTIALS_JSON_${envKey}`]);
+    } else if (process.env.GOOGLE_TOKEN_JSON && process.env.GOOGLE_CREDENTIALS_JSON) {
       tokens = JSON.parse(process.env.GOOGLE_TOKEN_JSON);
       creds = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
     } else {
@@ -43,8 +57,8 @@ function getGoogleAuth() {
       const config = creds.installed || creds.web;
       const { client_id, client_secret, redirect_uris } = config;
       const oAuth2Client = new google.auth.OAuth2(
-        client_id, 
-        client_secret, 
+        client_id,
+        client_secret,
         redirect_uris ? redirect_uris[0] : 'http://localhost'
       );
       oAuth2Client.setCredentials(tokens);
@@ -151,7 +165,7 @@ router.post('/curator', auth, async (req, res) => {
 // 3. Google Meet Сілтемесін жасау
 router.post('/create-meet', auth, async (req, res) => {
   const { recordingId, curatorName, subject } = req.body;
-  const authClient = getGoogleAuth();
+  const authClient = getGoogleAuth(subject);
 
   if (!authClient) {
     return res.status(400).json({ error: 'Google авторизация кілттері табылмады' });
@@ -218,7 +232,7 @@ router.post('/sync-drive', auth, async (req, res) => {
   const record = rec.rows[0];
   const targetCode = meetCode || record.meet_code;
 
-  const authClient = getGoogleAuth();
+  const authClient = getGoogleAuth(record.subject);
   if (!authClient) {
     return res.status(400).json({ error: 'Google авторизация кілттері табылмады' });
   }
