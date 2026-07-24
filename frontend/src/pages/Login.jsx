@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import juz40Logo from '../assets/juz40-logo.png';
 import { smartScheduleByMonth, juniorScheduleByMonth } from './scheduleData';
 import { IconAlert } from '../components/icons';
+import StarField from '../components/StarField';
 
 import math    from '../assets/subjects/Математика.webp';
 import kaz     from '../assets/subjects/Казахский_Язык.webp';
@@ -82,16 +83,6 @@ function IllustrationPanel() {
     setTilt({ x: px * 14, y: py * -10 });
   };
 
-  const sparkles = useMemo(() => (
-    Array.from({ length: 14 }, (_, i) => ({
-      id: i,
-      left: Math.round(Math.random() * 96) + 2,
-      top: Math.round(Math.random() * 92) + 2,
-      size: 3 + Math.round(Math.random() * 5),
-      dur: 3 + Math.random() * 4,
-      delay: Math.random() * 4,
-    }))
-  ), []);
 
   return (
     <div
@@ -108,23 +99,14 @@ function IllustrationPanel() {
         @keyframes blobDrift2 { 0%,100% { transform:translate(0,0) scale(1); } 50% { transform:translate(20px,-16px) scale(1.05); } }
         @keyframes mascotFloat { 0%,100% { transform:translateY(0) rotate(-1.2deg); } 50% { transform:translateY(-14px) rotate(1.2deg); } }
         @keyframes glowPulse { 0%,100% { opacity:0.35; transform:scale(1); } 50% { opacity:0.6; transform:scale(1.12); } }
-        @keyframes sparkleTwinkle { 0%,100% { opacity:0; transform:scale(0.4) rotate(0deg); } 50% { opacity:0.9; transform:scale(1) rotate(90deg); } }
       `}</style>
 
       {/* Soft bg circles, drifting slowly */}
       <div style={{ position:'absolute', width:300, height:300, borderRadius:'50%', background:'rgba(255,255,255,0.25)', top:-60, right:-60, animation:'blobDrift1 9s ease-in-out infinite' }} />
       <div style={{ position:'absolute', width:200, height:200, borderRadius:'50%', background:'rgba(255,255,255,0.18)', bottom:-40, left:-40, animation:'blobDrift2 11s ease-in-out infinite' }} />
 
-      {/* Sparkle particles */}
-      {sparkles.map(s => (
-        <div key={s.id} style={{
-          position:'absolute', left:`${s.left}%`, top:`${s.top}%`,
-          width:s.size, height:s.size, borderRadius:'50%',
-          background:'#ffffff',
-          animation:`sparkleTwinkle ${s.dur}s ease-in-out ${s.delay}s infinite`,
-          pointerEvents:'none', zIndex:2,
-        }} />
-      ))}
+      {/* Ұшып жүрген жұлдызшалар */}
+      <StarField count={26} color="#ffffff" maxOpacity={0.85} style={{ zIndex: 2 }} />
 
       {/* Small fixed logo badge, top-left */}
       <div style={{

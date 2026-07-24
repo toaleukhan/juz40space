@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import useIsMobile from '../hooks/useIsMobile';
 import juz40Logo from '../assets/juz40-logo.png';
 import { IconMenu, IconClose, IconUser, IconCalendar, IconVideo, IconUsers, IconLogout } from './icons';
+import StarField from './StarField';
 
 export const RAIL_WIDTH = 76;
 export const RAIL_WIDTH_EXPANDED = 252;
@@ -131,7 +132,10 @@ export default function Sidebar() {
           overflow: 'hidden', transition: 'width 0.18s ease',
           boxShadow: expanded ? '8px 0 32px rgba(0,0,0,0.14)' : 'none',
         }}>
-        <SidebarContent collapsed={!expanded} />
+        <StarField count={16} color="var(--accent)" maxOpacity={0.45} />
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <SidebarContent collapsed={!expanded} />
+        </div>
       </aside>
     );
   }
@@ -160,12 +164,16 @@ export default function Sidebar() {
           <aside style={{
             position: 'relative', width: 'min(82vw, 300px)', height: '100%', background: 'var(--surface-solid, var(--surface))',
             display: 'flex', flexDirection: 'column', padding: '18px 16px', boxShadow: '8px 0 32px rgba(0,0,0,0.2)',
+            overflow: 'hidden',
           }}>
+            <StarField count={14} color="var(--accent)" maxOpacity={0.45} />
             <button onClick={() => setOpen(false)} aria-label="Жабу"
-              style={{ alignSelf: 'flex-end', width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginBottom: 10 }}>
+              style={{ position: 'relative', zIndex: 1, alignSelf: 'flex-end', width: 32, height: 32, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginBottom: 10 }}>
               <IconClose />
             </button>
-            <SidebarContent collapsed={false} onNavigate={() => setOpen(false)} />
+            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              <SidebarContent collapsed={false} onNavigate={() => setOpen(false)} />
+            </div>
           </aside>
         </div>
       )}
