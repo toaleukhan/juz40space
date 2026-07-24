@@ -168,7 +168,7 @@ export default function StRecordings() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              JUZ40 · САПА БӨЛІМІ
+              JUZ40 · БАСҚАРУ
             </div>
             <h1 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text)', margin: '4px 0 0', letterSpacing: '-0.5px' }}>
               СТ Жүйесі {selectedSubject ? `· ${selectedSubject.name}` : ''}

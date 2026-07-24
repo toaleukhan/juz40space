@@ -1683,7 +1683,7 @@ export default function Schedule({ onGoToCabinet }) {
       <div style={{ padding:'24px 28px 0', background:'var(--surface)', borderBottom:'1px solid #eef0f3' }}>
         <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:16 }}>
           <div>
-            <div style={{ fontSize:10, fontWeight:700, letterSpacing:'2px', color:'var(--text-muted)', textTransform:'uppercase', marginBottom:6 }}>JUZ40 · БІЛІМ БӨЛІМІ</div>
+            <div style={{ fontSize:10, fontWeight:700, letterSpacing:'2px', color:'var(--text-muted)', textTransform:'uppercase', marginBottom:6 }}>JUZ40 · БАСҚАРУ</div>
             <h1 style={{ fontSize:22, fontWeight:800, color:'#0a1f2e', margin:0, letterSpacing:'-0.4px' }}>Сабақ кестесі</h1>
             <p style={{ fontSize:12, color:'#90a4ae', margin:'4px 0 0', fontWeight:500 }}>{activeMonthName} айы · {streamName} ағыны</p>
           </div>

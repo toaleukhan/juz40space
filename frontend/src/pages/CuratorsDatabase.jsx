@@ -268,28 +268,30 @@ export default function CuratorsDatabase() {
               return (
                 <motion.div
                   key={s.code}
-                  whileHover={{ scale: 1.03, y: -4 }}
+                  whileHover={{ y: -6, boxShadow: `0 16px 32px ${col.primary}30` }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => updateFilters({ subject: s.code, stream: '01' })}
                   className="card"
                   style={{
-                    padding: '24px 20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14,
-                    borderTop: `4px solid ${col.primary}`,
+                    padding: '28px 22px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16,
+                    position: 'relative', overflow: 'hidden',
                   }}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: `linear-gradient(90deg, ${col.primary}, ${col.secondary || col.primary})` }} />
                   <div style={{
-                    width: 64, height: 64, borderRadius: '50%',
+                    width: 72, height: 72, borderRadius: 22,
                     background: `linear-gradient(135deg, ${col.primary}, ${col.secondary || col.primary})`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: `0 8px 20px ${col.primary}40`, padding: 14
+                    boxShadow: `0 10px 24px ${col.primary}40`, padding: 16
                   }}>
                     {svgLogo && (
-                      <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      <div style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         dangerouslySetInnerHTML={{ __html: svgLogo }} />
                     )}
                   </div>
                   <div>
                     <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{s.name}</div>
-                    <div style={{ fontSize: 11, color: col.primary, fontWeight: 700, marginTop: 3 }}>
-                      {s.code}-01 · ({s.months} ай)
+                    <div style={{ fontSize: 11.5, color: col.primary, fontWeight: 700, marginTop: 4 }}>
+                      {s.code}-01 · {s.months} ай
                     </div>
                   </div>
                 </motion.div>
