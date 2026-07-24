@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import juz40Logo from '../assets/juz40-logo.png';
 import { smartScheduleByMonth, juniorScheduleByMonth } from './scheduleData';
+import { IconAlert } from '../components/icons';
 
 import math    from '../assets/subjects/Математика.webp';
 import kaz     from '../assets/subjects/Казахский_Язык.webp';
@@ -303,7 +304,7 @@ export default function Login() {
               background:'rgba(239,68,68,0.06)', border:'1px solid rgba(239,68,68,0.15)',
               color:'#dc2626', fontSize:13, display:'flex', alignItems:'center', gap:8,
             }}>
-              ⚠️ {error}
+              <IconAlert style={{ width: 15, height: 15, flexShrink: 0 }} /> {error}
             </div>
           )}
 

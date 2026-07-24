@@ -97,7 +97,10 @@ router.get('/', auth, async (req, res) => {
     let params = [subj, strId, mNum, wNum];
 
     if (isCurator) {
-      query += ` AND (curator_name = $5 OR curator_id = $6)`;
+      // curator_id — curators.id-ге сілтейді, ал req.user.id — users.id (JWT).
+      // Бұларды тікелей салыстыруға болмайды: curators.user_id арқылы
+      // req.user.id-ге сәйкес келетін curators.id жиынын тауып барып салыстырамыз.
+      query += ` AND (curator_name = $5 OR curator_id IN (SELECT id FROM curators WHERE user_id = $6))`;
       params.push(req.user.fullName, req.user.id);
     }
 

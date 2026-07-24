@@ -58,3 +58,36 @@ export const IconMeetLogo = ({ style, ...p }) => (
 export const IconSettings = (p) => (
   <svg {...base} {...p}><circle cx="12" cy="12" r="3" /><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3H9.8l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9c.6.5 1.3.9 2 1.2l.4 2.6h4.4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z" /></svg>
 );
+export const IconPlus = (p) => (
+  <svg {...base} {...p}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+);
+export const IconRefresh = (p) => (
+  <svg {...base} {...p}><path d="M4 12a8 8 0 0 1 14-5.3L21 9" /><path d="M21 4v5h-5" /><path d="M20 12a8 8 0 0 1-14 5.3L3 15" /><path d="M3 20v-5h5" /></svg>
+);
+export const IconBolt = (p) => (
+  <svg {...base} {...p} fill="currentColor" stroke="none"><path d="M13 2L4 14h6l-1 8 9-12h-6z" /></svg>
+);
+export const IconClock = (p) => (
+  <svg {...base} {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>
+);
+export const IconWrench = (p) => (
+  <svg {...base} {...p}><path d="M14.7 6.3a4 4 0 0 0-5.4 4.6L4 16.2V20h3.8l5.3-5.3a4 4 0 0 0 4.6-5.4l-2.8 2.8-2-2z" /></svg>
+);
+export const IconFile = (p) => (
+  <svg {...base} {...p}><path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z" /><path d="M14 3.5V8h4" /></svg>
+);
+export const IconBuilding = (p) => (
+  <svg {...base} {...p}><rect x="4" y="3.5" width="10" height="17" rx="1" /><path d="M14 9h6v11.5h-6" /><line x1="7" y1="7" x2="7" y2="7.01" /><line x1="11" y1="7" x2="11" y2="7.01" /><line x1="7" y1="11" x2="7" y2="11.01" /><line x1="11" y1="11" x2="11" y2="11.01" /><line x1="7" y1="15" x2="7" y2="15.01" /><line x1="11" y1="15" x2="11" y2="15.01" /></svg>
+);
+export const IconXCircle = (p) => (
+  <svg {...base} {...p}><circle cx="12" cy="12" r="8.5" /><line x1="9.2" y1="9.2" x2="14.8" y2="14.8" /><line x1="14.8" y1="9.2" x2="9.2" y2="14.8" /></svg>
+);
+export const IconCheckCircle = (p) => (
+  <svg {...base} {...p}><circle cx="12" cy="12" r="8.5" /><path d="M8.3 12.3l2.6 2.6 4.8-5.4" /></svg>
+);
+// Статус нүктесі — 🟢🟡🔵🔴 эмодзилерін алмастырады. color: CSS түс мәні.
+export const IconDot = ({ color = 'currentColor', style, ...p }) => (
+  <svg viewBox="0 0 24 24" width={10} height={10} style={{ flexShrink: 0, ...style }} {...p}>
+    <circle cx="12" cy="12" r="9" fill={color} />
+  </svg>
+);

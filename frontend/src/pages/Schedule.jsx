@@ -7,6 +7,10 @@ import juz40Logo from '../assets/juz40-logo.png';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  IconPlus, IconCalendar, IconClock, IconFile, IconCheck, IconAlert,
+  IconWrench, IconBolt, IconTable, IconUser, IconDownload,
+} from '../components/icons';
 
 const JUZ = {
   teal:      '#1B6E7E',
@@ -607,7 +611,7 @@ function CalEventCard({ ev }) {
       {/* Card content */}
       <div style={{ display:'flex', alignItems:'center', gap:5, overflow:'hidden' }}>
         {ev.direction==='SMART' && (isAdditional
-          ? <span style={{fontSize:9,lineHeight:1,flexShrink:0}}>➕</span>
+          ? <IconPlus style={{width:9,height:9,flexShrink:0}}/>
           : <span className="live-dot" style={{flexShrink:0}}/>)}
         <div style={{ fontSize: tiny ? 9.5 : compact ? 10.5 : 12, fontWeight:800, color:col.primary, lineHeight:1.25, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis' }}>
           {ev.subject}{ev.note ? ` · ${ev.note}` : ''}
@@ -791,7 +795,7 @@ function TeacherWeeklyTimeline({ entries }) {
   return (
     <div className="g-card" style={{padding:'22px 24px',marginBottom:16,background:'var(--surface)'}}>
       <div style={{fontSize:14,fontWeight:700,color:C.titleColor,marginBottom:18,display:'flex',alignItems:'center',gap:8}}>
-        <span style={{fontSize:18}}>📅</span> Апталық кесте
+        <IconCalendar style={{width:17,height:17}}/> Апталық кесте
       </div>
 
       {/* Time header */}
@@ -1100,7 +1104,7 @@ function TeachersView({ teachersIndex, filters }) {
         {/* Per-day session breakdown */}
         <div className="g-card" style={{padding:'20px 24px',background:'rgba(255,255,255,0.07)'}}>
           <div style={{fontSize:13,fontWeight:700,color:C.titleColor,marginBottom:14,display:'flex',alignItems:'center',gap:8}}>
-            <span style={{fontSize:16}}>🕐</span> Сессиялар
+            <IconClock style={{width:15,height:15}}/> Сессиялар
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:10}}>
             {sortedDays.map(day=>{
@@ -1267,16 +1271,16 @@ function TeachersView({ teachersIndex, filters }) {
 function SupervisorDashboard({ onLogout, onBack }) {
   const [file,setFile]=useState(null); const [fileName,setFileName]=useState('');
   const [parsing,setParsing]=useState(false); const [parseResult,setParseResult]=useState(null);
-  const [preview,setPreview]=useState(''); const [status,setStatus]=useState('');
+  const [preview,setPreview]=useState(''); const [status,setStatus]=useState(null);
   const [error,setError]=useState(''); const [targetDir,setTargetDir]=useState('SMART');
   const [targetMonth,setTargetMonth]=useState('01'); const fileRef=useRef();
 
   const handleFile=(e)=>{
     const f=e.target.files[0]; if(!f) return;
-    setFile(f); setFileName(f.name); setParseResult(null); setPreview(''); setStatus(''); setError('');
+    setFile(f); setFileName(f.name); setParseResult(null); setPreview(''); setStatus(null); setError('');
   };
   const handleParse=async()=>{
-    if(!file) return; setParsing(true); setError(''); setStatus(''); setParseResult(null);
+    if(!file) return; setParsing(true); setError(''); setStatus(null); setParseResult(null);
     try {
       const base64=await new Promise((res,rej)=>{
         const r=new FileReader();
@@ -1295,8 +1299,8 @@ function SupervisorDashboard({ onLogout, onBack }) {
       const data=await response.json();
       setParseResult({teachers:data.teachers,days:data.days,chars:data.result?.length||0});
       setPreview(data.result||'');
-      setStatus(`✅ Дайын — ${data.days} күн, ${data.teachers} мұғалім`);
-    } catch(err) { setError('❌ '+err.message); } finally { setParsing(false); }
+      setStatus({ok:true,text:`Дайын — ${data.days} күн, ${data.teachers} мұғалім`});
+    } catch(err) { setError(err.message); } finally { setParsing(false); }
   };
   const handleDownload=()=>{
     if(!preview) return;
@@ -1306,7 +1310,7 @@ function SupervisorDashboard({ onLogout, onBack }) {
     const a=document.createElement('a');
     a.href=url; a.download=`schedule_${targetDir}_${targetMonth}_parsed.js`; a.click();
     URL.revokeObjectURL(url);
-    setStatus('⬇️ Жүктелді. GitHub push жасаңыз.');
+    setStatus({ok:false,text:'Жүктелді. GitHub push жасаңыз.'});
   };
   const sel={fontSize:13,padding:'8px 12px',borderRadius:9,border:`1.5px solid ${C.divider}`,
     background:'rgba(255,255,255,0.9)',color:C.text,fontFamily:'inherit',outline:'none',cursor:'pointer'};
@@ -1328,7 +1332,7 @@ function SupervisorDashboard({ onLogout, onBack }) {
       </div>
       <div style={{maxWidth:820,margin:'0 auto',padding:'28px 24px',display:'flex',flexDirection:'column',gap:16}}>
         <div className="g-card" style={{padding:'16px 20px',background:'rgba(232,244,246,0.7)'}}>
-          <div style={{fontSize:14,fontWeight:700,color:C.titleColor,marginBottom:10}}>📋 Автоматты парсинг — docx → scheduleData.js</div>
+          <div style={{fontSize:14,fontWeight:700,color:C.titleColor,marginBottom:10,display:'flex',alignItems:'center',gap:8}}><IconFile style={{width:15,height:15}}/> Автоматты парсинг — docx → scheduleData.js</div>
           <div style={{fontSize:12,color:C.textSub,lineHeight:2}}>
             <b>1.</b> Бағыт пен ай таңдаңыз &nbsp; <b>2.</b> .docx жүктеңіз &nbsp; <b>3.</b> Оқу → .js жүктеу &nbsp; <b>4.</b> scheduleData.js-ке қойып, GitHub push
           </div>
@@ -1351,37 +1355,39 @@ function SupervisorDashboard({ onLogout, onBack }) {
         </div>
         <div className="g-card" style={{padding:'24px',textAlign:'center',border:`2px dashed ${C.divider}`}}>
           <input ref={fileRef} type="file" accept=".docx" onChange={handleFile} style={{display:'none'}}/>
-          <div style={{fontSize:32,marginBottom:8}}>📄</div>
+          <div style={{marginBottom:8,display:'flex',justifyContent:'center'}}><IconFile style={{width:30,height:30,color:JUZ.teal}}/></div>
           <button onClick={()=>fileRef.current?.click()}
             style={{padding:'9px 22px',borderRadius:9,background:JUZ.teal,border:'none',color:'#fff',fontSize:13,cursor:'pointer',fontWeight:700,boxShadow:'0 4px 14px rgba(27,110,126,0.28)'}}>
             .docx файл таңдау
           </button>
-          {fileName&&<div style={{marginTop:10,fontSize:13,color:JUZ.teal,fontWeight:500}}>✓ {fileName}</div>}
+          {fileName&&<div style={{marginTop:10,fontSize:13,color:JUZ.teal,fontWeight:500,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}><IconCheck style={{width:13,height:13}}/> {fileName}</div>}
         </div>
         {file&&(
           <button onClick={handleParse} disabled={parsing}
             style={{padding:'12px',borderRadius:10,fontSize:14,fontWeight:700,
               background:parsing?C.textMuted:JUZ.teal,border:'none',color:'#fff',cursor:parsing?'not-allowed':'pointer',
               display:'flex',alignItems:'center',justifyContent:'center',gap:8,boxShadow:'0 4px 14px rgba(27,110,126,0.28)'}}>
-            {parsing?(<><span style={{display:'inline-block',width:16,height:16,border:'2px solid rgba(255,255,255,0.3)',borderTop:'2px solid #fff',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/>Оқып жатыр...</>):'📄 Кестені оқу'}
+            {parsing?(<><span style={{display:'inline-block',width:16,height:16,border:'2px solid rgba(255,255,255,0.3)',borderTop:'2px solid #fff',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/>Оқып жатыр...</>):(<><IconFile style={{width:14,height:14}}/> Кестені оқу</>)}
           </button>
         )}
-        {error&&<div style={{padding:'12px 16px',borderRadius:9,background:'rgba(239,68,68,0.06)',border:'1px solid rgba(239,68,68,0.18)',fontSize:13,color:'#dc2626'}}>{error}</div>}
+        {error&&<div style={{display:'flex',alignItems:'center',gap:8,padding:'12px 16px',borderRadius:9,background:'rgba(239,68,68,0.06)',border:'1px solid rgba(239,68,68,0.18)',fontSize:13,color:'#dc2626'}}><IconAlert style={{width:14,height:14,flexShrink:0}}/> {error}</div>}
         {parseResult&&(
           <div style={{padding:'14px',borderRadius:10,background:'rgba(240,255,244,0.9)',border:'1px solid rgba(154,230,180,0.8)'}}>
             <div style={{fontSize:13,fontWeight:600,color:'#276749',marginBottom:4}}>Нәтиже:</div>
-            <div style={{fontSize:12,color:'#276749',lineHeight:2}}>📅 Күндер: <b>{parseResult.days}</b> &nbsp; 👨‍🏫 Мұғалімдер: <b>{parseResult.teachers}</b></div>
+            <div style={{fontSize:12,color:'#276749',lineHeight:2,display:'flex',flexWrap:'wrap',gap:'0 6px',alignItems:'center'}}>
+              <IconCalendar style={{width:13,height:13}}/> Күндер: <b>{parseResult.days}</b> &nbsp; <IconUser style={{width:13,height:13}}/> Мұғалімдер: <b>{parseResult.teachers}</b>
+            </div>
           </div>
         )}
-        {status&&<div style={{padding:'12px 16px',borderRadius:9,fontSize:13,
-          background:status.startsWith('✅')?'rgba(240,255,244,0.9)':'rgba(232,244,246,0.9)',
-          border:`1px solid ${status.startsWith('✅')?'rgba(154,230,180,0.8)':C.divider}`,
-          color:status.startsWith('✅')?'#276749':JUZ.teal}}>{status}</div>}
+        {status&&<div style={{display:'flex',alignItems:'center',gap:8,padding:'12px 16px',borderRadius:9,fontSize:13,
+          background:status.ok?'rgba(240,255,244,0.9)':'rgba(232,244,246,0.9)',
+          border:`1px solid ${status.ok?'rgba(154,230,180,0.8)':C.divider}`,
+          color:status.ok?'#276749':JUZ.teal}}>{status.ok?<IconCheck style={{width:14,height:14}}/>:<IconFile style={{width:14,height:14}}/>} {status.text}</div>}
         {preview&&(
           <>
             <button onClick={handleDownload}
-              style={{padding:'9px 22px',borderRadius:9,background:JUZ.teal,border:'none',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',alignSelf:'flex-end',boxShadow:'0 3px 12px rgba(27,110,126,0.25)'}}>
-              ⬇️ .js жүктеу
+              style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'9px 22px',borderRadius:9,background:JUZ.teal,border:'none',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',alignSelf:'flex-end',boxShadow:'0 3px 12px rgba(27,110,126,0.25)'}}>
+              <IconDownload style={{width:14,height:14}}/> .js жүктеу
             </button>
             <details style={{borderRadius:12,border:`1px solid ${C.divider}`,overflow:'hidden'}}>
               <summary style={{padding:'10px 16px',background:'#F8FAFC',fontSize:12,color:C.textSub,cursor:'pointer'}}>
@@ -1441,7 +1447,7 @@ function LessonEntryModal({ month, onClose, onSubmit, teacherNames }) {
       <div className="g-card" style={{ width:440, maxHeight:'88vh', overflowY:'auto', padding:'24px 24px 20px' }}
         onClick={e=>e.stopPropagation()}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:18 }}>
-          <div style={{ fontSize:16, fontWeight:800, color:C.titleColor }}>➕ Сабақ енгізу</div>
+          <div style={{ fontSize:16, fontWeight:800, color:C.titleColor, display:'flex', alignItems:'center', gap:8 }}><IconPlus style={{width:15,height:15}}/> Сабақ енгізу</div>
           <span style={{ cursor:'pointer', fontSize:18, color:C.textMuted }} onClick={onClose}>×</span>
         </div>
 
@@ -1466,13 +1472,13 @@ function LessonEntryModal({ month, onClose, onSubmit, teacherNames }) {
             <div>
               <label style={labelStyle}>Түрі</label>
               <div style={{ display:'flex', gap:8 }}>
-                {[{id:'live',label:'● LIVE сабақ'},{id:'additional',label:'➕ ҚОСЫМША сабақ'}].map(k=>(
+                {[{id:'live',label:'LIVE сабақ'},{id:'additional',label:'ҚОСЫМША сабақ'}].map(k=>(
                   <button key={k.id} type="button" onClick={()=>setKind(k.id)}
-                    style={{ flex:1, padding:'8px 10px', borderRadius:8, fontSize:11.5, fontWeight:700, cursor:'pointer',
+                    style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 10px', borderRadius:8, fontSize:11.5, fontWeight:700, cursor:'pointer',
                       border:`1.5px solid ${kind===k.id?JUZ.teal:C.divider}`,
                       background: kind===k.id ? `${JUZ.teal}12` : 'transparent',
                       color: kind===k.id ? JUZ.teal : C.textMuted }}>
-                    {k.label}
+                    {k.id==='live' ? <span className="live-dot"/> : <IconPlus style={{width:11,height:11}}/>} {k.label}
                   </button>
                 ))}
               </div>
@@ -1503,7 +1509,7 @@ function LessonEntryModal({ month, onClose, onSubmit, teacherNames }) {
             <label style={labelStyle}>Мұғалім</label>
             <select value={teacherSel} onChange={e=>setTeacherSel(e.target.value)} style={inputStyle}>
               {teacherNames.map(n=><option key={n} value={n}>{n}</option>)}
-              <option value={NEW_TEACHER}>➕ Жаңа мұғалім қосу...</option>
+              <option value={NEW_TEACHER}>+ Жаңа мұғалім қосу...</option>
             </select>
             {teacherSel===NEW_TEACHER && (
               <input value={newTeacher} onChange={e=>setNewTeacher(e.target.value)}
@@ -1639,9 +1645,9 @@ export default function Schedule({ onGoToCabinet }) {
   if (supervisorMode) return <SupervisorDashboard onLogout={()=>{setSM(false);setSA(false);}} onBack={()=>setSM(false)}/>;
 
   const NAV_ITEMS=[
-    {id:'schedule',icon:'📋',label:'Тізім'},
-    {id:'calendar',icon:'📅',label:'Күнтізбе'},
-    {id:'teachers',icon:'👨‍🏫',label:'Мұғалімдер'},
+    {id:'schedule',icon:IconTable,label:'Тізім'},
+    {id:'calendar',icon:IconCalendar,label:'Күнтізбе'},
+    {id:'teachers',icon:IconUser,label:'Мұғалімдер'},
   ];
 
   return (
@@ -1663,12 +1669,12 @@ export default function Schedule({ onGoToCabinet }) {
         </div>
         <div style={{display:'flex',gap:8}}>
           <button onClick={()=>{setSM(true);setSA(true);}}
-            style={{padding:'6px 13px',borderRadius:8,fontSize:11,cursor:'pointer',
+            style={{display:'flex',alignItems:'center',gap:6,padding:'6px 13px',borderRadius:8,fontSize:11,cursor:'pointer',
               background: supervisorAuth ? '#1B6E7E' : '#f5f7fa',
               border:`1px solid ${supervisorAuth?'#1B6E7E':'#eef0f3'}`,
               color: supervisorAuth ? '#fff' : C.textMuted,
               fontWeight:600, transition:'all 0.2s'}}>
-            🔧 Басқару{supervisorAuth?' ✓':''}
+            <IconWrench style={{width:12,height:12}}/> Басқару{supervisorAuth?<IconCheck style={{width:12,height:12}}/>:''}
           </button>
         </div>
       </header>
@@ -1694,7 +1700,7 @@ export default function Schedule({ onGoToCabinet }) {
                   boxShadow: view === item.id ? '0 1px 6px rgba(0,0,0,0.10)' : 'none',
                   transition:'all 0.15s',
                 }}>
-                <span>{item.icon}</span><span>{item.label}</span>
+                <item.icon style={{width:13,height:13}}/><span>{item.label}</span>
               </button>
             ))}
           </div>
@@ -1721,8 +1727,8 @@ export default function Schedule({ onGoToCabinet }) {
           {filters.dir!=='JUNIOR' && (
             <div style={{ display:'flex', background:'#f4f6f8', borderRadius:10, padding:3, gap:2, marginBottom:6 }}>
               {[
-                {id:'live',label:'● LIVE сабақ',activeColor:'#b91c1c'},
-                {id:'additional',label:'➕ ҚОСЫМША сабақ',activeColor:'#9a3412'},
+                {id:'live',label:'LIVE сабақ',activeColor:'#b91c1c'},
+                {id:'additional',label:'ҚОСЫМША сабақ',activeColor:'#9a3412'},
               ].map(k=>{
                 const active = filters.kinds.includes(k.id);
                 return (
@@ -1741,7 +1747,7 @@ export default function Schedule({ onGoToCabinet }) {
                       opacity: active ? 1 : 0.7,
                       transition:'all 0.15s', whiteSpace:'nowrap',
                     }}>
-                    {k.label}
+                    {k.id==='live' ? <span className="live-dot"/> : <IconPlus style={{width:10,height:10}}/>} {k.label}
                   </button>
                 );
               })}
@@ -1754,13 +1760,13 @@ export default function Schedule({ onGoToCabinet }) {
                 style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 13px', borderRadius:9,
                   border:'none', cursor:'pointer', fontFamily:'inherit', fontSize:11.5, fontWeight:700,
                   background:'#1B6E7E', color:'#fff', boxShadow:'0 3px 10px rgba(27,110,126,0.3)' }}>
-                ➕ Енгізу
+                <IconPlus style={{width:12,height:12}}/> Енгізу
               </button>
               <button onClick={()=>setSM(true)}
                 style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 13px', borderRadius:9,
                   border:'1px solid #eef0f3', cursor:'pointer', fontFamily:'inherit', fontSize:11.5, fontWeight:600,
                   background:'#f5f7fa', color:C.textMuted }}>
-                📋 Docx парсинг
+                <IconFile style={{width:12,height:12}}/> Docx парсинг
               </button>
             </div>
           )}
@@ -1784,7 +1790,7 @@ export default function Schedule({ onGoToCabinet }) {
           {/* Filter bar */}
           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:18,flexWrap:'wrap'}}>
             <button className={`filter-pill${hasFilter?' has-filter':''}`} onClick={()=>setShowFilter(true)}>
-              <span>⚡</span>
+              <IconBolt style={{width:12,height:12,color:'#f59e0b'}}/>
               <span>{filterLabel()}</span>
               {hasFilter&&<span style={{marginLeft:2,opacity:0.6,fontSize:11}}>▾</span>}
             </button>

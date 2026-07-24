@@ -4,7 +4,8 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "verify": "node scripts/verify.js"
   },
   "dependencies": {
     "adm-zip": "^0.5.18",

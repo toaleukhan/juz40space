@@ -31,15 +31,18 @@ const strId = streamId || '01';
     );
 
     // curators кестесіне де қосамыз — ST-жазба авто-синхронизациясы осы кестені пайдаланады
+    const userId = userResult.rows[0].id;
     const curatorCheck = await pool.query(
       'SELECT id FROM curators WHERE full_name = $1 AND subject = $2 AND stream_id = $3',
       [fullName, subject, strId]
     );
     if (curatorCheck.rows.length === 0) {
       await pool.query(
-        `INSERT INTO curators (full_name, subject, stream_id, status) VALUES ($1, $2, $3, 'active')`,
-        [fullName, subject, strId]
+        `INSERT INTO curators (full_name, subject, stream_id, status, user_id) VALUES ($1, $2, $3, 'active', $4)`,
+        [fullName, subject, strId, userId]
       );
+    } else {
+      await pool.query('UPDATE curators SET user_id = $1 WHERE id = $2', [userId, curatorCheck.rows[0].id]);
     }
 
     console.log('✅ Куратор жасалды:', userResult.rows[0]);

@@ -21,28 +21,27 @@ async function createCuratorWithLogin({ fullName, subject, streamId }) {
   const username = await makeUsername(fullName, pool);
   const password = makePassword();
   const hash = await hashPassword(password);
-  await pool.query(
+  const userRes = await pool.query(
     `INSERT INTO users (username, password, full_name, role, subject, stream_id)
-     VALUES ($1, $2, $3, 'curator', $4, $5)`,
+     VALUES ($1, $2, $3, 'curator', $4, $5) RETURNING id`,
     [username, hash, fullName, subject, strId]
   );
+  await pool.query(`UPDATE curators SET user_id = $1 WHERE id = $2`, [userRes.rows[0].id, curator.id]);
 
   return { ...curator, username, password };
 }
 
-// 1. Орталық базадағы кураторларды алу — логин мен соңғы кіру уақытымен қоса
-// (users кестесімен аты-жөні+пән+ағым бойынша сәйкестендіріледі).
-// DISTINCT ON (c.id): full_name бойынша бір куратордың атына сай бірнеше
-// users жолы табылып қалса (ескі/қайталанған аккаунт), куратор бір-ақ рет
-// шығады — ең соңғы жасалған логин таңдалады.
+// 1. Орталық базадағы кураторларды алу — логин мен соңғы кіру уақытымен қоса.
+// user_id FK арқылы нақты байланыстырылады (аты-жөннің емле нұсқалары —
+// "Куандык"/"Қуандық" — енді дубль-жол тудырмайды, себебі сәйкестендіру
+// енді жол-салыстыру емес, тұрақты id бойынша).
 router.get('/', auth, requireAdmin, async (req, res) => {
   const { subject, streamId } = req.query;
   try {
     let query = `
-      SELECT DISTINCT ON (c.id) c.*, u.username AS username, u.last_login AS last_login
+      SELECT c.*, u.username AS username, u.last_login AS last_login
       FROM curators c
-      LEFT JOIN users u
-        ON u.full_name = c.full_name AND u.subject = c.subject AND u.stream_id = c.stream_id
+      LEFT JOIN users u ON u.id = c.user_id
       WHERE 1=1`;
     let params = [];
     let idx = 1;
@@ -56,7 +55,7 @@ router.get('/', auth, requireAdmin, async (req, res) => {
       params.push(streamId);
     }
 
-    query += ` ORDER BY c.id ASC, u.id DESC`;
+    query += ` ORDER BY c.id ASC`;
     const result = await pool.query(query, params);
     res.json(result.rows);
   } catch (err) {
@@ -71,22 +70,19 @@ router.post('/:id/generate-login', auth, requireAdmin, async (req, res) => {
     if (curRes.rows.length === 0) return res.status(404).json({ error: 'Куратор табылмады' });
     const cur = curRes.rows[0];
 
-    const existing = await pool.query(
-      'SELECT id FROM users WHERE full_name = $1 AND subject = $2 AND stream_id = $3',
-      [cur.full_name, cur.subject, cur.stream_id]
-    );
-    if (existing.rows.length > 0) {
+    if (cur.user_id) {
       return res.status(400).json({ error: 'Бұл куратордың логині бұрыннан бар' });
     }
 
     const username = await makeUsername(cur.full_name, pool);
     const password = makePassword();
     const hash = await hashPassword(password);
-    await pool.query(
+    const userRes = await pool.query(
       `INSERT INTO users (username, password, full_name, role, subject, stream_id)
-       VALUES ($1, $2, $3, 'curator', $4, $5)`,
+       VALUES ($1, $2, $3, 'curator', $4, $5) RETURNING id`,
       [username, hash, cur.full_name, cur.subject, cur.stream_id]
     );
+    await pool.query(`UPDATE curators SET user_id = $1 WHERE id = $2`, [userRes.rows[0].id, cur.id]);
 
     res.json({ ...cur, username, password });
   } catch (err) {

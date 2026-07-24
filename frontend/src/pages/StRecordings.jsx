@@ -5,7 +5,7 @@ import api from '../services/api';
 import { SUBJECT_COLORS, SUBJECT_LOGOS } from './scheduleData';
 import { motion } from 'framer-motion';
 import { SHEETS_LOGO } from '../components/brandLogos';
-import { IconMeetLogo } from '../components/icons';
+import { IconMeetLogo, IconBolt, IconRefresh, IconVideo, IconClock, IconClose, IconTable } from '../components/icons';
 
 const SUBJECTS = [
   { code:'ФИЗ',   name:'Физика',           months: 5 },
@@ -229,7 +229,7 @@ export default function StRecordings() {
                   border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text-sub)',
                   fontWeight: 700, fontSize: 12.5, cursor: 'pointer',
                 }}>
-                ⚡ {selectedSubject.code}-{currentStream} · {currentMonth}-ай · {currentWeek}-апта
+                <IconBolt style={{ width: 13, height: 13, color: '#f59e0b' }} /> {selectedSubject.code}-{currentStream} · {currentMonth}-ай · {currentWeek}-апта
                 <span style={{ opacity: 0.6, fontSize: 11 }}>▾</span>
               </button>
 
@@ -350,8 +350,8 @@ export default function StRecordings() {
                             {code}
                           </a>
                           <button onClick={() => handleSyncDrive(row.id, code)} disabled={actionLoading[row.id] === 'drive'}
-                            style={{ padding: '7px 10px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-                            🔄 Синхрондау
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                            <IconRefresh style={{ width: 13, height: 13 }} /> Синхрондау
                           </button>
                         </div>
                       ))}
@@ -364,8 +364,8 @@ export default function StRecordings() {
                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Видео жазба</div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                               {videoLinks.map((v, idx) => (
-                                <a key={idx} href={v} target="_blank" rel="noreferrer" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none', fontSize: 12.5 }}>
-                                  🎬 Запись {videoLinks.length > 1 ? idx + 1 : ''}
+                                <a key={idx} href={v} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#2563eb', fontWeight: 600, textDecoration: 'none', fontSize: 12.5 }}>
+                                  <IconVideo style={{ width: 13, height: 13 }} /> Запись {videoLinks.length > 1 ? idx + 1 : ''}
                                 </a>
                               ))}
                             </div>
@@ -379,7 +379,7 @@ export default function StRecordings() {
                                 <a key={idx} href={a} target="_blank" rel="noreferrer" title="Отслежка">
                                   {SHEETS_LOGO
                                     ? <img src={SHEETS_LOGO} alt="Отслежка" style={{ width: 20, height: 20 }} />
-                                    : <span style={{ color: '#059669', fontWeight: 600, fontSize: 12.5 }}>📊 Отслежка {attendanceLinks.length > 1 ? idx + 1 : ''}</span>}
+                                    : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#059669', fontWeight: 600, fontSize: 12.5 }}><IconTable style={{ width: 13, height: 13 }} /> Отслежка {attendanceLinks.length > 1 ? idx + 1 : ''}</span>}
                                 </a>
                               ))}
                             </div>
@@ -446,13 +446,13 @@ export default function StRecordings() {
                           {videoLinks.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                               {videoLinks.map((v, idx) => (
-                                <a key={idx} href={v} target="_blank" rel="noreferrer" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none', fontSize: 11.5 }}>
-                                  🎬 Запись {videoLinks.length > 1 ? idx + 1 : ''}
+                                <a key={idx} href={v} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#2563eb', fontWeight: 600, textDecoration: 'none', fontSize: 11.5 }}>
+                                  <IconVideo style={{ width: 12, height: 12 }} /> Запись {videoLinks.length > 1 ? idx + 1 : ''}
                                 </a>
                               ))}
                             </div>
                           ) : meetLinks.length > 0 ? (
-                            <span style={{ color: '#d97706', fontSize: 11, fontWeight: 600 }}>⏳ Жазба дайындалуда</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#d97706', fontSize: 11, fontWeight: 600 }}><IconClock style={{ width: 12, height: 12 }} /> Жазба дайындалуда</span>
                           ) : (
                             <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>—</span>
                           )}
@@ -465,7 +465,7 @@ export default function StRecordings() {
                                 <a key={idx} href={a} target="_blank" rel="noreferrer" title="Отслежка">
                                   {SHEETS_LOGO
                                     ? <img src={SHEETS_LOGO} alt="Отслежка" style={{ width: 18, height: 18 }} />
-                                    : <span style={{ color: '#059669', fontWeight: 600, fontSize: 11.5 }}>📊 Отслежка {attendanceLinks.length > 1 ? idx + 1 : ''}</span>}
+                                    : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#059669', fontWeight: 600, fontSize: 11.5 }}><IconTable style={{ width: 12, height: 12 }} /> Отслежка {attendanceLinks.length > 1 ? idx + 1 : ''}</span>}
                                 </a>
                               ))}
                             </div>
@@ -499,15 +499,15 @@ export default function StRecordings() {
                                   {code}
                                 </a>
                                 <button onClick={() => handleSyncDrive(row.id, code)} disabled={actionLoading[row.id] === 'drive'}
-                                  style={{ padding: '4px 6px', borderRadius: 6, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 10, cursor: 'pointer' }}>
-                                  🔄
+                                  style={{ display: 'flex', padding: '4px 6px', borderRadius: 6, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 10, cursor: 'pointer' }}>
+                                  <IconRefresh style={{ width: 11, height: 11 }} />
                                 </button>
                               </div>
                             ))}
 
                             <button onClick={() => handleDeleteRow(row.id)}
-                              style={{ padding: '5px 8px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: 'none', fontSize: 11, cursor: 'pointer', marginLeft: 'auto' }}>
-                              ✕
+                              style={{ display: 'flex', padding: '5px 8px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: 'none', fontSize: 11, cursor: 'pointer', marginLeft: 'auto' }}>
+                              <IconClose style={{ width: 12, height: 12 }} />
                             </button>
                           </div>
                         </td>

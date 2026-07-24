@@ -11,6 +11,9 @@ export default function CuratorCabinet() {
   const [user, setUser] = useState(localUser);
   const [studentsCount, setStudentsCount] = useState(localUser.studentsCount || '0');
   const [avatarUrl, setAvatarUrl] = useState(localUser.avatarUrl || '');
+  const [firstName, setFirstName] = useState(localUser.firstName || '');
+  const [lastName, setLastName] = useState(localUser.lastName || '');
+  const [department, setDepartment] = useState(localUser.department || '');
   const [password, setPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMessage] = useState('');
@@ -29,7 +32,13 @@ export default function CuratorCabinet() {
       setUser(data);
       setStudentsCount(data.students_count || '0');
       setAvatarUrl(data.avatar_url || '');
-      const updated = { ...localUser, ...data, avatarUrl: data.avatar_url, studentsCount: data.students_count };
+      setFirstName(data.first_name || '');
+      setLastName(data.last_name || '');
+      setDepartment(data.department || '');
+      const updated = {
+        ...localUser, ...data, avatarUrl: data.avatar_url, studentsCount: data.students_count,
+        firstName: data.first_name, lastName: data.last_name, department: data.department,
+      };
       localStorage.setItem('user', JSON.stringify(updated));
     } catch (err) {
       console.error(err);
@@ -56,10 +65,16 @@ export default function CuratorCabinet() {
       const { data } = await api.put('/auth/profile', {
         studentsCount,
         avatarUrl,
+        firstName,
+        lastName,
+        department,
         password: password.trim() ? password : undefined,
       });
       setUser(data);
-      const updated = { ...localUser, ...data, avatarUrl: data.avatar_url, studentsCount: data.students_count };
+      const updated = {
+        ...localUser, ...data, avatarUrl: data.avatar_url, studentsCount: data.students_count,
+        firstName: data.first_name, lastName: data.last_name, department: data.department,
+      };
       localStorage.setItem('user', JSON.stringify(updated));
       setPassword('');
       setMessage('success:Профиль сәтті жаңартылды!');
@@ -132,6 +147,11 @@ export default function CuratorCabinet() {
                 <span style={{ padding: '5px 12px', borderRadius: 20, background: 'rgba(139,92,246,0.10)', color: '#6d28d9', fontWeight: 700, fontSize: 11.5 }}>
                   Ағым: {user.stream_id || '01'}
                 </span>
+                {user.department && (
+                  <span style={{ padding: '5px 12px', borderRadius: 20, background: 'rgba(16,185,129,0.10)', color: '#059669', fontWeight: 700, fontSize: 11.5 }}>
+                    Бөлім: {user.department}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -139,10 +159,29 @@ export default function CuratorCabinet() {
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 18 }}>
               <div>
+                <label style={labelStyle}>Аты</label>
+                <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)}
+                  placeholder="Мысалы: Меруерт" style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Тегі</label>
+                <input type="text" value={lastName} onChange={e => setLastName(e.target.value)}
+                  placeholder="Мысалы: Орынбек" style={inputStyle} />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 18 }}>
+              <div>
+                <label style={labelStyle}>Бөлім</label>
+                <input type="text" value={department} onChange={e => setDepartment(e.target.value)}
+                  placeholder="Мысалы: Сапа бөлімі" style={inputStyle} />
+              </div>
+              <div>
                 <label style={labelStyle}>Оқушыларыңыздың жалпы саны</label>
                 <input type="number" value={studentsCount} onChange={e => setStudentsCount(e.target.value)}
                   placeholder="Мысалы: 25" style={inputStyle} />
               </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 18 }}>
               <div>
                 <label style={labelStyle}>Профиль фотосының сілтемесі</label>
                 <input type="text" value={avatarUrl} onChange={e => setAvatarUrl(e.target.value)}

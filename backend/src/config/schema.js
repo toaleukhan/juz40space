@@ -26,6 +26,9 @@ const createTables = async () => {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS students_count VARCHAR(50) DEFAULT '0';`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP;`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100);`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100);`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(150);`);
 
     // 👑 ADMIN АКТИВАЦИЯСЫ: admin / admin123
     const adminCheck = await pool.query(`SELECT id FROM users WHERE username = 'admin'`);
@@ -51,6 +54,22 @@ const createTables = async () => {
         status VARCHAR(50) DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+    `);
+
+    // curators.user_id: full_name+subject+stream_id жол сәйкестігінің орнына
+    // накты FK — есімнің емлесі өзгерсе де (Куандык/Қуандық) байланыс үзілмейді.
+    await pool.query(`ALTER TABLE curators ADD COLUMN IF NOT EXISTS user_id INT REFERENCES users(id);`);
+    // Бұрын құрылған, user_id әлі толтырылмаған жолдарды бір рет байланыстыру.
+    // Идемпотентті: тек user_id IS NULL жолдарға ғана әсер етеді, қайта іске
+    // қосылса да қауіпсіз.
+    await pool.query(`
+      UPDATE curators c SET user_id = sub.id FROM (
+        SELECT DISTINCT ON (full_name, subject, stream_id) id, full_name, subject, stream_id
+        FROM users
+        ORDER BY full_name, subject, stream_id, id DESC
+      ) sub
+      WHERE c.user_id IS NULL
+        AND c.full_name = sub.full_name AND c.subject = sub.subject AND c.stream_id = sub.stream_id;
     `);
 
     // 3. st_recordings кестесі

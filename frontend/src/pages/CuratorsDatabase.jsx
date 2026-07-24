@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import api from '../services/api';
 import { SUBJECT_COLORS, SUBJECT_LOGOS } from './scheduleData';
 import { motion } from 'framer-motion';
+import { IconFile, IconClose, IconDot, IconPlus } from '../components/icons';
 
 const SUBJECTS = [
   { code:'ФИЗ',   name:'Физика',           months: 5 },
@@ -24,10 +25,10 @@ const SUBJECTS = [
 const STREAMS = ['01', '11', '21', '31', '41'];
 
 const STATUS_MAP = {
-  active: { label: '🟢 Жұмыста', color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
-  stream_changed: { label: '🟡 Ағым ауысты', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-  subject_changed: { label: '🔵 Пән ауысты', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
-  fired: { label: '🔴 Жұмыстан шықты', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
+  active: { label: 'Жұмыста', color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+  stream_changed: { label: 'Ағым ауысты', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+  subject_changed: { label: 'Пән ауысты', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
+  fired: { label: 'Жұмыстан шықты', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
 };
 
 export default function CuratorsDatabase() {
@@ -184,9 +185,9 @@ export default function CuratorsDatabase() {
             <button onClick={() => setShowBulk(!showBulk)}
               style={{
                 padding: '10px 20px', marginLeft: 'auto', borderRadius: 12, fontWeight: 800, fontSize: 12, border: 'none', cursor: 'pointer',
-                background: '#3b82f6', color: '#fff',
+                background: '#3b82f6', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 8,
               }}>
-              📋 Тізіммен кураторларды бірден қосу
+              <IconFile style={{ width: 14, height: 14 }} /> Тізіммен кураторларды бірден қосу
             </button>
           </div>
         )}
@@ -223,7 +224,7 @@ export default function CuratorsDatabase() {
               <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>
                 Жаңа логин/парольдер ({newCreds.length})
               </h3>
-              <button onClick={() => setNewCreds(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--text-muted)' }}>✕</button>
+              <button onClick={() => setNewCreds(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}><IconClose style={{ width: 16, height: 16 }} /></button>
             </div>
             <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 10 }}>
               Бұл парольдер тек қазір көрсетіледі — жоғалтпас үшін дереу көшіріп, кураторларға жіберіңіз.
@@ -301,8 +302,8 @@ export default function CuratorsDatabase() {
               <input placeholder="Куратор аты-жөнін қосу..." value={newCurator} onChange={e => setNewCurator(e.target.value)}
                 style={{ width: 320, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 13 }} />
               <button onClick={handleAddCurator}
-                style={{ padding: '9px 18px', borderRadius: 10, background: '#8b5cf6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-                + Базаға қосу
+                style={{ padding: '9px 18px', borderRadius: 10, background: '#8b5cf6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <IconPlus style={{ width: 14, height: 14 }} /> Базаға қосу
               </button>
               <div style={{ marginLeft: 'auto', fontSize: 13, fontWeight: 700, color: 'var(--text-sub)' }}>
                 Осы ағымда: <span style={{ color: 'var(--text)' }}>{curatorsList.length}</span> куратор
@@ -354,21 +355,24 @@ export default function CuratorsDatabase() {
                           {cur.last_login ? new Date(cur.last_login).toLocaleString('kk-KZ', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Кірген жоқ'}
                         </td>
                         <td style={{ padding: '14px 16px' }}>
-                          <select value={cur.status || 'active'} onChange={(e) => handleUpdateCuratorStatus(cur.id, e.target.value)}
-                            style={{
-                              padding: '6px 12px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer',
-                              background: stInfo.bg, color: stInfo.color
-                            }}>
-                            <option value="active">🟢 Жұмыста</option>
-                            <option value="stream_changed">🟡 Ағым ауысты</option>
-                            <option value="subject_changed">🔵 Пән ауысты</option>
-                            <option value="fired">🔴 Жұмыстан шықты</option>
-                          </select>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 6px 4px 10px', borderRadius: 8, background: stInfo.bg }}>
+                            <IconDot color={stInfo.color} />
+                            <select value={cur.status || 'active'} onChange={(e) => handleUpdateCuratorStatus(cur.id, e.target.value)}
+                              style={{
+                                padding: '2px 4px', borderRadius: 6, border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer',
+                                background: 'transparent', color: stInfo.color
+                              }}>
+                              <option value="active">Жұмыста</option>
+                              <option value="stream_changed">Ағым ауысты</option>
+                              <option value="subject_changed">Пән ауысты</option>
+                              <option value="fired">Жұмыстан шықты</option>
+                            </select>
+                          </div>
                         </td>
                         <td style={{ padding: '14px 16px' }}>
                           <button onClick={() => handleDeleteCurator(cur.id)}
-                            style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: 'none', cursor: 'pointer' }}>
-                            ✕
+                            style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: 'none', cursor: 'pointer', display: 'flex' }}>
+                            <IconClose style={{ width: 14, height: 14 }} />
                           </button>
                         </td>
                       </tr>
