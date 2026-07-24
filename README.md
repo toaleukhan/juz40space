@@ -1,12 +1,25 @@
-# JUZ40 Online Education
+# JUZ40 Space
 
-Кураторларға арналған JUZ40 Online Education платформасы.
-
-## Ағымдағы жағдай
-
-Қазір негізгі назар — **сабақ кестесі** функционалына аударылған (SMART + JUNIOR ағындары бойынша апталық/айлық кесте, пәндер мен мұғалімдер шолуы). WhatsApp рассылка (куратор кабинеті) коды репозиторийде сақталған, бірақ **уақытша өшірілген** — интерфейсте (sidebar, роутинг) көрсетілмейді, сабақ кестесі толық дамығанша қайта қосылмайды.
+Кураторларға арналған JUZ40 ішкі платформасы: сабақ кестесі, СТ (сабақ тапсыру) жазбалары мен отслежкасы, кураторлар базасы, дэшборд.
 
 Публикалық тіркелу жоқ — жаңа куратор аккаунтын тек сервер қолжетімділігі бар адам [backend/scripts/create-curator.js](backend/scripts/create-curator.js) скрипті арқылы қолмен жасайды.
+
+## Негізгі беттер
+
+- `/login` — жалғыз ашық бет, жүйеге кіру
+- `/schedule` — сабақ кестесі (SMART/JUNIOR ағындары бойынша апталық/айлық)
+- `/st-recordings` — СТ жүйесі: пән/ағым бойынша кураторлардың Мит-і, видео жазбасы, отслежкасы
+- `/curators` — кураторлар базасы (тек admin)
+- `/dashboard` — аналитика: KPI, тренд, куратор рейтингі
+- `/profile` — куратордың жеке кабинеті (профиль + өз СТ-жазба тарихы)
+
+## Архитектура
+
+```
+Frontend (React + Vite, Vercel) → Backend (Node.js + Express, Railway) → PostgreSQL
+                                          ↓
+                          Google Calendar/Meet + Drive (пән бойынша жеке аккаунт)
+```
 
 ## Даму процесі — `main`-ге тікелей push жасамау
 
@@ -19,12 +32,6 @@
 5. Көңіліңізден шықса ғана — branch-ты `main`-ге merge жаса (GitHub Desktop: "Branch" → "Merge into current branch" немесе GitHub-та Pull Request ашу)
 
 Backend (Railway) үшін preview автоматты емес — ауыр жүктеме/деректер қорына қатысты өзгерісті локалды (`npm run dev` + локалды Postgres) тексеріп алған дұрыс.
-
-## Архитектура
-
-```
-Frontend (React + Vite) → Backend (Node.js + Express) → PostgreSQL
-```
 
 ## Жылдам старт (локально)
 
@@ -71,23 +78,24 @@ npm run dev
 # → http://localhost:5173
 ```
 
-## Негізгі беттер
+## Google Meet/Calendar — пән бойынша жеке аккаунт
 
-- `/login` — жалғыз ашық бет, жүйеге кіру
-- `/dashboard`, `/` — пәндер шолуы
-- `/schedule` — сабақ кестесі (қазіргі негізгі даму бағыты)
+СТ жүйесіндегі "Мит ашу" әр пән үшін **өз алдына жеке Google аккаунтпен** жұмыс істейді (мыс. физика кураторлары физика домен аккаунтымен ашады) — ортақ аккаунт жоқ, себебі бір пәннің Мит-і басқа пәннің атынан ашылмауы керек.
 
-## Railway-ге Deploy (өндіріс)
+Пән коды → орта айнымалысының жалғауы: `ФИЗ→FIZ, МАТ→MAT, ТІЛ→TIL, БИО→BIO, ИНФО→INFO, ГЕО→GEO, ТАРИХ→TARIH, РУС→RUS, ХИМ→HIM, МС→MS, ӘДЕБ→ADEB, АНГЛ→ANGL, ДЖТ→DZHT`.
 
-### 1. GitHub-қа жүктеу
-```bash
-git init
-git add .
-git commit -m "JUZNOTIFY initial"
-git push origin main
-```
+Әр пән үшін Railway-де (backend Variables) осы екеуінің **біреуін** орнату керек:
 
-### 2. Railway.app-та жаңа проект
+- `GOOGLE_TOKEN_JSON_<КОД>` + `GOOGLE_CREDENTIALS_JSON_<КОД>` — OAuth client + refresh token жұбы (қолданушы аккаунтпен, ұсынылады, себебі Meet сілтемесін нақты адам аккаунты сенімді жасайды)
+- немесе `GOOGLE_SERVICE_ACCOUNT_JSON_<КОД>` — service account (domain-wide delegation жоқ болса, Мит жасауда шектеулі болуы мүмкін)
+
+Токен/credentials жұбын генерациялау үшін: `node backend/scripts/generate-google-token.js path/to/credentials.json` (Google Cloud Console-дан жүктелген OAuth client JSON-ды бір реттік consent flow арқылы токенге айырбастайды — client_id/secret сәйкессіздігінен болатын `invalid_client` қатесін болдырмау үшін екеуін бірге, бір client-тен генерациялау маңызды).
+
+Пәннің өз аккаунты орнатылмаса, сол пәннің кураторлары "Мит ашу" баса алмайды (әдейі істелген тежеу) — "Google авторизация кілттері табылмады" қатесі шығады.
+
+## Railway-ге Deploy (backend, өндіріс)
+
+### 1. Railway.app-та жаңа проект
 1. railway.app → New Project → GitHub repo
 2. **PostgreSQL** қосу: Add Service → Database → PostgreSQL
 3. **Backend** сервис: Root Directory = `backend`
@@ -96,38 +104,48 @@ git push origin main
      DATABASE_URL=${{Postgres.DATABASE_URL}}
      JWT_SECRET=кез_келген_ұзын_кілт
      NODE_ENV=production
-     FRONTEND_URL=https://сенің-frontend.up.railway.app
+     FRONTEND_URL=https://juz40.space
      ```
-4. **Frontend** сервис: Root Directory = `frontend`
-   - Environment Variables:
-     ```
-     VITE_API_URL=https://сенің-backend.up.railway.app/api
-     ```
+   - Пән бойынша Google айнымалылары (жоғарыдағы бөлімді қараңыз)
+
+### 2. Vercel-ге Deploy (frontend, өндіріс)
+
+Frontend Vercel-де GitHub repo-мен байланысты (Root Directory = `frontend`), Environment Variables:
+```
+VITE_API_URL=https://сенің-backend.up.railway.app/api
+```
 
 ## API Endpoints
 
 ### Auth
 - `POST /api/auth/login` — кіру
-
-### Groups
-- `GET /api/groups` — топтар тізімі
-- `POST /api/groups` — топ жасау
-- `GET /api/groups/:id/students` — оқушылар
-- `POST /api/groups/:id/students` — оқушы қосу
-- `POST /api/groups/:id/students/bulk` — жаппай қосу
+- `GET /api/auth/me` — ағымдағы қолданушы
+- `PUT /api/auth/profile` — профильді жаңарту
 
 ### Schedule
 - `POST /api/parse-schedule` — .docx кестені парсинг жасау (Басқарушы кабинеті)
 - `GET /api/schedule/overrides` — "Енгізу" арқылы қолмен қосылған сабақтар (барлық кураторға ортақ)
 - `PUT /api/schedule/overrides` — сол деректерді сақтау
 
+### СТ жазбалары (st-recordings)
+- `GET /api/st-recordings` — пән/ағым/апта бойынша тізім (куратор тек өзінікін көреді)
+- `POST /api/st-recordings/curator` — жаңа куратор жолы қосу
+- `POST /api/st-recordings/create-meet` — Google Meet сілтемесін ашу (пән аккаунты арқылы)
+- `POST /api/st-recordings/sync-drive` — Drive-тан видео/отслежка файлдарын тауып байлау
+- `PUT /api/st-recordings/:id` — жолды жаңарту (оқушылар саны, ескертпе)
+- `DELETE /api/st-recordings/:id` — жолды өшіру
+
+### Кураторлар базасы (тек admin)
+- `GET /api/curators` — тізім
+- `POST /api/curators` — куратор қосу
+- `POST /api/curators/bulk` — жаппай қосу
+- `POST /api/curators/:id/generate-login` — логин/пароль генерациялау
+- `PUT /api/curators/:id` — жаңарту
+- `DELETE /api/curators/:id` — өшіру
+
+### Dashboard
+- `GET /api/dashboard/status` — жалпы статус
+- `GET /api/dashboard/:subject/monthly` — пән бойынша айлық аналитика
+
 ### Stats
 - `GET /api/stats` — метрикалар
-
-### WhatsApp (уақытша өшірілген, интерфейсте жоқ)
-- `GET /api/whatsapp/qr` — QR код (SSE)
-- `GET /api/whatsapp/status` — статус
-- `POST /api/whatsapp/send` — хабарлама жіберу
-- `GET /api/whatsapp/history` — тарих
-
-WhatsApp-web.js **unofficial** API қолданады. WhatsApp кез келген уақытта сессияны блоктауы мүмкін. Өндірістік пайдалану үшін **WhatsApp Business API** (Meta) ресми нұсқасын қарастырыңыз.
