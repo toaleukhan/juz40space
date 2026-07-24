@@ -213,13 +213,12 @@ router.post('/create-meet', auth, async (req, res) => {
 
 // 4. Драйвтан ВИДЕО мен ОТСЛЕЖКА-ны Табу
 router.post('/sync-drive', auth, async (req, res) => {
-  const { recordingId, meetCode } = req.body;
+  const { recordingId } = req.body;
 
   const rec = await pool.query('SELECT * FROM st_recordings WHERE id = $1', [recordingId]);
   if (!rec.rows.length) return res.status(404).json({ error: 'Жол табылмады' });
 
   const record = rec.rows[0];
-  const targetCode = meetCode || record.meet_code;
 
   const authClient = getGoogleAuth(record.subject);
   if (!authClient) {
@@ -229,7 +228,12 @@ router.post('/sync-drive', auth, async (req, res) => {
   try {
     const drive = google.drive({ version: 'v3', auth: authClient });
 
-    const query = `name contains '${targetCode}' and trashed = false`;
+    // Google Meet жазба/отслежка файлдарын Drive-та Мит кодымен емес,
+    // күнтізбе оқиғасының атауымен сақтайды (create-meet-тегі event.summary-мен
+    // бірдей: "СТ: <пән> - <куратор аты>"), сондықтан іздеу де сол атау
+    // бойынша болуы керек.
+    const searchText = `СТ: ${record.subject} - ${record.curator_name}`.replace(/'/g, "\\'");
+    const query = `name contains '${searchText}' and trashed = false`;
 
     const driveRes = await drive.files.list({
       q: query,
@@ -241,6 +245,8 @@ router.post('/sync-drive', auth, async (req, res) => {
     let videoLink = null;
     let attendanceLink = null;
 
+    // orderBy: createdTime desc — тізім ең жаңасынан басталады, сондықтан
+    // әр түрге тек БІРІНШІ (яғни ең жаңа) сәйкестікті аламыз.
     files.forEach(f => {
       const lowerName = (f.name || '').toLowerCase();
       const mime = (f.mimeType || '').toLowerCase();
@@ -249,8 +255,8 @@ router.post('/sync-drive', auth, async (req, res) => {
       const isVideo = mime.startsWith('video/') || lowerName.endsWith('.mp4') || lowerName.endsWith('.mkv');
       const isAttendance = mime.includes('spreadsheet') || mime.includes('document') || mime.includes('pdf') || lowerName.includes('расшифровка') || lowerName.includes('отслежка');
 
-      if (isVideo) videoLink = link;
-      else if (isAttendance) attendanceLink = link;
+      if (isVideo && !videoLink) videoLink = link;
+      else if (isAttendance && !attendanceLink) attendanceLink = link;
     });
 
     const vLinks = record.video_links || (record.video_link ? [record.video_link] : []);
