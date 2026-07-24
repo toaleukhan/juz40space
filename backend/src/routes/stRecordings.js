@@ -228,12 +228,26 @@ router.post('/sync-drive', auth, async (req, res) => {
   try {
     const drive = google.drive({ version: 'v3', auth: authClient });
 
+    // Осы куратордың КЕЛЕСІ аптасының жолы бар ма — болса, іздеуді содан
+    // бұрынғымен шектейміз, әйтпесе кейінгі апталардың жазбасын да қосып алар едік.
+    const nextRow = await pool.query(
+      `SELECT created_at FROM st_recordings
+       WHERE subject = $1 AND stream_id = $2 AND curator_name = $3
+         AND (month_num, week_num) > ($4, $5)
+       ORDER BY month_num ASC, week_num ASC LIMIT 1`,
+      [record.subject, record.stream_id, record.curator_name, record.month_num, record.week_num]
+    );
+
     // Google Meet жазба/отслежка файлдарын Drive-та Мит кодымен емес,
     // күнтізбе оқиғасының атауымен сақтайды (create-meet-тегі event.summary-мен
     // бірдей: "СТ: <пән> - <куратор аты>"), сондықтан іздеу де сол атау
-    // бойынша болуы керек.
+    // бойынша болады. Датамен шектеу — сол атаумен басқа аптада ашылған
+    // Мит-тің жазбасын осы аптаға жаңылыстырып жаппас үшін.
     const searchText = `СТ: ${record.subject} - ${record.curator_name}`.replace(/'/g, "\\'");
-    const query = `name contains '${searchText}' and trashed = false`;
+    let query = `name contains '${searchText}' and trashed = false and createdTime > '${record.created_at.toISOString()}'`;
+    if (nextRow.rows.length) {
+      query += ` and createdTime < '${nextRow.rows[0].created_at.toISOString()}'`;
+    }
 
     const driveRes = await drive.files.list({
       q: query,
@@ -242,38 +256,34 @@ router.post('/sync-drive', auth, async (req, res) => {
     });
 
     const files = driveRes.data.files || [];
-    let videoLink = null;
-    let attendanceLink = null;
+    const vLinks = record.video_links || (record.video_link ? [record.video_link] : []);
+    const aLinks = record.attendance_links || (record.attendance_link ? [record.attendance_link] : []);
 
-    // orderBy: createdTime desc — тізім ең жаңасынан басталады, сондықтан
-    // әр түрге тек БІРІНШІ (яғни ең жаңа) сәйкестікті аламыз.
+    // Осы аптада бірнеше Мит ашылған болуы мүмкін (мыс. алғашқысына толық
+    // кірмей, "+ Жаңа Мит" басылса) — сондықтан бір ғана емес, осы уақыт
+    // аралығында табылған БАРЛЫҚ видео/отслежка файлын жинаймыз.
     files.forEach(f => {
       const lowerName = (f.name || '').toLowerCase();
       const mime = (f.mimeType || '').toLowerCase();
       const link = f.webViewLink || '';
+      if (!link) return;
 
       const isVideo = mime.startsWith('video/') || lowerName.endsWith('.mp4') || lowerName.endsWith('.mkv');
       const isAttendance = mime.includes('spreadsheet') || mime.includes('document') || mime.includes('pdf') || lowerName.includes('расшифровка') || lowerName.includes('отслежка');
 
-      if (isVideo && !videoLink) videoLink = link;
-      else if (isAttendance && !attendanceLink) attendanceLink = link;
+      if (isVideo && !vLinks.includes(link)) vLinks.push(link);
+      else if (isAttendance && !aLinks.includes(link)) aLinks.push(link);
     });
 
-    const vLinks = record.video_links || (record.video_link ? [record.video_link] : []);
-    const aLinks = record.attendance_links || (record.attendance_link ? [record.attendance_link] : []);
-
-    if (videoLink && !vLinks.includes(videoLink)) vLinks.push(videoLink);
-    if (attendanceLink && !aLinks.includes(attendanceLink)) aLinks.push(attendanceLink);
-
     const updated = await pool.query(
-      `UPDATE st_recordings 
-       SET video_link = COALESCE($1, video_link), 
-           attendance_link = COALESCE($2, attendance_link), 
-           video_links = $3, 
-           attendance_links = $4, 
-           updated_at = NOW() 
+      `UPDATE st_recordings
+       SET video_link = COALESCE($1, video_link),
+           attendance_link = COALESCE($2, attendance_link),
+           video_links = $3,
+           attendance_links = $4,
+           updated_at = NOW()
        WHERE id = $5 RETURNING *`,
-      [videoLink, attendanceLink, vLinks, aLinks, recordingId]
+      [vLinks[0] || null, aLinks[0] || null, vLinks, aLinks, recordingId]
     );
 
     res.json({ success: true, record: updated.rows[0], foundCount: files.length });
