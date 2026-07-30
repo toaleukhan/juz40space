@@ -312,8 +312,21 @@ export default function StRecordings() {
                 const bookings = row?.bookings || [];
                 const videoLinks = row?.video_links || (row?.video_link ? [row.video_link] : []);
                 const attendanceLinks = row?.attendance_links || (row?.attendance_link ? [row.attendance_link] : []);
+                const hasSt = bookings.some(b => b.meeting_type === 'st');
                 return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {row && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderRadius: 12, background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Ескеру керек жағдай:</label>
+                        <input
+                          defaultValue={row.notes || ''}
+                          placeholder="Мыс: ауырып тұр..."
+                          onBlur={(e) => handleUpdateRow(row.id, 'notes', e.target.value)}
+                          style={{ flex: 1, minWidth: 120, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 12.5 }}
+                        />
+                      </div>
+                    )}
+
                     <WeekBookingCalendar
                       monday={monday}
                       bookings={bookings}
@@ -321,23 +334,11 @@ export default function StRecordings() {
                       onDeleteBooking={(b) => handleDeleteBooking(b.id)}
                     />
 
-                    {row && (
-                      <div className="card" style={{ padding: '14px 18px' }}>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Ескеру керек жағдайлар</label>
-                        <input
-                          defaultValue={row.notes || ''}
-                          placeholder="Мыс: ауырып тұр..."
-                          onBlur={(e) => handleUpdateRow(row.id, 'notes', e.target.value)}
-                          style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)' }}
-                        />
-                      </div>
-                    )}
-
-                    {(videoLinks.length > 0 || attendanceLinks.length > 0) && (
+                    {hasSt && (
                       <div className="card" style={{ padding: 18, display: 'flex', flexWrap: 'wrap', gap: 24 }}>
-                        {videoLinks.length > 0 && (
-                          <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Видео жазба</div>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Видео жазба</div>
+                          {videoLinks.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                               {videoLinks.map((v, idx) => (
                                 <a key={idx} href={v} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#2563eb', fontWeight: 600, textDecoration: 'none', fontSize: 12.5 }}>
@@ -345,11 +346,15 @@ export default function StRecordings() {
                                 </a>
                               ))}
                             </div>
-                          </div>
-                        )}
-                        {attendanceLinks.length > 0 && (
-                          <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Отслежка</div>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#d97706', fontSize: 11.5, fontWeight: 600 }}>
+                              <IconClock style={{ width: 12, height: 12 }} /> Әлі дайын емес — автоматты түрде табылады
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Отслежка</div>
+                          {attendanceLinks.length > 0 ? (
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                               {attendanceLinks.map((a, idx) => (
                                 <a key={idx} href={a} target="_blank" rel="noreferrer" title="Отслежка">
@@ -359,8 +364,12 @@ export default function StRecordings() {
                                 </a>
                               ))}
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#d97706', fontSize: 11.5, fontWeight: 600 }}>
+                              <IconClock style={{ width: 12, height: 12 }} /> Әлі дайын емес — автоматты түрде табылады
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
