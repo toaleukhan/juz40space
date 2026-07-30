@@ -91,8 +91,8 @@ function IllustrationPanel() {
       onMouseMove={handleMouseMove}
       style={{
         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'linear-gradient(160deg, #c8e8ee 0%, #a8d8e2 40%, #90cdd9 100%)',
-        borderRadius: 24, position: 'relative', overflow: 'hidden', minHeight: 480,
+        background: 'linear-gradient(165deg, #16332e 0%, #0c6478 55%, #0e4956 100%)',
+        borderRadius: 18, position: 'relative', overflow: 'hidden', minHeight: 480,
       }}>
       <style>{`
         @keyframes blobDrift1 { 0%,100% { transform:translate(0,0) scale(1); } 50% { transform:translate(-24px,18px) scale(1.08); } }
@@ -102,21 +102,26 @@ function IllustrationPanel() {
       `}</style>
 
       {/* Soft bg circles, drifting slowly */}
-      <div style={{ position:'absolute', width:300, height:300, borderRadius:'50%', background:'rgba(255,255,255,0.25)', top:-60, right:-60, animation:'blobDrift1 9s ease-in-out infinite' }} />
-      <div style={{ position:'absolute', width:200, height:200, borderRadius:'50%', background:'rgba(255,255,255,0.18)', bottom:-40, left:-40, animation:'blobDrift2 11s ease-in-out infinite' }} />
+      <div style={{ position:'absolute', width:300, height:300, borderRadius:'50%', background:'rgba(181,130,42,0.14)', top:-60, right:-60, animation:'blobDrift1 9s ease-in-out infinite' }} />
+      <div style={{ position:'absolute', width:200, height:200, borderRadius:'50%', background:'rgba(255,255,255,0.06)', bottom:-40, left:-40, animation:'blobDrift2 11s ease-in-out infinite' }} />
 
       {/* Ұшып жүрген жұлдызшалар */}
-      <StarField count={26} color="#ffffff" maxOpacity={0.85} style={{ zIndex: 2 }} />
+      <StarField count={22} color="#ffffff" maxOpacity={0.55} style={{ zIndex: 2 }} />
 
       {/* Small fixed logo badge, top-left */}
       <div style={{
         position:'absolute', top:24, left:24, zIndex:3,
-        width:44, height:44, borderRadius:12,
-        background:'rgba(255,255,255,0.92)',
-        boxShadow:'0 4px 14px rgba(0,0,0,0.10)',
+        width:44, height:44, borderRadius:11,
+        background:'rgba(255,255,255,0.95)',
+        boxShadow:'0 4px 14px rgba(0,0,0,0.18)',
         display:'flex', alignItems:'center', justifyContent:'center',
       }}>
         <img src={juz40Logo} alt="JUZ40" style={{ width:30, height:'auto', display:'block' }} />
+      </div>
+
+      {/* Editorial eyebrow, top-right */}
+      <div style={{ position:'absolute', top:32, right:32, zIndex:3, fontSize:10.5, fontWeight:700, letterSpacing:'1.6px', textTransform:'uppercase', color:'rgba(255,255,255,0.55)' }}>
+        Пәндер бойынша
       </div>
 
       {/* Big slideshow icon — fills most of the panel */}
@@ -128,7 +133,7 @@ function IllustrationPanel() {
         {/* Glow behind mascot */}
         <div style={{
           position:'absolute', width:'58%', height:'58%', borderRadius:'50%',
-          background:'radial-gradient(circle, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 70%)',
+          background:'radial-gradient(circle, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 70%)',
           animation:'glowPulse 4s ease-in-out infinite', zIndex:0,
         }} />
         <AnimatePresence mode="wait">
@@ -158,8 +163,8 @@ function IllustrationPanel() {
       <div style={{
         position:'absolute', bottom:0, left:0, right:0,
         padding:'16px 26px 22px',
-        background:'rgba(255,255,255,0.85)', backdropFilter:'blur(6px)',
-        borderTop:'1px solid rgba(255,255,255,0.5)',
+        background:'rgba(10,25,24,0.45)', backdropFilter:'blur(10px)',
+        borderTop:'1px solid rgba(255,255,255,0.12)',
         textAlign:'center',
       }}>
         <AnimatePresence mode="wait">
@@ -169,10 +174,10 @@ function IllustrationPanel() {
             animate={{ opacity:1, y:0 }}
             exit={{ opacity:0, y:-8 }}
             transition={{ duration:0.35 }}>
-            <div style={{ fontSize:16, fontWeight:800, color:'#0D4A57', marginBottom:4 }}>
+            <div className="font-display" style={{ fontSize:16, fontWeight:700, color:'#ffffff', marginBottom:4 }}>
               {subj.name}
             </div>
-            <div style={{ fontSize:11.5, color:'rgba(13,74,87,0.75)', lineHeight:1.5 }}>
+            <div style={{ fontSize:11.5, color:'rgba(255,255,255,0.62)', lineHeight:1.5 }}>
               {teachers.length
                 ? `${teachers.length} мұғалім: ${teachers.slice(0,3).join(', ')}${teachers.length>3?` және т.б.`:''}`
                 : 'Бұл пән бойынша деректер жоқ'}
@@ -188,7 +193,7 @@ function IllustrationPanel() {
               style={{
                 width: i===idx ? 16 : 6, height:6, borderRadius:3,
                 border:'none', cursor:'pointer', padding:0,
-                background: i===idx ? '#1B6E7E' : 'rgba(13,74,87,0.25)',
+                background: i===idx ? '#d9a94a' : 'rgba(255,255,255,0.28)',
                 transition:'all 0.25s',
               }}/>
           ))}
@@ -219,11 +224,11 @@ export default function Login() {
   };
 
   const inp = (field) => ({
-    width:'100%', padding:'12px 14px', borderRadius:12, boxSizing:'border-box',
+    width:'100%', padding:'12px 14px', borderRadius:10, boxSizing:'border-box',
     border:`1.5px solid ${focused===field ? 'var(--accent)' : 'var(--border)'}`,
     background: focused===field ? 'var(--surface)' : 'var(--surface2)',
     color:'var(--text)', fontSize:14, outline:'none', transition:'all 0.2s', fontFamily:'inherit',
-    boxShadow: focused===field ? '0 0 0 3px rgba(27,110,126,0.15)' : 'none',
+    boxShadow: focused===field ? '0 0 0 3px var(--accent-soft)' : 'none',
   });
 
   return (
@@ -243,12 +248,12 @@ export default function Login() {
         }
         @keyframes spin14 { to { transform:rotate(360deg); } }
         .login-btn:hover:not(:disabled) {
-          background:#0f5a6a !important;
+          background:#094c5a !important;
           transform:translateY(-1px);
-          box-shadow:0 8px 20px rgba(27,110,126,0.4) !important;
+          box-shadow:0 8px 20px rgba(12,100,120,0.35) !important;
         }
         .login-btn:active:not(:disabled) { transform:translateY(0); }
-        .show-btn:hover { color:#1B6E7E !important; }
+        .show-btn:hover { color:var(--accent) !important; }
         @media (max-width: 860px) {
           .login-row { flex-direction: column !important; height: auto !important; }
           .login-form-col { flex: 1 1 auto !important; min-height: auto !important; border-right: none !important; padding: 36px 24px !important; }
@@ -272,7 +277,8 @@ export default function Login() {
           </div>
 
           <div style={{ textAlign:'center', marginBottom:32 }}>
-            <h1 style={{ fontSize:26, fontWeight:800, color:'var(--text)', marginBottom:6, letterSpacing:'-0.5px' }}>
+            <div className="eyebrow" style={{ justifyContent:'center', marginBottom:10 }}>JUZ40 Space</div>
+            <h1 className="font-display" style={{ fontSize:27, fontWeight:700, color:'var(--text)', marginBottom:6, letterSpacing:'-0.4px' }}>
               Қош келдіңіз!
             </h1>
             <p style={{ fontSize:13, color:'var(--text-sub)', margin:0 }}>
@@ -339,12 +345,12 @@ export default function Login() {
               className="login-btn"
               disabled={loading}
               style={{
-                padding:'13px', borderRadius:12, marginTop:6,
-                background: loading ? '#9ab5a5' : '#1B6E7E',
+                padding:'13px', borderRadius:10, marginTop:6,
+                background: loading ? 'var(--text-muted)' : 'var(--accent)',
                 border:'none', color:'#fff', fontSize:14, fontWeight:700,
                 cursor: loading ? 'default' : 'pointer',
                 transition:'all 0.2s',
-                boxShadow:'0 4px 14px rgba(27,110,126,0.3)',
+                boxShadow:'0 4px 14px var(--accent-soft)',
               }}
             >
               {loading
@@ -373,7 +379,7 @@ export default function Login() {
         </div>
 
         {/* ── Right: Illustration ── */}
-        <div className="login-illustration-col" style={{ flex: 1, display: 'flex', minWidth: 0 }}>
+        <div className="login-illustration-col" style={{ flex: 1, display: 'flex', minWidth: 0, background: 'var(--bg)', padding: '20px 20px 20px 0' }}>
           <IllustrationPanel />
         </div>
       </div>
