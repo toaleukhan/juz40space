@@ -6,7 +6,7 @@ import { SUBJECT_COLORS, SUBJECT_LOGOS } from './scheduleData';
 import { motion } from 'framer-motion';
 import { SHEETS_LOGO } from '../components/brandLogos';
 import { IconMeetLogo, IconBolt, IconRefresh, IconVideo, IconClock, IconClose, IconTable } from '../components/icons';
-import WeekBookingCalendar, { getMonday, minutesToTime, toLocalISODate } from '../components/WeekBookingCalendar';
+import WeekBookingCalendar, { getFilterMonday, minutesToTime, toLocalISODate } from '../components/WeekBookingCalendar';
 import BookingModal from '../components/BookingModal';
 
 const SUBJECTS = [
@@ -50,7 +50,7 @@ export default function StRecordings() {
   const [modalSlot, setModalSlot] = useState(null); // { date, startTime } | null
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
-  const monday = getMonday();
+  const monday = getFilterMonday(currentMonth, currentWeek);
 
   useEffect(() => {
     if (selectedSubject) loadTable();
@@ -505,7 +505,7 @@ export default function StRecordings() {
                         <td style={{ padding: '12px 16px' }}>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                             <button onClick={() => handleOpenBookingForRow(row)}
-                              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
                               <IconMeetLogo style={{ width: 14, height: 14 }} />
                               {bookings.length > 0 ? '+ Жаңа Мит' : 'Мит ашу'}
                             </button>

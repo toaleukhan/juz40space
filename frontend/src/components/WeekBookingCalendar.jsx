@@ -6,15 +6,24 @@ const START_HOUR = 8;
 const END_HOUR = 22;
 const HOUR_H = 56;
 
-// Ағымдағы нақты аптаның дүйсенбісі — куратордың "1-ай/1-апта" секілді
-// абстрактілі жол таңдауына қарамастан, календарь әрдайым нақты бүгінгі
-// аптаны көрсетеді (Мит нақты күн-уақытпен жасалады ғой).
 export function getMonday(date = new Date()) {
   const d = new Date(date);
   const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+// "1-ай 1-апта" фильтрінің дүйсенбісі (2026-07-06). Әр апта +7 күн, әр ай
+// 4 аптадан тұрады деп есептеледі — осыдан кез келген ай/апта таңдауының
+// нақты дүйсенбісін шығарамыз (мыс. 1-ай 4-апта → 27.07, 2-ай 1-апта →
+// 03.08, яғни келесі апта).
+const FILTER_ANCHOR_MONDAY = new Date(2026, 6, 6);
+export function getFilterMonday(monthNum, weekNum) {
+  const weekIndex = (monthNum - 1) * 4 + (weekNum - 1);
+  const d = new Date(FILTER_ANCHOR_MONDAY);
+  d.setDate(d.getDate() + weekIndex * 7);
   return d;
 }
 
