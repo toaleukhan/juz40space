@@ -22,7 +22,31 @@ const navStyle = (collapsed) => ({ isActive }) => ({
   whiteSpace: 'nowrap', overflow: 'hidden',
 });
 
-function SidebarContent({ collapsed, onNavigate }) {
+// Логотипке тінтуірді апарғанда гамбургерге crossfade болатын аймақ (Gemini-дегідей).
+// Ашық күйде (open) icon әрдайым көрінеді — hover керек емес.
+function LogoToggle({ open, onToggle }) {
+  return (
+    <div
+      className={`logo-toggle-zone${open ? ' is-open' : ''}`}
+      onClick={onToggle}
+      role="button"
+      aria-label={open ? 'Мәзірді жабу' : 'Мәзірді ашу'}
+      title={open ? 'Мәзірді жабу' : 'Мәзірді ашу'}
+      style={{ width: 34, height: 34, position: 'relative', cursor: 'pointer', flexShrink: 0, borderRadius: 10 }}
+    >
+      <img src={juz40Logo} alt="JUZ40" className="logo-toggle-logo"
+        style={{ width: 34, height: 34, objectFit: 'contain', display: 'block' }} />
+      <div className="logo-toggle-icon" style={{
+        position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-sub)',
+      }}>
+        {open ? <IconClose /> : <IconMenu />}
+      </div>
+    </div>
+  );
+}
+
+function SidebarContent({ collapsed, onNavigate, open, onToggle }) {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isCurator = user.role === 'curator';
@@ -49,7 +73,9 @@ function SidebarContent({ collapsed, onNavigate }) {
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28, justifyContent: collapsed ? 'center' : 'flex-start' }}>
-        <img src={juz40Logo} alt="JUZ40" style={{ height: 34, width: 34, objectFit: 'contain', flexShrink: 0 }} />
+        {onToggle
+          ? <LogoToggle open={open} onToggle={onToggle} />
+          : <img src={juz40Logo} alt="JUZ40" style={{ height: 34, width: 34, objectFit: 'contain', flexShrink: 0 }} />}
         {!collapsed && (
           <div style={{ minWidth: 0, overflow: 'hidden' }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>JUZ40</div>
@@ -115,29 +141,38 @@ function SidebarContent({ collapsed, onNavigate }) {
 export default function Sidebar() {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
-  const [hovered, setHovered] = useState(false);
 
   if (!isMobile) {
-    const expanded = hovered;
     return (
-      <aside
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          width: expanded ? RAIL_WIDTH_EXPANDED : RAIL_WIDTH,
+      <>
+        <style>{`
+          .logo-toggle-logo { opacity: 1; transition: opacity 0.15s ease; }
+          .logo-toggle-icon { opacity: 0; transition: opacity 0.15s ease; }
+          .logo-toggle-zone:hover .logo-toggle-logo, .logo-toggle-zone.is-open .logo-toggle-logo { opacity: 0; }
+          .logo-toggle-zone:hover .logo-toggle-icon, .logo-toggle-zone.is-open .logo-toggle-icon { opacity: 1; }
+        `}</style>
+
+        {/* Толық ашылғанда қалған экранды күңгірттендіретін scrim */}
+        {open && (
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 59, background: 'rgba(0,0,0,0.32)' }} />
+        )}
+
+        <aside style={{
+          width: open ? RAIL_WIDTH_EXPANDED : RAIL_WIDTH,
           flexShrink: 0, background: 'var(--surface)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
           borderRight: '1px solid var(--border)',
           display: 'flex', flexDirection: 'column', height: '100vh',
           position: 'fixed', top: 0, left: 0, padding: '22px 14px', zIndex: 60,
-          overflow: 'hidden', transition: 'width 0.18s ease',
-          boxShadow: expanded ? '8px 0 32px rgba(0,0,0,0.14)' : 'none',
+          overflow: 'hidden', transition: 'width 0.2s cubic-bezier(0.4,0,0.2,1)',
+          boxShadow: open ? '8px 0 32px rgba(0,0,0,0.14)' : 'none',
         }}>
-        <StarField count={16} color="var(--accent)" maxOpacity={0.45} />
-        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <SidebarContent collapsed={!expanded} />
-        </div>
-      </aside>
+          <StarField count={16} color="var(--accent)" maxOpacity={0.45} />
+          <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <SidebarContent collapsed={!open} open={open} onToggle={() => setOpen(v => !v)} onNavigate={() => setOpen(false)} />
+          </div>
+        </aside>
+      </>
     );
   }
 
