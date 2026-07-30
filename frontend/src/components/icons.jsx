@@ -1,4 +1,6 @@
 // Минималды сызықты иконкалар (Heroicons стилінде, сыртқы тәуелділіксіз)
+import { useId } from 'react';
+
 const base = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' };
 
 export const IconMenu = (p) => (
@@ -43,17 +45,38 @@ export const IconLink = (p) => (
 export const IconTable = (p) => (
   <svg {...base} {...p}><rect x="4" y="4.5" width="16" height="15" rx="2" /><line x1="4" y1="9.5" x2="20" y2="9.5" /><line x1="10" y1="4.5" x2="10" y2="19.5" /></svg>
 );
-// Google Meet белгісі — тек камера пиктограммасы, жазусыз (4 түсті стиль)
-export const IconMeetLogo = ({ style, ...p }) => (
-  <svg viewBox="0 0 36 36" style={{ width: 16, height: 16, flexShrink: 0, ...style }} {...p}>
-    <path fill="#00832d" d="M20.5 11.5v6.7l4.9 3.8V15z" />
-    <path fill="#0066da" d="M20.5 24.9H8.6a2 2 0 0 1-2-2V15h13.9z" />
-    <path fill="#e94235" d="M6.6 15V9.6a2 2 0 0 1 2-2h11.9v7.4z" />
-    <path fill="#2684fc" d="M25.4 12.9l-4.9 3.8v3.2l4.9 3.8a1.1 1.1 0 0 0 1.8-.85V13.75a1.1 1.1 0 0 0-1.8-.85z" />
-    <path fill="#ffba00" d="M20.5 18l-13.9 3v3.9a2 2 0 0 0 2 2h11.9z" />
-    <path fill="#00ac47" d="M20.5 11.5H6.6v6.5h13.9z" />
-  </svg>
-);
+// Google Meet белгісі — ресми логотип (2026 стилі). Бір бетте бірнеше рет
+// қатар шығуы мүмкін болғандықтан, ішкі градиент/маска id-лерін useId()
+// арқылы әр data-instance үшін бірегей етеміз (әйтпесе inline SVG-лер бір
+// DOM-да болғанда id қақтығысып, түстер бұзылады).
+export const IconMeetLogo = ({ style, ...p }) => {
+  const uid = useId();
+  const gradA = `meet-a${uid}`, gradF = `meet-f${uid}`, gradB = `meet-b${uid}`;
+  const filterC = `meet-c${uid}`, maskE = `meet-e${uid}`;
+  return (
+    <svg viewBox="0 0 192 192" style={{ width: 16, height: 16, flexShrink: 0, ...style }} {...p}>
+      <path fill={`url(#${gradA})`} d="M110.015 108.88c-6.829-4.718-6.921-14.778-.179-19.62L165 49.643c7.94-5.701 19-.038 19 9.737v77.755c0 9.675-10.861 15.359-18.821 9.859z" />
+      <path fill={`url(#${gradB})`} d="M8 71c0-24.3 19.7-44 44-44h64c11.046 0 20 8.954 20 20v98c0 11.046-8.954 20-20 20H28c-11.046 0-20-8.954-20-20z" />
+      <mask id={maskE} width="129" height="138" x="8" y="27" maskUnits="userSpaceOnUse" style={{ maskType: 'luminance' }}>
+        <path fill="#fff" d="M8 71c0-24.3 19.7-44 44-44h64c11.046 0 20 8.954 20 20v98c0 11.046-8.954 20-20 20H28c-11.046 0-20-8.954-20-20z" />
+      </mask>
+      <g filter={`url(#${filterC})`} mask={`url(#${maskE})`}>
+        <path fill={`url(#${gradF})`} d="m73.906 99.198 110-63.198v124z" />
+      </g>
+      <circle cx="38" cy="135" r="14" fill="#fff" />
+      <defs>
+        <linearGradient id={gradA} x1="128.8" x2="227.2" y1="104.44" y2="104.44" gradientUnits="userSpaceOnUse"><stop stopColor="#f6a100" /><stop offset="1" stopColor="#ffbe00" /></linearGradient>
+        <linearGradient id={gradF} x1="136.22" x2="78.5" y1="91.32" y2="91.19" gradientUnits="userSpaceOnUse"><stop offset=".15" stopColor="#ffb5e8" /><stop offset="1" stopColor="#ffdbf5" stopOpacity="0" /></linearGradient>
+        <radialGradient id={gradB} cx="0" cy="0" r="1" gradientTransform="matrix(-159.725 0 0 -135.852 160.325 96)" gradientUnits="userSpaceOnUse"><stop offset=".15" stopColor="#ffe921" /><stop offset="1" stopColor="#fec700" /></radialGradient>
+        <filter id={filterC} width="166" height="180" x="45.91" y="8" colorInterpolationFilters="sRGB" filterUnits="userSpaceOnUse">
+          <feFlood floodOpacity="0" result="BackgroundImageFix" />
+          <feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape" />
+          <feGaussianBlur result="effect1_foregroundBlur_37584_9338" stdDeviation="14" />
+        </filter>
+      </defs>
+    </svg>
+  );
+};
 
 export const IconSettings = (p) => (
   <svg {...base} {...p}><circle cx="12" cy="12" r="3" /><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3.9a7 7 0 0 0-2-1.2L14.2 3H9.8l-.4 2.6a7 7 0 0 0-2 1.2l-2.3-.9-2 3.4 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.4 2.3-.9c.6.5 1.3.9 2 1.2l.4 2.6h4.4l.4-2.6a7 7 0 0 0 2-1.2l2.3.9 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z" /></svg>

@@ -60,7 +60,7 @@ export default function BookingModal({ initialDate, initialStartTime, onClose, o
         {meetingType === 'st' && (
           <div>
             <label style={labelStyle}>СТ-ге кіретін оқушы саны</label>
-            <input type="number" min="0" value={studentsCount} onChange={(e) => setStudentsCount(e.target.value)} style={inputStyle} />
+            <input type="number" min="0" className="no-spinner" value={studentsCount} onChange={(e) => setStudentsCount(e.target.value)} style={inputStyle} />
           </div>
         )}
 
@@ -80,8 +80,8 @@ export default function BookingModal({ initialDate, initialStartTime, onClose, o
         </div>
 
         <button onClick={handleSubmit} disabled={loading}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px', borderRadius: 10, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 14, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1 }}>
-          <IconMeetLogo style={{ width: 16, height: 16 }} />
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '11px', borderRadius: 10, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1.5px solid rgba(16,185,129,0.35)', fontWeight: 700, fontSize: 14, cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+          <IconMeetLogo style={{ width: 18, height: 18 }} />
           {loading ? 'Жасалуда...' : 'Сақтау және Мит жасау'}
         </button>
       </div>

@@ -177,7 +177,7 @@ export default function CuratorCabinet() {
               </div>
               <div>
                 <label style={labelStyle}>Оқушыларыңыздың жалпы саны</label>
-                <input type="number" value={studentsCount} onChange={e => setStudentsCount(e.target.value)}
+                <input type="number" className="no-spinner" value={studentsCount} onChange={e => setStudentsCount(e.target.value)}
                   placeholder="Мысалы: 25" style={inputStyle} />
               </div>
             </div>
