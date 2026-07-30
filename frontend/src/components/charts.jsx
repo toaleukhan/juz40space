@@ -4,7 +4,7 @@
 // build-тәуекелін болдырмайды.)
 
 // Аптадан-аптаға орташа баллдың өзгерісі — сызықты график
-export function TrendLine({ points, height = 160, color = '#1B6E7E', emptyText = 'Деректер әлі жоқ' }) {
+export function TrendLine({ points, height = 160, color = 'var(--accent)', emptyText = 'Деректер әлі жоқ' }) {
   const valid = points.filter(p => p.value !== null && !Number.isNaN(p.value));
   if (valid.length === 0) {
     return (
@@ -72,7 +72,7 @@ export function BarRow({ label, value, max, color }) {
 }
 
 // Дөңгелек прогресс — KPI-карточкаларда пайыз/орта көрсету үшін
-export function RingStat({ value, max = 100, color = '#1B6E7E', size = 64, strokeWidth = 7 }) {
+export function RingStat({ value, max = 100, color = 'var(--accent)', size = 64, strokeWidth = 7 }) {
   const r = (size - strokeWidth) / 2;
   const c = 2 * Math.PI * r;
   const pct = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;

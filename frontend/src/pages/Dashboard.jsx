@@ -33,9 +33,9 @@ function toNumber(v) {
 
 function scoreColorByValue(n) {
   if (n === null) return 'var(--text-muted)';
-  if (n >= 80) return '#059669';
-  if (n >= 60) return '#d97706';
-  return '#dc2626';
+  if (n >= 80) return 'var(--success)';
+  if (n >= 60) return 'var(--warning)';
+  return 'var(--danger)';
 }
 
 function scoreColor(v) {
@@ -153,7 +153,7 @@ export default function Dashboard() {
     padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 16,
   };
   const kpiLabelStyle = { fontSize: 11.5, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' };
-  const kpiValueStyle = { fontSize: 24, fontWeight: 900, color: 'var(--text)', marginTop: 2 };
+  const kpiValueStyle = { fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 700, color: 'var(--text)', marginTop: 2 };
 
   return (
     <div className="app-shell" style={{ background: 'var(--bg)', fontFamily: "'Inter', sans-serif" }}>
@@ -162,16 +162,14 @@ export default function Dashboard() {
       <main style={{ flex: 1, padding: '24px 32px', minWidth: 0, overflowY: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '2px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-              JUZ40 · БАСҚАРУ
-            </div>
-            <h1 style={{ fontSize: 24, fontWeight: 900, color: 'var(--text)', margin: '4px 0 0', letterSpacing: '-0.5px' }}>
+            <div className="eyebrow">JUZ40 · Басқару</div>
+            <h1 className="font-display" style={{ fontSize: 25, fontWeight: 700, color: 'var(--text)', margin: '6px 0 0', letterSpacing: '-0.3px' }}>
               Дэшборд {selectedSubject ? `· ${selectedSubject.name}` : ''}
             </h1>
           </div>
           {selectedSubject && (
             <button onClick={() => updateFilters({ subject: null })}
-              style={{ padding: '8px 16px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-sub)', fontWeight: 600, fontSize: 12 }}>
+              style={{ padding: '8px 16px', borderRadius: 9, background: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-sub)', fontWeight: 600, fontSize: 12 }}>
               ← Барлық пәндер
             </button>
           )}
@@ -180,7 +178,7 @@ export default function Dashboard() {
         {!selectedSubject ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 18 }}>
             {SUBJECTS.map(s => {
-              const col = SUBJECT_COLORS[s.code] || { primary: '#1B6E7E' };
+              const col = SUBJECT_COLORS[s.code] || { primary: '#0c6478' };
               const svgLogo = SUBJECT_LOGOS[s.code];
               const connected = !!status[s.code];
               return (
@@ -211,7 +209,7 @@ export default function Dashboard() {
                     <div style={{
                       display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6,
                       fontSize: 11, fontWeight: 700,
-                      color: connected ? '#059669' : 'var(--text-muted)',
+                      color: connected ? 'var(--success)' : 'var(--text-muted)',
                     }}>
                       {connected
                         ? <><IconCheckCircle style={{ width: 12, height: 12 }} /> Қосылған</>
@@ -225,7 +223,7 @@ export default function Dashboard() {
         ) : loadingData ? (
           <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Жүктелуде...</div>
         ) : error ? (
-          <div className="card" style={{ padding: 32, textAlign: 'center', color: '#dc2626', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--danger)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             <IconAlert style={{ width: 20, height: 20 }} />
             {error}
           </div>
@@ -245,8 +243,8 @@ export default function Dashboard() {
               </div>
 
               <div className="card" style={kpiCardStyle}>
-                <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <IconUsers style={{ width: 20, height: 20, color: '#059669' }} />
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--success-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <IconUsers style={{ width: 20, height: 20, color: 'var(--success)' }} />
                 </div>
                 <div>
                   <div style={kpiLabelStyle}>Балл қойылған куратор</div>
@@ -255,16 +253,16 @@ export default function Dashboard() {
               </div>
 
               <div className="card" style={kpiCardStyle}>
-                <RingStat value={analytics.completeness} max={100} color="#3b82f6" />
+                <RingStat value={analytics.completeness} max={100} color="var(--accent-mid)" />
                 <div>
                   <div style={kpiLabelStyle}>Кесте толтырылуы</div>
-                  <div style={{ ...kpiValueStyle, color: '#3b82f6' }}>{analytics.completeness}%</div>
+                  <div style={{ ...kpiValueStyle, color: 'var(--accent-mid)' }}>{analytics.completeness}%</div>
                 </div>
               </div>
 
               <div className="card" style={kpiCardStyle}>
-                <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <IconChart style={{ width: 20, height: 20, color: '#8b5cf6' }} />
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--gold-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <IconChart style={{ width: 20, height: 20, color: 'var(--gold)' }} />
                 </div>
                 <div>
                   <div style={kpiLabelStyle}>Апта саны (кестеде)</div>
@@ -278,16 +276,16 @@ export default function Dashboard() {
               <div className="card" style={{ padding: 22 }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>Орташа балл динамикасы</div>
                 <div style={{ fontSize: 12, color: 'var(--text-sub)', marginBottom: 16 }}>Апта сайын барлық кураторлардың орташа "Ортақ" баллы</div>
-                <TrendLine points={analytics.trend} color="#1B6E7E" />
+                <TrendLine points={analytics.trend} color="var(--accent)" />
               </div>
 
               <div className="card" style={{ padding: 22 }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>Үлестіру (соңғы белгілі балл)</div>
                 <div style={{ fontSize: 12, color: 'var(--text-sub)', marginBottom: 16 }}>Куратор саны санат бойынша</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <BarRow label="Жақсы" value={analytics.buckets['Жақсы (80+)']} max={analytics.totalCurators} color="#059669" />
-                  <BarRow label="Орта" value={analytics.buckets['Орта (60-79)']} max={analytics.totalCurators} color="#d97706" />
-                  <BarRow label="Назар аудару" value={analytics.buckets['Назар аудару (<60)']} max={analytics.totalCurators} color="#dc2626" />
+                  <BarRow label="Жақсы" value={analytics.buckets['Жақсы (80+)']} max={analytics.totalCurators} color="var(--success)" />
+                  <BarRow label="Орта" value={analytics.buckets['Орта (60-79)']} max={analytics.totalCurators} color="var(--warning)" />
+                  <BarRow label="Назар аудару" value={analytics.buckets['Назар аудару (<60)']} max={analytics.totalCurators} color="var(--danger)" />
                   <BarRow label="Деректер жоқ" value={analytics.buckets['Деректер жоқ']} max={analytics.totalCurators} color="var(--text-muted)" />
                 </div>
               </div>
