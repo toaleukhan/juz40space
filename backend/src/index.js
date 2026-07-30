@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const createTables = require('./config/schema');
 const { apiLimiter, loginLimiter, securityHeaders, sanitizeInput } = require('./middleware/security');
+const { startAutoSyncScheduler } = require('./jobs/driveSync');
 
 const app = express();
 
@@ -52,10 +53,12 @@ const PORT = process.env.PORT || 3001;
 
 const start = async () => {
   await createTables();
-  
+
   console.log('✅ Backend ready');
-  
+
   app.listen(PORT, () => console.log(`🚀 JUZNOTIFY backend: http://localhost:${PORT}`));
+
+  startAutoSyncScheduler();
 };
 
 start().catch(console.error);

@@ -55,7 +55,7 @@ function minutesFromMidnight(timeStr) {
   return h * 60 + (m || 0);
 }
 
-export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onBookingClick }) {
+export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onDeleteBooking }) {
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
   const totalH = (END_HOUR - START_HOUR) * HOUR_H;
 
@@ -110,22 +110,63 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onB
                   const startMin = minutesFromMidnight(b.start_time);
                   const endMin = minutesFromMidnight(b.end_time);
                   const top = ((startMin - START_HOUR * 60) / 60) * HOUR_H;
-                  const height = Math.max(22, ((endMin - startMin) / 60) * HOUR_H);
+                  const height = Math.max(24, ((endMin - startMin) / 60) * HOUR_H);
                   const isSt = b.meeting_type === 'st';
+                  const primary = isSt ? 'var(--accent)' : '#8b5cf6';
+                  const tertiary = isSt ? 'var(--accent-soft)' : 'rgba(139,92,246,0.12)';
+                  const compact = height < 58;
+                  const tiny = height < 38;
                   return (
-                    <div
-                      key={b.id}
-                      onClick={(e) => { e.stopPropagation(); onBookingClick(b); }}
-                      style={{
-                        position: 'absolute', top, height, left: 3, right: 3, borderRadius: 8, padding: '4px 6px',
-                        background: isSt ? 'var(--accent-soft)' : 'rgba(139,92,246,0.12)',
-                        border: `1px solid ${isSt ? 'var(--accent)' : '#8b5cf6'}`,
-                        color: isSt ? 'var(--accent)' : '#8b5cf6',
-                        fontSize: 10.5, fontWeight: 700, overflow: 'hidden', cursor: 'pointer', lineHeight: 1.3,
-                      }}
-                    >
-                      {isSt ? 'СТ' : 'Жеке'} · {b.start_time.slice(0, 5)}
-                      {isSt && b.students_count ? ` · ${b.students_count} оқ.` : ''}
+                    // Сыртқы <div> — тек орналасу контейнері (absolute top/height).
+                    // Нақты басылатын беті — толық <a href> сілтеме: window.open()
+                    // емес, нағыз anchor қолданамыз, себебі кейбір браузерлер
+                    // JS window.open()-ды popup-блокатормен тоқтата алады, ал
+                    // <a target="_blank"> ешқашан бұғатталмайды.
+                    <div key={b.id} className="wbc-slot" style={{ position: 'absolute', top, height, left: 3, right: 3 }}>
+                      <a
+                        className="wbc-block"
+                        href={b.meet_link}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Мит-ке кіру үшін бас"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          position: 'absolute', inset: 0, borderRadius: 12,
+                          padding: tiny ? '3px 6px' : compact ? '5px 7px' : '7px 9px',
+                          background: tertiary, boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                          overflow: 'hidden', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 3,
+                          textDecoration: 'none',
+                        }}
+                      >
+                        <div style={{
+                          fontSize: tiny ? 9.5 : 10.5, fontWeight: 800, color: primary, lineHeight: 1.25,
+                          overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', paddingRight: 16,
+                        }}>
+                          {isSt ? 'СТ' : 'Жеке сөйлесу'}{isSt && b.students_count ? ` · ${b.students_count} оқ.` : ''}
+                        </div>
+                        {!tiny && (
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 9, color: '#fff', background: primary, borderRadius: 20, padding: '2px 7px', fontWeight: 700 }}>
+                              {b.start_time.slice(0, 5)}
+                            </span>
+                            {!compact && (
+                              <span style={{ fontSize: 9, color: primary, background: 'rgba(255,255,255,0.7)', borderRadius: 20, padding: '2px 7px', fontWeight: 700 }}>
+                                {b.end_time.slice(0, 5)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </a>
+                      <button
+                        className="wbc-del"
+                        title="Броньды өшіру"
+                        onClick={(e) => { e.stopPropagation(); onDeleteBooking(b); }}
+                        style={{
+                          position: 'absolute', top: 3, right: 3, zIndex: 2, width: 16, height: 16, borderRadius: '50%',
+                          border: 'none', background: 'rgba(0,0,0,0.14)', color: primary, fontSize: 11, lineHeight: 1,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0,
+                        }}
+                      >×</button>
                     </div>
                   );
                 })}

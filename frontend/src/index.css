@@ -106,6 +106,13 @@ body {
 .card-lg { border-radius: 24px; }
 .card-xl { border-radius: 28px; }
 
+/* ── WeekBookingCalendar блогы: мұғалімдер кестесіндегі event card-қа сай
+   hover-те көтеріліп, өшіру ("×") батырмасы ғана сонда анық көрінеді ── */
+.wbc-block { transition: box-shadow 0.15s, transform 0.15s; }
+.wbc-slot:hover .wbc-block { box-shadow: 0 4px 14px rgba(0,0,0,0.16) !important; transform: scale(1.03); z-index: 5; }
+.wbc-del { opacity: 0.55; transition: opacity 0.15s; }
+.wbc-slot:hover .wbc-del { opacity: 1; }
+
 /* ── input[type=number]: жүйелік spin-button жасыру (flat дизайнға сай) ── */
 .no-spinner::-webkit-outer-spin-button,
 .no-spinner::-webkit-inner-spin-button {
