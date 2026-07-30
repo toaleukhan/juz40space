@@ -32,14 +32,19 @@ if (!subject || !streamId || !slug) {
 
     const results = [];
     for (const row of res.rows) {
-      if (row.username && row.username.endsWith(`_${slug}`)) {
+      // Тізім "Тегі Аты" ретімен келеді (мыс. "Орынбек Меруерт") — логин
+      // үшін соңғы сөз (нақты аты) алынады, meruert_phys үлгісіндей.
+      const parts = row.full_name.trim().split(/\s+/);
+      const givenName = parts[parts.length - 1];
+      const base = translit(givenName) || 'curator';
+      const targetBase = `${base}_${slug}`;
+
+      if (row.username === targetBase) {
         results.push({ name: row.full_name, username: row.username, password: '(өзгертілмеді)' });
         continue;
       }
 
-      const firstName = row.full_name.trim().split(/\s+/)[0];
-      const base = translit(firstName) || 'curator';
-      let candidate = `${base}_${slug}`;
+      let candidate = targetBase;
       let n = 1;
       // eslint-disable-next-line no-constant-condition
       while (true) {
