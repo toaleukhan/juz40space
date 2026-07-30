@@ -106,8 +106,24 @@ router.get('/', auth, async (req, res) => {
 
     query += ` ORDER BY id ASC`;
     const result = await pool.query(query, params);
+    const rows = result.rows;
 
-    res.json(result.rows);
+    // 3. Әр жолға өз bookings-ін (бекітілген уақыттарын) тіркеу — календарь
+    // осыны қолданып блок ретінде салады.
+    if (rows.length) {
+      const ids = rows.map(r => r.id);
+      const bookingsRes = await pool.query(
+        `SELECT * FROM st_bookings WHERE recording_id = ANY($1::int[]) ORDER BY scheduled_date ASC, start_time ASC`,
+        [ids]
+      );
+      const byRecording = {};
+      bookingsRes.rows.forEach(b => {
+        (byRecording[b.recording_id] ||= []).push(b);
+      });
+      rows.forEach(r => { r.bookings = byRecording[r.id] || []; });
+    }
+
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'База қатесі: ' + err.message });
   }
@@ -151,25 +167,43 @@ router.post('/curator', auth, async (req, res) => {
   }
 });
 
-// 3. Google Meet Сілтемесін жасау
-router.post('/create-meet', auth, async (req, res) => {
-  const { recordingId, curatorName, subject } = req.body;
-  const authClient = getGoogleAuth(subject);
+// 3. Куратор бекіткен уақытқа Google Meet жасау (СТ немесе жеке сөйлесу).
+// Бұрынғы бір батырмамен "қазір" Мит ашатын /create-meet-тің орнын алды —
+// енді curator таңдаған scheduledDate/startTime/endTime-ге сай event жасалады.
+router.post('/:id/bookings', auth, async (req, res) => {
+  const recordingId = req.params.id;
+  const { meetingType, studentsCount, scheduledDate, startTime, endTime } = req.body;
 
+  if (!scheduledDate || !startTime || !endTime) {
+    return res.status(400).json({ error: 'Күн мен уақыт аралығы міндетті' });
+  }
+
+  const rec = await pool.query('SELECT * FROM st_recordings WHERE id = $1', [recordingId]);
+  if (!rec.rows.length) return res.status(404).json({ error: 'Жол табылмады' });
+  const record = rec.rows[0];
+
+  const authClient = getGoogleAuth(record.subject);
   if (!authClient) {
     return res.status(400).json({ error: 'Google авторизация кілттері табылмады' });
   }
 
+  const type = meetingType === 'personal' ? 'personal' : 'st';
+
   try {
     const calendar = google.calendar({ version: 'v3', auth: authClient });
-    const startTime = new Date().toISOString();
-    const endTime = new Date(Date.now() + 3600000).toISOString();
+
+    // "СТ: <пән> - <куратор аты>" форматы sync-drive-тың Drive іздеуімен
+    // сәйкес болуы міндетті (attendance/video файлдарды осы атаумен табады) —
+    // өзгертпеу керек. Жеке сөйлесу — бөлек, sync-drive-қа қатысы жоқ.
+    const summary = type === 'personal'
+      ? `Жеке сөйлесу: ${record.subject} - ${record.curator_name}`
+      : `СТ: ${record.subject} - ${record.curator_name}`;
 
     const event = {
-      summary: `СТ: ${subject || 'ПӘН'} - ${curatorName || ''}`,
+      summary,
       description: 'JUZ40 - Сабақ Тапсыру Миті',
-      start: { dateTime: startTime },
-      end: { dateTime: endTime },
+      start: { dateTime: `${scheduledDate}T${startTime}:00` },
+      end: { dateTime: `${scheduledDate}T${endTime}:00` },
       conferenceData: {
         createRequest: {
           requestId: `st-${Date.now()}`,
@@ -187,27 +221,46 @@ router.post('/create-meet', auth, async (req, res) => {
     const meetLink = createdEvent.data.hangoutLink;
     const meetCode = meetLink ? meetLink.split('/').pop() : null;
 
-    const rec = await pool.query('SELECT * FROM st_recordings WHERE id = $1', [recordingId]);
-    const current = rec.rows[0];
-
-    const meetCodes = current.meet_codes || (current.meet_code ? [current.meet_code] : []);
-    const meetLinks = current.meet_links || (current.meet_link ? [current.meet_link] : []);
-
-    meetCodes.push(meetCode);
-    meetLinks.push(meetLink);
-
-    const updated = await pool.query(
-      `UPDATE st_recordings 
-       SET meet_link = $1, meet_code = $2, 
-           meet_codes = $3, meet_links = $4, 
-           updated_at = NOW() 
-       WHERE id = $5 RETURNING *`,
-      [meetLink, meetCode, meetCodes, meetLinks, recordingId]
+    const inserted = await pool.query(
+      `INSERT INTO st_bookings
+        (recording_id, meeting_type, students_count, scheduled_date, start_time, end_time, meet_link, meet_code, calendar_event_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [recordingId, type, type === 'st' ? (studentsCount || '0') : null, scheduledDate, startTime, endTime, meetLink, meetCode, createdEvent.data.id]
     );
 
-    res.json(updated.rows[0]);
+    res.json(inserted.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'Meet жасау қатесі: ' + err.message });
+  }
+});
+
+// 3b. Броньды өшіру (Calendar event-ті де өшіруге тырысады — best-effort,
+// сәтсіз болса да жол өшіріле береді, куратор оны қайта көрмеуі маңыздырақ)
+router.delete('/bookings/:bookingId', auth, async (req, res) => {
+  try {
+    const bookingRes = await pool.query(
+      `SELECT b.*, r.subject FROM st_bookings b
+       JOIN st_recordings r ON r.id = b.recording_id
+       WHERE b.id = $1`,
+      [req.params.bookingId]
+    );
+    if (!bookingRes.rows.length) return res.status(404).json({ error: 'Бронь табылмады' });
+    const booking = bookingRes.rows[0];
+
+    const authClient = getGoogleAuth(booking.subject);
+    if (authClient && booking.calendar_event_id) {
+      try {
+        const calendar = google.calendar({ version: 'v3', auth: authClient });
+        await calendar.events.delete({ calendarId: 'primary', eventId: booking.calendar_event_id });
+      } catch (calErr) {
+        console.error('Calendar event өшіру қатесі:', calErr.message);
+      }
+    }
+
+    await pool.query('DELETE FROM st_bookings WHERE id = $1', [req.params.bookingId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
