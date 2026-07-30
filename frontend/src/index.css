@@ -11,18 +11,21 @@ html, body { overflow-x: hidden; }
    moments (СТ, дэшборд top scores). Space Grotesk carries headlines
    and stat numbers, Inter carries body/UI text. ── */
 :root, [data-theme="light"] {
-  --bg:           #f6f3ec;
-  --bg2:          #efe9dc;
+  --bg:           #ffffff;
+  --bg2:          #f3f5f4;
+  --bg-gradient:  radial-gradient(1100px 640px at 84% 6%, rgba(12,100,120,0.08), transparent 60%),
+                  radial-gradient(900px 620px at 6% 96%, rgba(181,130,42,0.05), transparent 55%),
+                  #ffffff;
   --surface:      #ffffff;
-  --surface2:     #f6f3ec;
-  --surface3:     #efe9dc;
+  --surface2:     #f4f6f5;
+  --surface3:     #eef1f0;
   --surface-solid:#ffffff;
-  --border:       rgba(24,22,18,0.10);
-  --border2:      rgba(24,22,18,0.18);
-  --border-dark:  rgba(24,22,18,0.08);
-  --text:         #191712;
-  --text-sub:     #635c4e;
-  --text-muted:   #948c78;
+  --border:       rgba(20,25,23,0.09);
+  --border2:      rgba(20,25,23,0.16);
+  --border-dark:  rgba(20,25,23,0.07);
+  --text:         #171a18;
+  --text-sub:     #5c635f;
+  --text-muted:   #8b928c;
   --accent:       #0c6478;
   --accent-soft:  rgba(12,100,120,0.10);
   --accent-mid:   #15879e;
@@ -36,12 +39,13 @@ html, body { overflow-x: hidden; }
   --danger-soft:  rgba(163,58,47,0.10);
   --glass-blur:   blur(18px) saturate(140%);
   --glass-blur-sm:blur(10px) saturate(130%);
-  --sidebar-bg:   rgba(255,255,255,0.92);
-  --sidebar-border:rgba(24,22,18,0.08);
-  --header-bg:    rgba(255,255,255,0.92);
-  --card-shadow:  0 1px 2px rgba(24,22,18,0.05), 0 1px 0 rgba(24,22,18,0.03);
-  --card-shadow-hover: 0 10px 28px rgba(24,22,18,0.09), 0 2px 6px rgba(24,22,18,0.05);
-  --scrollbar:    rgba(12,100,120,0.25);
+  --sidebar-bg:   transparent;
+  --sidebar-bg-expanded: rgba(255,255,255,0.88);
+  --sidebar-border:transparent;
+  --header-bg:    rgba(255,255,255,0.88);
+  --card-shadow:  0 1px 2px rgba(20,25,23,0.05), 0 1px 0 rgba(20,25,23,0.03);
+  --card-shadow-hover: 0 10px 28px rgba(20,25,23,0.09), 0 2px 6px rgba(20,25,23,0.05);
+  --scrollbar:    rgba(12,100,120,0.22);
   --highlight:    inset 0 1px 0 rgba(255,255,255,0.6);
 }
 
@@ -49,6 +53,9 @@ html, body { overflow-x: hidden; }
 [data-theme="dark"] {
   --bg:           #100f0c;
   --bg2:          #15140f;
+  --bg-gradient:  radial-gradient(1100px 640px at 84% 6%, rgba(58,171,192,0.12), transparent 60%),
+                  radial-gradient(900px 620px at 6% 96%, rgba(220,171,92,0.07), transparent 55%),
+                  #100f0c;
   --surface:      #1b1a15;
   --surface2:     #15140f;
   --surface3:     #100f0c;
@@ -72,9 +79,10 @@ html, body { overflow-x: hidden; }
   --danger-soft:  rgba(214,122,108,0.14);
   --glass-blur:   blur(18px) saturate(140%);
   --glass-blur-sm:blur(10px) saturate(130%);
-  --sidebar-bg:   rgba(27,26,21,0.92);
-  --sidebar-border:rgba(255,255,255,0.08);
-  --header-bg:    rgba(16,15,12,0.90);
+  --sidebar-bg:   transparent;
+  --sidebar-bg-expanded: rgba(27,26,21,0.90);
+  --sidebar-border:transparent;
+  --header-bg:    rgba(16,15,12,0.88);
   --card-shadow:  0 1px 2px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.02);
   --card-shadow-hover: 0 10px 28px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.30);
   --scrollbar:    rgba(58,171,192,0.30);
@@ -83,7 +91,8 @@ html, body { overflow-x: hidden; }
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg);
+  background: var(--bg-gradient);
+  background-attachment: fixed;
   min-height: 100vh;
   color: var(--text);
   -webkit-font-smoothing: antialiased;

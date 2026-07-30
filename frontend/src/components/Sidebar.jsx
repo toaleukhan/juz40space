@@ -76,7 +76,8 @@ function SidebarContent({ collapsed, onNavigate }) {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '8px' : '9px 10px',
           justifyContent: collapsed ? 'center' : 'flex-start',
-          borderRadius: 10, background: 'var(--surface2)', border: '1px solid var(--border)', marginBottom: 8,
+          borderRadius: 10, background: collapsed ? 'transparent' : 'var(--surface2)',
+          border: collapsed ? '1px solid transparent' : '1px solid var(--border)', marginBottom: 8,
         }}>
           <div style={{
             width: 32, height: 32, borderRadius: 8, background: isCurator ? 'var(--gold)' : 'var(--accent)', color: '#fff',
@@ -123,13 +124,14 @@ export default function Sidebar() {
         onMouseLeave={() => setHovered(false)}
         style={{
           width: expanded ? RAIL_WIDTH_EXPANDED : RAIL_WIDTH,
-          flexShrink: 0, background: 'var(--sidebar-bg)',
-          backdropFilter: 'var(--glass-blur-sm)', WebkitBackdropFilter: 'var(--glass-blur-sm)',
-          borderRight: '1px solid var(--sidebar-border)',
+          flexShrink: 0, background: expanded ? 'var(--sidebar-bg-expanded)' : 'var(--sidebar-bg)',
+          backdropFilter: expanded ? 'var(--glass-blur-sm)' : 'none',
+          WebkitBackdropFilter: expanded ? 'var(--glass-blur-sm)' : 'none',
+          borderRight: expanded ? '1px solid var(--border)' : '1px solid transparent',
           display: 'flex', flexDirection: 'column', height: '100vh',
           position: 'fixed', top: 0, left: 0, padding: '20px 14px', zIndex: 60,
-          overflow: 'hidden', transition: 'width 0.18s ease',
-          boxShadow: expanded ? '10px 0 28px rgba(0,0,0,0.10)' : 'none',
+          overflow: 'hidden', transition: 'width 0.18s ease, background 0.18s ease',
+          boxShadow: expanded ? '10px 0 28px rgba(0,0,0,0.08)' : 'none',
         }}>
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <SidebarContent collapsed={!expanded} />
