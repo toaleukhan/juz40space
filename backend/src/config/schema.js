@@ -98,6 +98,26 @@ const createTables = async () => {
       );
     `);
 
+    // 4. st_bookings кестесі — бір st_recordings жолында (куратордың бір
+    // аптасында) бірнеше бекітілген уақыт болуы мүмкін (СТ + жеке сөйлесу,
+    // немесе бірнеше СТ) — meet_codes/meet_links массивтерінің орнына
+    // әрқайсысының өз түрі, оқушы саны және нақты уақыты сақталады.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS st_bookings (
+        id SERIAL PRIMARY KEY,
+        recording_id INT NOT NULL REFERENCES st_recordings(id) ON DELETE CASCADE,
+        meeting_type VARCHAR(20) NOT NULL DEFAULT 'st',
+        students_count VARCHAR(50),
+        scheduled_date DATE NOT NULL,
+        start_time TIME NOT NULL,
+        end_time TIME NOT NULL,
+        meet_link TEXT,
+        meet_code VARCHAR(100),
+        calendar_event_id VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     console.log('✅ Деректер базасы мен пайдаланушылар толық дайын!');
   } catch (err) {
     console.error('❌ Schema error:', err.message);

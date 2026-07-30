@@ -6,6 +6,8 @@ import { SUBJECT_COLORS, SUBJECT_LOGOS } from './scheduleData';
 import { motion } from 'framer-motion';
 import { SHEETS_LOGO } from '../components/brandLogos';
 import { IconMeetLogo, IconBolt, IconRefresh, IconVideo, IconClock, IconClose, IconTable } from '../components/icons';
+import WeekBookingCalendar, { getMonday, minutesToTime, toLocalISODate } from '../components/WeekBookingCalendar';
+import BookingModal from '../components/BookingModal';
 
 const SUBJECTS = [
   { code:'ФИЗ',   name:'Физика',           months: 5 },
@@ -45,6 +47,10 @@ export default function StRecordings() {
   const [newCurator, setNewCurator] = useState('');
   const [actionLoading, setActionLoading] = useState({});
   const [showFilter, setShowFilter] = useState(false);
+  const [modalSlot, setModalSlot] = useState(null); // { date, startTime } | null
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const monday = getMonday();
 
   useEffect(() => {
     if (selectedSubject) loadTable();
@@ -91,41 +97,58 @@ export default function StRecordings() {
     }
   };
 
-  const handleCreateMeet = async (rowId, curatorName) => {
-    setActionLoading(prev => ({ ...prev, [rowId]: 'meet' }));
+  // Куратордың осы аптаға (абстрактілі "1-ай/1-апта") жазбасы әлі жоқ болса,
+  // бронь жасамас бұрын алдымен соны жасайды.
+  const ensureRecordingRow = async () => {
+    if (rows[0]) return rows[0].id;
+    const { data } = await api.post('/st-recordings/curator', {
+      subject: currentSubjectCode,
+      streamId: currentStream,
+      monthNum: currentMonth,
+      weekNum: currentWeek,
+      curatorName: currentUser.fullName,
+    });
+    setRows([data]);
+    return data.id;
+  };
+
+  // Куратордың календарынан: слот белгілі, жол болмаса лезде жасалады.
+  const handleSlotClick = (date, startMin) => {
+    setModalSlot({ date, startTime: minutesToTime(startMin), recordingId: rows[0]?.id ?? null });
+  };
+
+  // Admin кестесінен: жол әрдайым бар (rows.map-тен келеді), уақыт әдепкіде "қазір".
+  const handleOpenBookingForRow = (row) => {
+    const now = new Date();
+    setModalSlot({
+      date: toLocalISODate(now),
+      startTime: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+      recordingId: row.id,
+    });
+  };
+
+  const handleCreateBooking = async (payload) => {
+    setBookingLoading(true);
     try {
-      const { data } = await api.post('/st-recordings/create-meet', {
-        recordingId: rowId,
-        curatorName,
-        subject: currentSubjectCode,
-      });
-      setRows(prev => prev.map(r => r.id === rowId ? data : r));
+      const recordingId = modalSlot.recordingId || await ensureRecordingRow();
+      const { data: booking } = await api.post(`/st-recordings/${recordingId}/bookings`, payload);
+      setRows(prev => prev.map(r => r.id === recordingId ? { ...r, bookings: [...(r.bookings || []), booking] } : r));
+      setModalSlot(null);
     } catch (err) {
-      alert(err.response?.data?.error || 'Мит ашуда қателік');
+      alert(err.response?.data?.error || 'Мит жасауда қателік');
     } finally {
-      setActionLoading(prev => ({ ...prev, [rowId]: null }));
+      setBookingLoading(false);
     }
   };
 
-  // Куратордың осы аптаға жазбасы әлі жоқ болса — "Мит ашу" басу арқылы
-  // жазбаны дереу жасап, содан кейін митті ашамыз (авто-синхрония орнына
-  // куратордың өз әрекетімен басталады, анығырақ).
-  const handleStartMyWeek = async () => {
-    setActionLoading(prev => ({ ...prev, self: 'meet' }));
+  const handleDeleteBooking = async (bookingId) => {
+    if (!confirm('Бұл броньды өшіруге сенімдісіз бе?')) return;
     try {
-      const { data } = await api.post('/st-recordings/curator', {
-        subject: currentSubjectCode,
-        streamId: currentStream,
-        monthNum: currentMonth,
-        weekNum: currentWeek,
-        curatorName: currentUser.fullName,
-      });
-      setRows([data]);
-      await handleCreateMeet(data.id, data.curator_name);
+      await api.delete(`/st-recordings/bookings/${bookingId}`);
+      setRows(prev => prev.map(r => ({ ...r, bookings: (r.bookings || []).filter(b => b.id !== bookingId) })));
+      setSelectedBooking(null);
     } catch (err) {
-      alert(err.response?.data?.error || 'Мит ашуда қателік');
-    } finally {
-      setActionLoading(prev => ({ ...prev, self: null }));
+      alert(err.response?.data?.error || 'Өшіруде қателік');
     }
   };
 
@@ -295,36 +318,55 @@ export default function StRecordings() {
             </div>
 
             {isCurator ? (
-              // ── Куратордың жеке карточкасы: кесте емес, тек өз жазбасы ──
+              // ── Куратордың өз Мит-календары: бос уақытты басып, СТ немесе
+              // жеке сөйлесу бекітеді — Мит сол сәтте, сол уақытпен жасалады ──
               loading ? (
                 <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Жүктелуде...</div>
-              ) : !rows[0] ? (
-                <div className="card" style={{ padding: 32, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-                  <div style={{ color: 'var(--text-muted)' }}>Бұл аптаға жазба әлі жоқ — Мит ашсаңыз, осы аптаға жазба сол сәтте жасалады.</div>
-                  <button onClick={handleStartMyWeek} disabled={actionLoading.self === 'meet'}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}>
-                    <IconMeetLogo style={{ width: 16, height: 16 }} />
-                    {actionLoading.self === 'meet' ? 'Ашылуда...' : 'Мит ашу'}
-                  </button>
-                </div>
               ) : (() => {
                 const row = rows[0];
-                const videoLinks = row.video_links || (row.video_link ? [row.video_link] : []);
-                const attendanceLinks = row.attendance_links || (row.attendance_link ? [row.attendance_link] : []);
-                const meetCodes = row.meet_codes || (row.meet_code ? [row.meet_code] : []);
-                const meetLinks = row.meet_links || (row.meet_link ? [row.meet_link] : []);
+                const bookings = row?.bookings || [];
+                const videoLinks = row?.video_links || (row?.video_link ? [row.video_link] : []);
+                const attendanceLinks = row?.attendance_links || (row?.attendance_link ? [row.attendance_link] : []);
                 return (
-                  <div className="card" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
-                      <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Оқушы саны</label>
-                        <input
-                          defaultValue={row.students_count || '0'}
-                          onBlur={(e) => handleUpdateRow(row.id, 'studentsCount', e.target.value)}
-                          style={{ width: 100, padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', textAlign: 'center' }}
-                        />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <WeekBookingCalendar
+                      monday={monday}
+                      bookings={bookings}
+                      onSlotClick={handleSlotClick}
+                      onBookingClick={setSelectedBooking}
+                    />
+
+                    {selectedBooking && (
+                      <div className="card" style={{ padding: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+                        <div style={{ flex: 1, minWidth: 200 }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>
+                            {selectedBooking.meeting_type === 'st' ? 'СТ' : 'Жеке сөйлесу'} · {String(selectedBooking.scheduled_date).slice(0, 10)} · {selectedBooking.start_time.slice(0, 5)}–{selectedBooking.end_time.slice(0, 5)}
+                          </div>
+                          {selectedBooking.meeting_type === 'st' && (
+                            <div style={{ fontSize: 12, color: 'var(--text-sub)', marginTop: 2 }}>Оқушы саны: {selectedBooking.students_count || 0}</div>
+                          )}
+                        </div>
+                        <a href={selectedBooking.meet_link} target="_blank" rel="noreferrer"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 9, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 12.5, textDecoration: 'none' }}>
+                          <IconMeetLogo style={{ width: 14, height: 14 }} /> Мит-ке кіру
+                        </a>
+                        <button onClick={() => handleSyncDrive(row.id, selectedBooking.meet_code)} disabled={actionLoading[row.id] === 'drive'}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 9, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12.5, cursor: 'pointer' }}>
+                          <IconRefresh style={{ width: 13, height: 13 }} /> Синхрондау
+                        </button>
+                        <button onClick={() => handleDeleteBooking(selectedBooking.id)}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 9, background: 'rgba(239,68,68,0.08)', color: '#dc2626', border: '1px solid rgba(239,68,68,0.2)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer' }}>
+                          <IconClose style={{ width: 13, height: 13 }} /> Өшіру
+                        </button>
+                        <button onClick={() => setSelectedBooking(null)}
+                          style={{ padding: '8px 12px', borderRadius: 9, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-sub)', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
+                          Жабу
+                        </button>
                       </div>
-                      <div>
+                    )}
+
+                    {row && (
+                      <div className="card" style={{ padding: '14px 18px' }}>
                         <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Ескеру керек жағдайлар</label>
                         <input
                           defaultValue={row.notes || ''}
@@ -333,32 +375,10 @@ export default function StRecordings() {
                           style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)' }}
                         />
                       </div>
-                    </div>
-
-                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-                      <button onClick={() => handleCreateMeet(row.id, row.curator_name)} disabled={actionLoading[row.id] === 'meet'}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 10, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                        <IconMeetLogo style={{ width: 16, height: 16 }} />
-                        {actionLoading[row.id] === 'meet' ? '...' : meetCodes.length > 0 ? '+ Жаңа Мит' : 'Мит ашу'}
-                      </button>
-
-                      {meetCodes.map((code, idx) => (
-                        <div key={idx} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                          <a href={meetLinks[idx]} target="_blank" rel="noreferrer"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 12, textDecoration: 'none' }}>
-                            <IconMeetLogo style={{ width: 14, height: 14 }} />
-                            {code}
-                          </a>
-                          <button onClick={() => handleSyncDrive(row.id, code)} disabled={actionLoading[row.id] === 'drive'}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderRadius: 8, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-                            <IconRefresh style={{ width: 13, height: 13 }} /> Синхрондау
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                    )}
 
                     {(videoLinks.length > 0 || attendanceLinks.length > 0) && (
-                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexWrap: 'wrap', gap: 24 }}>
+                      <div className="card" style={{ padding: 18, display: 'flex', flexWrap: 'wrap', gap: 24 }}>
                         {videoLinks.length > 0 && (
                           <div>
                             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Видео жазба</div>
@@ -425,8 +445,7 @@ export default function StRecordings() {
                   ) : rows.map((row) => {
                     const videoLinks = row.video_links || (row.video_link ? [row.video_link] : []);
                     const attendanceLinks = row.attendance_links || (row.attendance_link ? [row.attendance_link] : []);
-                    const meetCodes = row.meet_codes || (row.meet_code ? [row.meet_code] : []);
-                    const meetLinks = row.meet_links || (row.meet_link ? [row.meet_link] : []);
+                    const bookings = row.bookings || [];
 
                     return (
                       <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
@@ -451,7 +470,7 @@ export default function StRecordings() {
                                 </a>
                               ))}
                             </div>
-                          ) : meetLinks.length > 0 ? (
+                          ) : bookings.length > 0 ? (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#d97706', fontSize: 11, fontWeight: 600 }}><IconClock style={{ width: 12, height: 12 }} /> Жазба дайындалуда</span>
                           ) : (
                             <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>—</span>
@@ -485,20 +504,20 @@ export default function StRecordings() {
 
                         <td style={{ padding: '12px 16px' }}>
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                            <button onClick={() => handleCreateMeet(row.id, row.curator_name)} disabled={actionLoading[row.id] === 'meet'}
+                            <button onClick={() => handleOpenBookingForRow(row)}
                               style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, background: '#10b981', color: '#fff', border: 'none', fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>
                               <IconMeetLogo style={{ width: 14, height: 14 }} />
-                              {actionLoading[row.id] === 'meet' ? '...' : meetCodes.length > 0 ? '+ Жаңа Мит' : 'Мит ашу'}
+                              {bookings.length > 0 ? '+ Жаңа Мит' : 'Мит ашу'}
                             </button>
 
-                            {meetCodes.map((code, idx) => (
-                              <div key={idx} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                                <a href={meetLinks[idx]} target="_blank" rel="noreferrer"
+                            {bookings.map((b) => (
+                              <div key={b.id} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                <a href={b.meet_link} target="_blank" rel="noreferrer" title={`${b.meeting_type === 'st' ? 'СТ' : 'Жеке'} · ${String(b.scheduled_date).slice(0,10)} ${b.start_time.slice(0,5)}`}
                                   style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 6px', borderRadius: 6, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 10, textDecoration: 'none' }}>
                                   <IconMeetLogo style={{ width: 12, height: 12 }} />
-                                  {code}
+                                  {b.start_time.slice(0, 5)}
                                 </a>
-                                <button onClick={() => handleSyncDrive(row.id, code)} disabled={actionLoading[row.id] === 'drive'}
+                                <button onClick={() => handleSyncDrive(row.id, b.meet_code)} disabled={actionLoading[row.id] === 'drive'}
                                   style={{ display: 'flex', padding: '4px 6px', borderRadius: 6, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 10, cursor: 'pointer' }}>
                                   <IconRefresh style={{ width: 11, height: 11 }} />
                                 </button>
@@ -523,6 +542,16 @@ export default function StRecordings() {
           </div>
         )}
       </main>
+
+      {modalSlot && (
+        <BookingModal
+          initialDate={modalSlot.date}
+          initialStartTime={modalSlot.startTime}
+          onClose={() => setModalSlot(null)}
+          onSubmit={handleCreateBooking}
+          loading={bookingLoading}
+        />
+      )}
     </div>
   );
 }
