@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { IconClose, IconMeetLogo } from './icons';
 
 const inputStyle = {
-  width: '100%', padding: '9px 10px', borderRadius: 9, boxSizing: 'border-box',
+  width: '100%', padding: '9px 10px', borderRadius: 9, boxSizing: 'border-box', overflow: 'hidden',
   border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 13.5,
 };
 const labelStyle = { fontSize: 11.5, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 };

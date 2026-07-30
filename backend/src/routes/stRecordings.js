@@ -202,8 +202,8 @@ router.post('/:id/bookings', auth, async (req, res) => {
     const event = {
       summary,
       description: 'JUZ40 - Сабақ Тапсыру Миті',
-      start: { dateTime: `${scheduledDate}T${startTime}:00` },
-      end: { dateTime: `${scheduledDate}T${endTime}:00` },
+      start: { dateTime: `${scheduledDate}T${startTime}:00`, timeZone: 'Asia/Almaty' },
+      end: { dateTime: `${scheduledDate}T${endTime}:00`, timeZone: 'Asia/Almaty' },
       conferenceData: {
         createRequest: {
           requestId: `st-${Date.now()}`,
