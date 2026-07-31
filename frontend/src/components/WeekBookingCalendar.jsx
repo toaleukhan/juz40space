@@ -94,10 +94,12 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
 
   // Күн бағанының ені: әдепкіде DAY_MIN_W, бірақ сол күнде қатар тұратын
   // (уақыты қиылысатын) броньдар көбейген сайын кеңейеді — Schedule.jsx-тегі
-  // CalendarView-дың dayWidths есептеуімен бірдей логика, әйтпесе көп
-  // қиылысу кезінде блоктар тым тар болып, оқылмай қалады.
-  const EVENT_COL_W = 96;
-  const DAY_MIN_W = 118;
+  // мұғалімдер кестесіндегідей: әр карточка әрқашан ЫҢҒАЙЛЫ, оқуға жеткілікті
+  // ені сақтайды (тарылтып, майдалап жібермейміз), керек болса бүкіл
+  // календарь жанына қарай айналдырылады — картаны сығып, ақпаратты
+  // жасырғаннан гөрі, скролл жасаған әлдеқайда "аккуратно" көрінеді.
+  const EVENT_COL_W = 130;
+  const DAY_MIN_W = 130;
   const dayLayouts = DAY_LABELS.map((_, dayIndex) => layoutDayBookings(byDate[isoDateOfDay(monday, dayIndex)] || []));
   const dayWidths = dayLayouts.map(laid => {
     const maxCols = laid.reduce((m, b) => Math.max(m, Math.round(1 / b._wf)), 1);
@@ -183,17 +185,25 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
                       >
                         <div style={{
                           display: 'flex', alignItems: 'center', gap: 4,
-                          fontSize: tiny ? 9.5 : 10.5, fontWeight: 800, color: primary, lineHeight: 1.25,
+                          fontSize: tiny ? 9.5 : 11, fontWeight: 800, color: primary, lineHeight: 1.25,
                           overflow: 'hidden', whiteSpace: 'nowrap', paddingRight: 16,
                         }}>
                           <IconMeetLogo style={{ width: tiny ? 10 : 12, height: tiny ? 10 : 12, flexShrink: 0 }} />
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {b.curator_name ? `${b.curator_name} · ` : ''}{isSt ? 'СТ' : 'Жеке сөйлесу'}{isSt && b.students_count ? ` · ${b.students_count} оқ.` : ''}
+                            {isSt ? 'СТ' : 'Жеке сөйлесу'}{isSt && b.students_count ? ` · ${b.students_count} оқ.` : ''}
                           </span>
                         </div>
+                        {!tiny && b.curator_name && (
+                          <div style={{
+                            fontSize: 9.5, fontWeight: 600, color: primary, opacity: 0.75,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                            {b.curator_name}
+                          </div>
+                        )}
                         {!tiny && (
                           <span style={{
-                            alignSelf: 'flex-start', fontSize: 9, color: '#fff', background: primary,
+                            alignSelf: 'flex-start', marginTop: 'auto', fontSize: 9, color: '#fff', background: primary,
                             borderRadius: 20, padding: '2px 7px', fontWeight: 700, fontVariantNumeric: 'tabular-nums',
                           }}>
                             {b.start_time.slice(0, 5)}–{b.end_time.slice(0, 5)}
