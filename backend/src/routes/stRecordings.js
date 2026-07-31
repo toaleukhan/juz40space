@@ -10,10 +10,12 @@ const { syncRecordDrive } = require('../jobs/driveSync');
 router.get('/', auth, async (req, res) => {
   const { subject, streamId, monthNum, weekNum } = req.query;
 
-  // Егер куратор болса, оның өз пәні мен ағымын аламыз
+  // Куратор немесе координатор болса, оның өз пәні мен ағымын аламыз —
+  // координатор да сұраныс арқылы басқа ағымның деректерін сұрай алмайды.
   const isCurator = req.user.role === 'curator';
-  const subj = isCurator ? req.user.subject : (subject || 'ФИЗ');
-  const strId = isCurator ? req.user.streamId : (streamId || '01');
+  const isCoordinator = req.user.role === 'coordinator';
+  const subj = (isCurator || isCoordinator) ? req.user.subject : (subject || 'ФИЗ');
+  const strId = (isCurator || isCoordinator) ? req.user.streamId : (streamId || '01');
   const mNum = parseInt(monthNum) || 1;
   const wNum = parseInt(weekNum) || 1;
 

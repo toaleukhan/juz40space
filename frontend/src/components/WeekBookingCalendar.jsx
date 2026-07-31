@@ -57,7 +57,7 @@ function minutesFromMidnight(timeStr) {
   return h * 60 + (m || 0);
 }
 
-export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onDeleteBooking }) {
+export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onDeleteBooking, readOnly }) {
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
   const totalH = (END_HOUR - START_HOUR) * HOUR_H;
 
@@ -102,8 +102,8 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
             return (
               <div
                 key={dayIndex}
-                onClick={(e) => handleColumnClick(e, dayIndex)}
-                style={{ position: 'relative', height: totalH + HOUR_H / 2, borderLeft: '1px solid var(--border)', cursor: 'pointer' }}
+                onClick={readOnly ? undefined : (e) => handleColumnClick(e, dayIndex)}
+                style={{ position: 'relative', height: totalH + HOUR_H / 2, borderLeft: '1px solid var(--border)', cursor: readOnly ? 'default' : 'pointer' }}
               >
                 {hours.map(h => (
                   <div key={h} style={{ position: 'absolute', top: (h - START_HOUR) * HOUR_H, left: 0, right: 0, height: 1, background: 'var(--border)', opacity: 0.6 }} />
@@ -147,7 +147,7 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
                         }}>
                           <IconMeetLogo style={{ width: tiny ? 10 : 12, height: tiny ? 10 : 12, flexShrink: 0 }} />
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {isSt ? 'СТ' : 'Жеке сөйлесу'}{isSt && b.students_count ? ` · ${b.students_count} оқ.` : ''}
+                            {b.curator_name ? `${b.curator_name} · ` : ''}{isSt ? 'СТ' : 'Жеке сөйлесу'}{isSt && b.students_count ? ` · ${b.students_count} оқ.` : ''}
                           </span>
                         </div>
                         {!tiny && (
@@ -159,16 +159,18 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
                           </span>
                         )}
                       </a>
-                      <button
-                        className="wbc-del"
-                        title="Броньды өшіру"
-                        onClick={(e) => { e.stopPropagation(); onDeleteBooking(b); }}
-                        style={{
-                          position: 'absolute', top: 3, right: 3, zIndex: 2, width: 16, height: 16, borderRadius: '50%',
-                          border: 'none', background: 'rgba(0,0,0,0.14)', color: primary, fontSize: 11, lineHeight: 1,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0,
-                        }}
-                      >×</button>
+                      {!readOnly && (
+                        <button
+                          className="wbc-del"
+                          title="Броньды өшіру"
+                          onClick={(e) => { e.stopPropagation(); onDeleteBooking(b); }}
+                          style={{
+                            position: 'absolute', top: 3, right: 3, zIndex: 2, width: 16, height: 16, borderRadius: '50%',
+                            border: 'none', background: 'rgba(0,0,0,0.14)', color: primary, fontSize: 11, lineHeight: 1,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0,
+                          }}
+                        >×</button>
+                      )}
                     </div>
                   );
                 })}

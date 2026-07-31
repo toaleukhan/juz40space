@@ -45,6 +45,7 @@ app.use('/api/parse-schedule', require('./routes/parseSchedule'));
 app.use('/api/schedule', require('./routes/schedule'));
 app.use('/api/st-recordings', require('./routes/stRecordings'));
 app.use('/api/curators', require('./routes/curators'));
+app.use('/api/coordinators', require('./routes/coordinators'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }));

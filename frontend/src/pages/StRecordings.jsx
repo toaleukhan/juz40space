@@ -31,11 +31,12 @@ const WEEKS = [1, 2, 3, 4];
 export default function StRecordings() {
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const isCurator = currentUser.role === 'curator';
+  const isCoordinator = currentUser.role === 'coordinator';
 
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const currentSubjectCode = searchParams.get('subject') || (isCurator ? currentUser.subject : null);
-  const currentStream = searchParams.get('stream') || (isCurator ? (currentUser.streamId || '01') : '01');
+  const currentSubjectCode = searchParams.get('subject') || ((isCurator || isCoordinator) ? currentUser.subject : null);
+  const currentStream = searchParams.get('stream') || ((isCurator || isCoordinator) ? (currentUser.streamId || '01') : '01');
   const currentMonth = parseInt(searchParams.get('month') || '1', 10);
   const currentWeek = parseInt(searchParams.get('week') || '1', 10);
 
@@ -182,7 +183,7 @@ export default function StRecordings() {
               СТ Жүйесі {selectedSubject ? `· ${selectedSubject.name}` : ''}
             </h1>
           </div>
-          {selectedSubject && !isCurator && (
+          {selectedSubject && !isCurator && !isCoordinator && (
             <button onClick={() => updateFilters({ subject: null })}
               style={{ padding: '8px 16px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-sub)', fontWeight: 600, fontSize: 12 }}>
               ← Барлық пәндер
@@ -248,7 +249,7 @@ export default function StRecordings() {
                     position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 40,
                     padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14, width: 'max-content', maxWidth: '90vw',
                   }}>
-                    {!isCurator && (
+                    {!isCurator && !isCoordinator && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АҒЫМ:</span>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -375,6 +376,18 @@ export default function StRecordings() {
                   </div>
                 );
               })()
+            ) : isCoordinator ? (
+              // ── Координатордың аггрегат-календары: сол ағымдағы барлық
+              // куратордың бекітілген уақыты бір календарьда, тек оқу үшін ──
+              loading ? (
+                <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Жүктелуде...</div>
+              ) : (
+                <WeekBookingCalendar
+                  monday={monday}
+                  bookings={rows.flatMap(r => (r.bookings || []).map(b => ({ ...b, curator_name: r.curator_name })))}
+                  readOnly
+                />
+              )
             ) : (
             <>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
