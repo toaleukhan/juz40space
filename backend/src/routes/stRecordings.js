@@ -6,6 +6,7 @@ const { google } = require('googleapis');
 const { getGoogleAuth } = require('../utils/googleAuth');
 const { syncRecordDrive } = require('../jobs/driveSync');
 const { retryGoogleApi, isRetryableGoogleError } = require('../utils/retryGoogleApi');
+const { notifyCoordinatorsOfBooking } = require('../utils/telegramNotify');
 
 // 1. СТ Кестесін алу (КУРАТОРҒА ТЕК ӨЗ ДЕРЕКТЕРІ КӨРІНЕДІ)
 router.get('/', auth, async (req, res) => {
@@ -184,6 +185,20 @@ router.post('/:id/bookings', auth, async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
       [recordingId, type, type === 'st' ? (studentsCount || '0') : null, scheduledDate, startTime, endTime, meetLink, meetCode, createdEvent.data.id]
     );
+
+    // Куратордың жауабын кідіртпес үшін await жасамаймыз — координаторға
+    // хабарлама жіберу сәтсіз болса да, брондаудың өзі сәтті орындалды.
+    notifyCoordinatorsOfBooking(pool, {
+      subject: record.subject,
+      streamId: record.stream_id,
+      curatorName: record.curator_name,
+      type,
+      studentsCount,
+      scheduledDate,
+      startTime,
+      endTime,
+      meetLink,
+    });
 
     res.json(inserted.rows[0]);
   } catch (err) {
