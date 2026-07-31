@@ -62,7 +62,7 @@ function minutesFromMidnight(timeStr) {
 // CalendarView-дың layout() алгоритмімен бірдей: қиылысатын броньдарды
 // қатар тұратын бағандарға бөледі, әйтпесе бәрі бір-бірінің үстіне
 // түсіп, оқылмай қалады.
-function layoutDayBookings(dayBookings) {
+export function layoutDayBookings(dayBookings) {
   const withMin = dayBookings.map(b => ({
     ...b,
     _startMin: minutesFromMidnight(b.start_time),
