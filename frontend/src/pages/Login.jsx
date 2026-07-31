@@ -6,6 +6,8 @@ import juz40Logo from '../assets/juz40-logo.png';
 import { smartScheduleByMonth, juniorScheduleByMonth } from './scheduleData';
 import { IconAlert } from '../components/icons';
 import StarField from '../components/StarField';
+import TelegramLinkForm from '../components/TelegramLinkForm';
+import { isTelegramWebApp } from '../utils/telegram';
 
 import math    from '../assets/subjects/Математика.webp';
 import kaz     from '../assets/subjects/Казахский_Язык.webp';
@@ -206,6 +208,11 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [focused, setFocused] = useState('');
+
+  // Telegram Mini App ішінде ашылса — тар WebView-ге сыймайтын үлкен
+  // desktop-форманың орнына компакт Telegram-байланыстыру ағыны көрінеді.
+  // Барлық hook-тардан КЕЙІН тексерілуі керек (Rules of Hooks).
+  if (isTelegramWebApp()) return <TelegramLinkForm />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
