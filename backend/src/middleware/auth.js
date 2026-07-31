@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'juz40_secret_key';
+const JWT_SECRET = require('../config/jwtSecret');
 
 module.exports = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1] || req.query.token;

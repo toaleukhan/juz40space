@@ -4,8 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/db');
 const auth = require('../middleware/auth');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'juz40_secret_key';
+const JWT_SECRET = require('../config/jwtSecret');
 
 // 1. Кіру (Login)
 router.post('/login', async (req, res) => {
