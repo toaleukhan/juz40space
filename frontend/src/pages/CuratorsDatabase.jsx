@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar';
 import api from '../services/api';
 import { SUBJECT_COLORS, SUBJECT_LOGOS } from './scheduleData';
 import { motion } from 'framer-motion';
-import { IconFile, IconClose, IconDot, IconPlus } from '../components/icons';
+import { IconFile, IconClose, IconDot, IconPlus, IconUsers } from '../components/icons';
 
 const SUBJECTS = [
   { code:'ФИЗ',   name:'Физика',           months: 5 },
@@ -43,9 +43,12 @@ export default function CuratorsDatabase() {
   const [showBulk, setShowBulk] = useState(false);
   const [bulkText, setBulkText] = useState('');
   const [newCreds, setNewCreds] = useState(null);
+  const [showCoordinators, setShowCoordinators] = useState(false);
+  const [coordinatorsList, setCoordinatorsList] = useState([]);
+  const [newCoordinator, setNewCoordinator] = useState('');
 
   useEffect(() => {
-    if (selectedSubject) loadCuratorsBase();
+    if (selectedSubject) { loadCuratorsBase(); loadCoordinators(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSubjectCode, currentStream]);
 
@@ -67,6 +70,42 @@ export default function CuratorsDatabase() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCoordinators = async () => {
+    try {
+      const { data } = await api.get(`/coordinators?subject=${currentSubjectCode}&streamId=${currentStream}`);
+      setCoordinatorsList(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddCoordinator = async () => {
+    if (!newCoordinator.trim()) return;
+    try {
+      const { data } = await api.post('/coordinators', {
+        fullName: newCoordinator.trim(),
+        subject: currentSubjectCode,
+        streamId: currentStream,
+      });
+      const { password, ...coordinatorRow } = data;
+      setCoordinatorsList(prev => [...prev, coordinatorRow]);
+      setNewCreds([{ full_name: coordinatorRow.full_name, username: coordinatorRow.username, password }]);
+      setNewCoordinator('');
+    } catch (err) {
+      alert('Қателік: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleDeleteCoordinator = async (id) => {
+    if (!confirm('Координаторды өшіруге сенімдісіз бе?')) return;
+    try {
+      await api.delete(`/coordinators/${id}`);
+      setCoordinatorsList(prev => prev.filter(c => c.id !== id));
+    } catch (err) {
+      alert('Өшіруде қателік орын алды');
     }
   };
 
@@ -182,13 +221,53 @@ export default function CuratorsDatabase() {
                 </button>
               ))}
             </div>
-            <button onClick={() => setShowBulk(!showBulk)}
+            <button onClick={() => setShowCoordinators(!showCoordinators)}
               style={{
                 padding: '10px 20px', marginLeft: 'auto', borderRadius: 12, fontWeight: 800, fontSize: 12, border: 'none', cursor: 'pointer',
+                background: '#f59e0b', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 8,
+              }}>
+              <IconUsers style={{ width: 14, height: 14 }} /> Координаторлар ({coordinatorsList.length})
+            </button>
+            <button onClick={() => setShowBulk(!showBulk)}
+              style={{
+                padding: '10px 20px', borderRadius: 12, fontWeight: 800, fontSize: 12, border: 'none', cursor: 'pointer',
                 background: '#3b82f6', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 8,
               }}>
               <IconFile style={{ width: 14, height: 14 }} /> Тізіммен кураторларды бірден қосу
             </button>
+          </div>
+        )}
+
+        {showCoordinators && selectedSubject && (
+          <div className="card" style={{ padding: 20, marginBottom: 20, border: '2px solid #f59e0b' }}>
+            <h3 style={{ margin: '0 0 10px', fontSize: 15, fontWeight: 800 }}>
+              Координаторлар ({selectedSubject.name} · {selectedSubject.code}-{currentStream})
+            </h3>
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14 }}>
+              Координатор — куратор емес, сабақ бермейді. Осы ағымдағы барлық куратордың бекітілген СТ/жеке сөйлесу уақыттарын бір календарьда тек қарау үшін аккаунт.
+            </p>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+              <input placeholder="Аты-жөні (мыс: Талғатұлы Таңат)" value={newCoordinator} onChange={e => setNewCoordinator(e.target.value)}
+                style={{ flex: 1, padding: '9px 14px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: 13 }} />
+              <button onClick={handleAddCoordinator}
+                style={{ padding: '9px 18px', borderRadius: 10, background: '#f59e0b', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                + Координатор қосу
+              </button>
+            </div>
+            {coordinatorsList.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {coordinatorsList.map(c => (
+                  <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 10, background: 'var(--surface2)' }}>
+                    <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{c.full_name}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{c.username}</div>
+                    <button onClick={() => handleDeleteCoordinator(c.id)}
+                      style={{ display: 'flex', padding: '5px 8px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#dc2626', border: 'none', fontSize: 11, cursor: 'pointer' }}>
+                      <IconClose style={{ width: 12, height: 12 }} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

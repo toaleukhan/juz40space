@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const createTables = require('./config/schema');
 const { apiLimiter, loginLimiter, securityHeaders, sanitizeInput } = require('./middleware/security');
+const { startAutoSyncScheduler } = require('./jobs/driveSync');
 
 const app = express();
 
@@ -44,6 +45,7 @@ app.use('/api/parse-schedule', require('./routes/parseSchedule'));
 app.use('/api/schedule', require('./routes/schedule'));
 app.use('/api/st-recordings', require('./routes/stRecordings'));
 app.use('/api/curators', require('./routes/curators'));
+app.use('/api/coordinators', require('./routes/coordinators'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
@@ -52,10 +54,12 @@ const PORT = process.env.PORT || 3001;
 
 const start = async () => {
   await createTables();
-  
+
   console.log('✅ Backend ready');
-  
+
   app.listen(PORT, () => console.log(`🚀 JUZNOTIFY backend: http://localhost:${PORT}`));
+
+  startAutoSyncScheduler();
 };
 
 start().catch(console.error);

@@ -3,67 +3,19 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const pool = require('../config/db');
 const { google } = require('googleapis');
-
-// Пән коды (кириллица) -> ортам айнымалысының ASCII жалғауы,
-// мыс. GOOGLE_SERVICE_ACCOUNT_JSON_FIZ / GOOGLE_TOKEN_JSON_FIZ
-const SUBJECT_ENV_KEY = {
-  ФИЗ: 'FIZ', МАТ: 'MAT', ТІЛ: 'TIL', БИО: 'BIO', ИНФО: 'INFO', ГЕО: 'GEO',
-  ТАРИХ: 'TARIH', РУС: 'RUS', ХИМ: 'HIM', МС: 'MS', ӘДЕБ: 'ADEB', АНГЛ: 'ANGL', ДЖТ: 'DZHT',
-};
-
-const SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/drive'];
-
-// Пәннің ӨЗ домен аккаунты болмаса — null қайтарады (алдыңғы нұсқада сапа
-// бөлімінің ортақ аккаунтына түсіп кете беретін еді, ол дұрыс емес: сапа
-// бөлімінің есептік жазбасы басқа пәннің атынан Мит ашпауы керек).
-// Пән өз аккаунтын алғанша, сол пәннің кураторлары "Мит ашу" баса алмайды —
-// бұл әдейі істелген тежеу, қате хабарламасы соны түсіндіреді.
-function getGoogleAuth(subject) {
-  try {
-    const envKey = subject && SUBJECT_ENV_KEY[subject];
-    if (!envKey) return null;
-
-    const saJson = process.env[`GOOGLE_SERVICE_ACCOUNT_JSON_${envKey}`];
-    if (saJson) {
-      const sa = JSON.parse(saJson);
-      return new google.auth.JWT({
-        email: sa.client_email,
-        key: sa.private_key,
-        scopes: SCOPES,
-      });
-    }
-
-    const tokenJson = process.env[`GOOGLE_TOKEN_JSON_${envKey}`];
-    const credsJson = process.env[`GOOGLE_CREDENTIALS_JSON_${envKey}`];
-    if (tokenJson && credsJson) {
-      const tokens = JSON.parse(tokenJson);
-      const creds = JSON.parse(credsJson);
-      if (tokens.token && !tokens.access_token) tokens.access_token = tokens.token;
-
-      const config = creds.installed || creds.web;
-      const { client_id, client_secret, redirect_uris } = config;
-      const oAuth2Client = new google.auth.OAuth2(
-        client_id,
-        client_secret,
-        redirect_uris ? redirect_uris[0] : 'http://localhost'
-      );
-      oAuth2Client.setCredentials(tokens);
-      return oAuth2Client;
-    }
-  } catch (e) {
-    console.error('Google Auth Error:', e.message);
-  }
-  return null;
-}
+const { getGoogleAuth } = require('../utils/googleAuth');
+const { syncRecordDrive } = require('../jobs/driveSync');
 
 // 1. СТ Кестесін алу (КУРАТОРҒА ТЕК ӨЗ ДЕРЕКТЕРІ КӨРІНЕДІ)
 router.get('/', auth, async (req, res) => {
   const { subject, streamId, monthNum, weekNum } = req.query;
 
-  // Егер куратор болса, оның өз пәні мен ағымын аламыз
+  // Куратор немесе координатор болса, оның өз пәні мен ағымын аламыз —
+  // координатор да сұраныс арқылы басқа ағымның деректерін сұрай алмайды.
   const isCurator = req.user.role === 'curator';
-  const subj = isCurator ? req.user.subject : (subject || 'ФИЗ');
-  const strId = isCurator ? req.user.streamId : (streamId || '01');
+  const isCoordinator = req.user.role === 'coordinator';
+  const subj = (isCurator || isCoordinator) ? req.user.subject : (subject || 'ФИЗ');
+  const strId = (isCurator || isCoordinator) ? req.user.streamId : (streamId || '01');
   const mNum = parseInt(monthNum) || 1;
   const wNum = parseInt(weekNum) || 1;
 
@@ -264,7 +216,9 @@ router.delete('/bookings/:bookingId', auth, async (req, res) => {
   }
 });
 
-// 4. Драйвтан ВИДЕО мен ОТСЛЕЖКА-ны Табу
+// 4. Драйвтан ВИДЕО мен ОТСЛЕЖКА-ны Табу (қолмен шақыру — негізгі жол
+// енді автоматты scheduler, backend/src/jobs/driveSync.js: runAutoSync).
+// Бұл эндпоинт қате/кешігу жағдайында дереу қайта тексеру үшін қалдырылды.
 router.post('/sync-drive', auth, async (req, res) => {
   const { recordingId } = req.body;
 
@@ -273,93 +227,12 @@ router.post('/sync-drive', auth, async (req, res) => {
 
   const record = rec.rows[0];
 
-  const authClient = getGoogleAuth(record.subject);
-  if (!authClient) {
-    return res.status(400).json({ error: 'Google авторизация кілттері табылмады' });
-  }
-
   try {
-    const drive = google.drive({ version: 'v3', auth: authClient });
-
-    // Осы куратордың КЕЛЕСІ аптасының жолы бар ма — болса, іздеуді содан
-    // бұрынғымен шектейміз, әйтпесе кейінгі апталардың жазбасын да қосып алар едік.
-    const nextRow = await pool.query(
-      `SELECT created_at FROM st_recordings
-       WHERE subject = $1 AND stream_id = $2 AND curator_name = $3
-         AND (month_num, week_num) > ($4, $5)
-       ORDER BY month_num ASC, week_num ASC LIMIT 1`,
-      [record.subject, record.stream_id, record.curator_name, record.month_num, record.week_num]
-    );
-
-    // Google Meet жазба/отслежка файлдарын Drive-та Мит кодымен емес,
-    // күнтізбе оқиғасының атауымен сақтайды (create-meet-тегі event.summary-мен
-    // бірдей: "СТ: <пән> - <куратор аты>"), сондықтан іздеу де сол атау
-    // бойынша болады. Датамен шектеу — сол атаумен басқа аптада ашылған
-    // Мит-тің жазбасын осы аптаға жаңылыстырып жаппас үшін.
-    const searchText = `СТ: ${record.subject} - ${record.curator_name}`.replace(/'/g, "\\'");
-    let query = `name contains '${searchText}' and trashed = false and createdTime > '${record.created_at.toISOString()}'`;
-    if (nextRow.rows.length) {
-      query += ` and createdTime < '${nextRow.rows[0].created_at.toISOString()}'`;
+    const result = await syncRecordDrive(record);
+    if (!result.synced) {
+      return res.status(400).json({ error: 'Google авторизация кілттері табылмады' });
     }
-
-    const driveRes = await drive.files.list({
-      q: query,
-      fields: 'files(id, name, webViewLink, mimeType, createdTime)',
-      orderBy: 'createdTime desc'
-    });
-
-    const files = driveRes.data.files || [];
-    const vLinks = record.video_links || (record.video_link ? [record.video_link] : []);
-    const aLinks = record.attendance_links || (record.attendance_link ? [record.attendance_link] : []);
-    const newFiles = [];
-
-    // Осы аптада бірнеше Мит ашылған болуы мүмкін (мыс. алғашқысына толық
-    // кірмей, "+ Жаңа Мит" басылса) — сондықтан бір ғана емес, осы уақыт
-    // аралығында табылған БАРЛЫҚ видео/отслежка файлын жинаймыз.
-    //
-    // Отслежка — нақты ҚАТЫСУ ЕСЕБІ (Google Sheets), Gemini жасайтын жалпы
-    // қорытынды құжат (Google Docs) емес, сондықтан тек spreadsheet-ті
-    // санаймыз.
-    files.forEach(f => {
-      const mime = (f.mimeType || '').toLowerCase();
-      const lowerName = (f.name || '').toLowerCase();
-      const link = f.webViewLink || '';
-      if (!link) return;
-
-      const isVideo = mime.startsWith('video/') || lowerName.endsWith('.mp4') || lowerName.endsWith('.mkv');
-      const isAttendance = mime.includes('spreadsheet');
-
-      if (isVideo && !vLinks.includes(link)) { vLinks.push(link); newFiles.push(f); }
-      else if (isAttendance && !aLinks.includes(link)) { aLinks.push(link); newFiles.push(f); }
-    });
-
-    // Жаңадан табылған файлдар әдепкіде тек оны жасаған Google аккаунтқа
-    // ғана көрінеді — сілтемесі барға ашық қыламыз, әйтпесе қолданушылар
-    // "Access denied" көреді. Бір файлдың рұқсаты орнамай қалса да қалғаны
-    // сақталуы үшін қатені жұтамыз, тек логқа жазамыз.
-    for (const f of newFiles) {
-      try {
-        await drive.permissions.create({
-          fileId: f.id,
-          requestBody: { role: 'reader', type: 'anyone' },
-        });
-      } catch (permErr) {
-        console.error(`Drive рұқсат қатесі (${f.id}):`, permErr.message);
-      }
-    }
-
-    const updated = await pool.query(
-      `UPDATE st_recordings
-       SET video_link = COALESCE($1, video_link),
-           attendance_link = COALESCE($2, attendance_link),
-           video_links = $3,
-           attendance_links = $4,
-           updated_at = NOW()
-       WHERE id = $5 RETURNING *`,
-      [vLinks[0] || null, aLinks[0] || null, vLinks, aLinks, recordingId]
-    );
-
-    res.json({ success: true, record: updated.rows[0], foundCount: files.length });
+    res.json({ success: true, record: result.record, foundCount: result.foundCount });
   } catch (err) {
     res.status(500).json({ error: 'Драйв іздеу қатесі: ' + err.message });
   }

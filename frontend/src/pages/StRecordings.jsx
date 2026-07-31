@@ -5,7 +5,7 @@ import api from '../services/api';
 import { SUBJECT_COLORS, SUBJECT_LOGOS } from './scheduleData';
 import { motion } from 'framer-motion';
 import { SHEETS_LOGO } from '../components/brandLogos';
-import { IconMeetLogo, IconBolt, IconRefresh, IconVideo, IconClock, IconClose, IconTable } from '../components/icons';
+import { IconMeetLogo, IconBolt, IconVideo, IconClock, IconClose, IconTable } from '../components/icons';
 import WeekBookingCalendar, { getFilterMonday, minutesToTime, toLocalISODate } from '../components/WeekBookingCalendar';
 import BookingModal from '../components/BookingModal';
 
@@ -31,11 +31,12 @@ const WEEKS = [1, 2, 3, 4];
 export default function StRecordings() {
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const isCurator = currentUser.role === 'curator';
+  const isCoordinator = currentUser.role === 'coordinator';
 
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const currentSubjectCode = searchParams.get('subject') || (isCurator ? currentUser.subject : null);
-  const currentStream = searchParams.get('stream') || (isCurator ? (currentUser.streamId || '01') : '01');
+  const currentSubjectCode = searchParams.get('subject') || ((isCurator || isCoordinator) ? currentUser.subject : null);
+  const currentStream = searchParams.get('stream') || ((isCurator || isCoordinator) ? (currentUser.streamId || '01') : '01');
   const currentMonth = parseInt(searchParams.get('month') || '1', 10);
   const currentWeek = parseInt(searchParams.get('week') || '1', 10);
 
@@ -45,10 +46,8 @@ export default function StRecordings() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newCurator, setNewCurator] = useState('');
-  const [actionLoading, setActionLoading] = useState({});
   const [showFilter, setShowFilter] = useState(false);
   const [modalSlot, setModalSlot] = useState(null); // { date, startTime } | null
-  const [selectedBooking, setSelectedBooking] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const monday = getFilterMonday(currentMonth, currentWeek);
 
@@ -152,19 +151,6 @@ export default function StRecordings() {
     }
   };
 
-  const handleSyncDrive = async (rowId, meetCode) => {
-    setActionLoading(prev => ({ ...prev, [rowId]: 'drive' }));
-    try {
-      const { data } = await api.post('/st-recordings/sync-drive', { recordingId: rowId, meetCode });
-      if (data.foundCount === 0) alert('Драйвтан осы Мит кодымен файлдар әлі табылмады.');
-      else setRows(prev => prev.map(r => r.id === rowId ? data.record : r));
-    } catch (err) {
-      alert(err.response?.data?.error || 'Драйв іздеуде қателік');
-    } finally {
-      setActionLoading(prev => ({ ...prev, [rowId]: null }));
-    }
-  };
-
   const handleUpdateRow = async (id, field, value) => {
     try {
       await api.put(`/st-recordings/${id}`, { [field]: value });
@@ -197,7 +183,7 @@ export default function StRecordings() {
               СТ Жүйесі {selectedSubject ? `· ${selectedSubject.name}` : ''}
             </h1>
           </div>
-          {selectedSubject && !isCurator && (
+          {selectedSubject && !isCurator && !isCoordinator && (
             <button onClick={() => updateFilters({ subject: null })}
               style={{ padding: '8px 16px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-sub)', fontWeight: 600, fontSize: 12 }}>
               ← Барлық пәндер
@@ -263,7 +249,7 @@ export default function StRecordings() {
                     position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 40,
                     padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14, width: 'max-content', maxWidth: '90vw',
                   }}>
-                    {!isCurator && (
+                    {!isCurator && !isCoordinator && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', width: 60 }}>АҒЫМ:</span>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -327,61 +313,33 @@ export default function StRecordings() {
                 const bookings = row?.bookings || [];
                 const videoLinks = row?.video_links || (row?.video_link ? [row.video_link] : []);
                 const attendanceLinks = row?.attendance_links || (row?.attendance_link ? [row.attendance_link] : []);
+                const hasSt = bookings.some(b => b.meeting_type === 'st');
                 return (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    <WeekBookingCalendar
-                      monday={monday}
-                      bookings={bookings}
-                      onSlotClick={handleSlotClick}
-                      onBookingClick={setSelectedBooking}
-                    />
-
-                    {selectedBooking && (
-                      <div className="card" style={{ padding: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
-                        <div style={{ flex: 1, minWidth: 200 }}>
-                          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>
-                            {selectedBooking.meeting_type === 'st' ? 'СТ' : 'Жеке сөйлесу'} · {String(selectedBooking.scheduled_date).slice(0, 10)} · {selectedBooking.start_time.slice(0, 5)}–{selectedBooking.end_time.slice(0, 5)}
-                          </div>
-                          {selectedBooking.meeting_type === 'st' && (
-                            <div style={{ fontSize: 12, color: 'var(--text-sub)', marginTop: 2 }}>Оқушы саны: {selectedBooking.students_count || 0}</div>
-                          )}
-                        </div>
-                        <a href={selectedBooking.meet_link} target="_blank" rel="noreferrer"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 9, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 12.5, textDecoration: 'none' }}>
-                          <IconMeetLogo style={{ width: 14, height: 14 }} /> Мит-ке кіру
-                        </a>
-                        <button onClick={() => handleSyncDrive(row.id, selectedBooking.meet_code)} disabled={actionLoading[row.id] === 'drive'}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 9, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 12.5, cursor: 'pointer' }}>
-                          <IconRefresh style={{ width: 13, height: 13 }} /> Синхрондау
-                        </button>
-                        <button onClick={() => handleDeleteBooking(selectedBooking.id)}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 9, background: 'rgba(239,68,68,0.08)', color: '#dc2626', border: '1px solid rgba(239,68,68,0.2)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer' }}>
-                          <IconClose style={{ width: 13, height: 13 }} /> Өшіру
-                        </button>
-                        <button onClick={() => setSelectedBooking(null)}
-                          style={{ padding: '8px 12px', borderRadius: 9, background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-sub)', fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}>
-                          Жабу
-                        </button>
-                      </div>
-                    )}
-
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {row && (
-                      <div className="card" style={{ padding: '14px 18px' }}>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>Ескеру керек жағдайлар</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', borderRadius: 12, background: 'var(--surface2)', border: '1px solid var(--border)' }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Ескеру керек жағдай:</label>
                         <input
                           defaultValue={row.notes || ''}
                           placeholder="Мыс: ауырып тұр..."
                           onBlur={(e) => handleUpdateRow(row.id, 'notes', e.target.value)}
-                          style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)' }}
+                          style={{ flex: 1, minWidth: 120, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 12.5 }}
                         />
                       </div>
                     )}
 
-                    {(videoLinks.length > 0 || attendanceLinks.length > 0) && (
+                    <WeekBookingCalendar
+                      monday={monday}
+                      bookings={bookings}
+                      onSlotClick={handleSlotClick}
+                      onDeleteBooking={(b) => handleDeleteBooking(b.id)}
+                    />
+
+                    {hasSt && (
                       <div className="card" style={{ padding: 18, display: 'flex', flexWrap: 'wrap', gap: 24 }}>
-                        {videoLinks.length > 0 && (
-                          <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Видео жазба</div>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Видео жазба</div>
+                          {videoLinks.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                               {videoLinks.map((v, idx) => (
                                 <a key={idx} href={v} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#2563eb', fontWeight: 600, textDecoration: 'none', fontSize: 12.5 }}>
@@ -389,11 +347,15 @@ export default function StRecordings() {
                                 </a>
                               ))}
                             </div>
-                          </div>
-                        )}
-                        {attendanceLinks.length > 0 && (
-                          <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Отслежка</div>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#d97706', fontSize: 11.5, fontWeight: 600 }}>
+                              <IconClock style={{ width: 12, height: 12 }} /> Әлі дайын емес — автоматты түрде табылады
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>Отслежка</div>
+                          {attendanceLinks.length > 0 ? (
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                               {attendanceLinks.map((a, idx) => (
                                 <a key={idx} href={a} target="_blank" rel="noreferrer" title="Отслежка">
@@ -403,13 +365,29 @@ export default function StRecordings() {
                                 </a>
                               ))}
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#d97706', fontSize: 11.5, fontWeight: 600 }}>
+                              <IconClock style={{ width: 12, height: 12 }} /> Әлі дайын емес — автоматты түрде табылады
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
                 );
               })()
+            ) : isCoordinator ? (
+              // ── Координатордың аггрегат-календары: сол ағымдағы барлық
+              // куратордың бекітілген уақыты бір календарьда, тек оқу үшін ──
+              loading ? (
+                <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Жүктелуде...</div>
+              ) : (
+                <WeekBookingCalendar
+                  monday={monday}
+                  bookings={rows.flatMap(r => (r.bookings || []).map(b => ({ ...b, curator_name: r.curator_name })))}
+                  readOnly
+                />
+              )
             ) : (
             <>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -511,17 +489,11 @@ export default function StRecordings() {
                             </button>
 
                             {bookings.map((b) => (
-                              <div key={b.id} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                                <a href={b.meet_link} target="_blank" rel="noreferrer" title={`${b.meeting_type === 'st' ? 'СТ' : 'Жеке'} · ${String(b.scheduled_date).slice(0,10)} ${b.start_time.slice(0,5)}`}
-                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 6px', borderRadius: 6, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 10, textDecoration: 'none' }}>
-                                  <IconMeetLogo style={{ width: 12, height: 12 }} />
-                                  {b.start_time.slice(0, 5)}
-                                </a>
-                                <button onClick={() => handleSyncDrive(row.id, b.meet_code)} disabled={actionLoading[row.id] === 'drive'}
-                                  style={{ display: 'flex', padding: '4px 6px', borderRadius: 6, background: '#3b82f6', color: '#fff', border: 'none', fontWeight: 700, fontSize: 10, cursor: 'pointer' }}>
-                                  <IconRefresh style={{ width: 11, height: 11 }} />
-                                </button>
-                              </div>
+                              <a key={b.id} href={b.meet_link} target="_blank" rel="noreferrer" title={`${b.meeting_type === 'st' ? 'СТ' : 'Жеке'} · ${String(b.scheduled_date).slice(0,10)} ${b.start_time.slice(0,5)}`}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 6px', borderRadius: 6, background: 'rgba(16,185,129,0.12)', color: '#059669', border: '1px solid rgba(16,185,129,0.3)', fontWeight: 700, fontSize: 10, textDecoration: 'none' }}>
+                                <IconMeetLogo style={{ width: 12, height: 12 }} />
+                                {b.start_time.slice(0, 5)}
+                              </a>
                             ))}
 
                             <button onClick={() => handleDeleteRow(row.id)}
