@@ -146,7 +146,6 @@ export default function StRecordings() {
     try {
       await api.delete(`/st-recordings/bookings/${bookingId}`);
       setRows(prev => prev.map(r => ({ ...r, bookings: (r.bookings || []).filter(b => b.id !== bookingId) })));
-      setSelectedBooking(null);
     } catch (err) {
       alert(err.response?.data?.error || 'Өшіруде қателік');
     }
