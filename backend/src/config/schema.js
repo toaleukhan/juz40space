@@ -29,6 +29,7 @@ const createTables = async () => {
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100);`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100);`);
     await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(150);`);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id BIGINT UNIQUE;`);
 
     // 👑 ADMIN АКТИВАЦИЯСЫ: admin / admin123
     const adminCheck = await pool.query(`SELECT id FROM users WHERE username = 'admin'`);

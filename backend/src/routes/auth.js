@@ -5,6 +5,42 @@ const jwt = require('jsonwebtoken');
 const pool = require('../config/db');
 const auth = require('../middleware/auth');
 const JWT_SECRET = require('../config/jwtSecret');
+const { verifyInitData } = require('../utils/telegramAuth');
+
+// /login, /telegram, /telegram/link — үшеуі де сонында дәл осы пішінде
+// JWT + user объектісін қайтарады, сондықтан ортақ функцияға шығарылды.
+function buildAuthResponse(user) {
+  const role = user.role || (user.username === 'admin' ? 'admin' : 'curator');
+  const token = jwt.sign(
+    {
+      id: user.id,
+      username: user.username,
+      role,
+      subject: user.subject,
+      streamId: user.stream_id,
+      fullName: user.full_name
+    },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  return {
+    token,
+    user: {
+      id: user.id,
+      username: user.username,
+      fullName: user.full_name,
+      role,
+      subject: user.subject,
+      streamId: user.stream_id,
+      studentsCount: user.students_count || '0',
+      avatarUrl: user.avatar_url,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      department: user.department
+    }
+  };
+}
 
 // 1. Кіру (Login)
 router.post('/login', async (req, res) => {
@@ -35,37 +71,64 @@ router.post('/login', async (req, res) => {
 
     await pool.query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
 
-    const token = jwt.sign(
-      { 
-        id: user.id, 
-        username: user.username, 
-        role: user.role || (user.username === 'admin' ? 'admin' : 'curator'),
-        subject: user.subject,
-        streamId: user.stream_id,
-        fullName: user.full_name
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        fullName: user.full_name,
-        role: user.role || (user.username === 'admin' ? 'admin' : 'curator'),
-        subject: user.subject,
-        streamId: user.stream_id,
-        studentsCount: user.students_count || '0',
-        avatarUrl: user.avatar_url,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        department: user.department
-      }
-    });
+    res.json(buildAuthResponse(user));
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// 1b. Telegram Mini App: бұрын байланыстырылған telegram_id арқылы кіру
+router.post('/telegram', async (req, res) => {
+  try {
+    const tgUser = verifyInitData(req.body.initData, process.env.TELEGRAM_BOT_TOKEN);
+
+    const userRes = await pool.query('SELECT * FROM users WHERE telegram_id = $1', [tgUser.id]);
+    if (userRes.rows.length === 0) {
+      return res.json({ linked: false });
+    }
+
+    const user = userRes.rows[0];
+    await pool.query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
+    res.json({ linked: true, ...buildAuthResponse(user) });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// 1c. Telegram Mini App: бір реттік привязка — бар логин/парольмен
+// расталады да, сол users жолына telegram_id жазылады.
+router.post('/telegram/link', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Логин мен парольді толық енгізіңіз' });
+  }
+
+  try {
+    const tgUser = verifyInitData(req.body.initData, process.env.TELEGRAM_BOT_TOKEN);
+
+    const cleanLogin = username.toString().toLowerCase().trim();
+    const userRes = await pool.query('SELECT * FROM users WHERE LOWER(username) = $1', [cleanLogin]);
+    if (userRes.rows.length === 0) {
+      return res.status(400).json({ error: 'Логин немесе пароль қате' });
+    }
+
+    const user = userRes.rows[0];
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Логин немесе пароль қате' });
+    }
+
+    const updated = await pool.query(
+      'UPDATE users SET telegram_id = $1, last_login = NOW() WHERE id = $2 RETURNING *',
+      [tgUser.id, user.id]
+    );
+
+    res.json(buildAuthResponse(updated.rows[0]));
+  } catch (err) {
+    if (err.code === '23505') { // unique_violation — бұл telegram_id басқа аккаунтқа байланысты
+      return res.status(400).json({ error: 'Бұл Telegram аккаунты басқа қолданушыға байланыстырылған' });
+    }
+    res.status(400).json({ error: err.message });
   }
 });
 
