@@ -5,6 +5,7 @@ const pool = require('../config/db');
 const { google } = require('googleapis');
 const { getGoogleAuth } = require('../utils/googleAuth');
 const { syncRecordDrive } = require('../jobs/driveSync');
+const { retryGoogleApi, isRetryableGoogleError } = require('../utils/retryGoogleApi');
 
 // 1. СТ Кестесін алу (КУРАТОРҒА ТЕК ӨЗ ДЕРЕКТЕРІ КӨРІНЕДІ)
 router.get('/', auth, async (req, res) => {
@@ -164,11 +165,15 @@ router.post('/:id/bookings', auth, async (req, res) => {
       }
     };
 
-    const createdEvent = await calendar.events.insert({
+    // Бір пәннің аккаунтына көп куратор бір мезгілде "Мит ашу" бассы,
+    // Google уақытша rate-limit қатесін қайтаруы мүмкін — сондай кезде
+    // сәл кідіріп қайта көреміз (retryGoogleApi), curator-ға дереу
+    // қатеге ұрындырмай.
+    const createdEvent = await retryGoogleApi(() => calendar.events.insert({
       calendarId: 'primary',
       requestBody: event,
       conferenceDataVersion: 1
-    });
+    }));
 
     const meetLink = createdEvent.data.hangoutLink;
     const meetCode = meetLink ? meetLink.split('/').pop() : null;
@@ -182,6 +187,9 @@ router.post('/:id/bookings', auth, async (req, res) => {
 
     res.json(inserted.rows[0]);
   } catch (err) {
+    if (isRetryableGoogleError(err)) {
+      return res.status(503).json({ error: 'Дәл қазір бұл пәнде Мит ашушылар көбейіп кетті. Бір-екі минуттан кейін қайталап көріңіз.' });
+    }
     res.status(500).json({ error: 'Meet жасау қатесі: ' + err.message });
   }
 });
