@@ -57,6 +57,31 @@ function minutesFromMidnight(timeStr) {
   return h * 60 + (m || 0);
 }
 
+// Бір күнде бір уақытта бірнеше бронь болуы мүмкін (координатордың
+// аггрегат-календарында — әр түрлі кураторлар) — Schedule.jsx-тегі
+// CalendarView-дың layout() алгоритмімен бірдей: қиылысатын броньдарды
+// қатар тұратын бағандарға бөледі, әйтпесе бәрі бір-бірінің үстіне
+// түсіп, оқылмай қалады.
+function layoutDayBookings(dayBookings) {
+  const withMin = dayBookings.map(b => ({
+    ...b,
+    _startMin: minutesFromMidnight(b.start_time),
+    _endMin: minutesFromMidnight(b.end_time),
+  }));
+  const sorted = [...withMin].sort((a, b) => a._startMin - b._startMin || b._endMin - a._endMin);
+  const cols = [];
+  const result = [];
+  sorted.forEach(b => {
+    let ci = 0;
+    while (cols[ci] && cols[ci].some(c => c._startMin < b._endMin && c._endMin > b._startMin)) ci++;
+    if (!cols[ci]) cols[ci] = [];
+    cols[ci].push(b);
+    result.push({ ...b, _ci: ci });
+  });
+  const totalCols = cols.length || 1;
+  return result.map(b => ({ ...b, _cf: b._ci / totalCols, _wf: 1 / totalCols }));
+}
+
 export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onDeleteBooking, readOnly }) {
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
   const totalH = (END_HOUR - START_HOUR) * HOUR_H;
@@ -66,6 +91,20 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
     const key = String(b.scheduled_date).slice(0, 10);
     (byDate[key] ||= []).push(b);
   });
+
+  // Күн бағанының ені: әдепкіде DAY_MIN_W, бірақ сол күнде қатар тұратын
+  // (уақыты қиылысатын) броньдар көбейген сайын кеңейеді — Schedule.jsx-тегі
+  // CalendarView-дың dayWidths есептеуімен бірдей логика, әйтпесе көп
+  // қиылысу кезінде блоктар тым тар болып, оқылмай қалады.
+  const EVENT_COL_W = 96;
+  const DAY_MIN_W = 118;
+  const dayLayouts = DAY_LABELS.map((_, dayIndex) => layoutDayBookings(byDate[isoDateOfDay(monday, dayIndex)] || []));
+  const dayWidths = dayLayouts.map(laid => {
+    const maxCols = laid.reduce((m, b) => Math.max(m, Math.round(1 / b._wf)), 1);
+    return Math.max(DAY_MIN_W, maxCols * EVENT_COL_W);
+  });
+  const totalDayWidth = dayWidths.reduce((s, w) => s + w, 0);
+  const gridTemplate = `64px ${dayWidths.map(w => `${w}px`).join(' ')}`;
 
   const handleColumnClick = (e, dayIndex) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -79,7 +118,7 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
       <div style={{ overflowX: 'auto' }}>
-        <div style={{ minWidth: 64 + 7 * 118, display: 'grid', gridTemplateColumns: '64px repeat(7, minmax(118px, 1fr))' }}>
+        <div style={{ minWidth: 64 + totalDayWidth, display: 'grid', gridTemplateColumns: gridTemplate }}>
           <div style={{ borderBottom: '1px solid var(--border)' }} />
           {DAY_LABELS.map((label, i) => (
             <div key={label} style={{ padding: '10px 8px', borderLeft: '1px solid var(--border)', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
@@ -97,8 +136,7 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
           </div>
 
           {DAY_LABELS.map((_, dayIndex) => {
-            const dateKey = isoDateOfDay(monday, dayIndex);
-            const dayBookings = byDate[dateKey] || [];
+            const dayBookings = dayLayouts[dayIndex];
             return (
               <div
                 key={dayIndex}
@@ -109,22 +147,25 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
                   <div key={h} style={{ position: 'absolute', top: (h - START_HOUR) * HOUR_H, left: 0, right: 0, height: 1, background: 'var(--border)', opacity: 0.6 }} />
                 ))}
                 {dayBookings.map(b => {
-                  const startMin = minutesFromMidnight(b.start_time);
-                  const endMin = minutesFromMidnight(b.end_time);
-                  const top = ((startMin - START_HOUR * 60) / 60) * HOUR_H;
-                  const height = Math.max(24, ((endMin - startMin) / 60) * HOUR_H);
+                  const top = ((b._startMin - START_HOUR * 60) / 60) * HOUR_H;
+                  const height = Math.max(24, ((b._endMin - b._startMin) / 60) * HOUR_H);
                   const isSt = b.meeting_type === 'st';
                   const primary = isSt ? 'var(--accent)' : '#8b5cf6';
                   const tertiary = isSt ? 'var(--accent-soft)' : 'rgba(139,92,246,0.12)';
                   const compact = height < 58;
                   const tiny = height < 38;
                   return (
-                    // Сыртқы <div> — тек орналасу контейнері (absolute top/height).
+                    // Сыртқы <div> — тек орналасу контейнері (absolute top/height,
+                    // қиылысатын броньдар үшін cf/wf бойынша баған да осында).
                     // Нақты басылатын беті — толық <a href> сілтеме: window.open()
                     // емес, нағыз anchor қолданамыз, себебі кейбір браузерлер
                     // JS window.open()-ды popup-блокатормен тоқтата алады, ал
                     // <a target="_blank"> ешқашан бұғатталмайды.
-                    <div key={b.id} className="wbc-slot" style={{ position: 'absolute', top, height, left: 3, right: 3 }}>
+                    <div key={b.id} className="wbc-slot" style={{
+                      position: 'absolute', top, height,
+                      left: `calc(${b._cf * 100}% + 3px)`,
+                      width: `calc(${b._wf * 100}% - 6px)`,
+                    }}>
                       <a
                         className="wbc-block"
                         href={b.meet_link}

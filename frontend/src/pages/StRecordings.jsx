@@ -49,6 +49,7 @@ export default function StRecordings() {
   const [showFilter, setShowFilter] = useState(false);
   const [modalSlot, setModalSlot] = useState(null); // { date, startTime } | null
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [coordinatorView, setCoordinatorView] = useState('calendar'); // 'calendar' | 'table'
   const monday = getFilterMonday(currentMonth, currentWeek);
 
   useEffect(() => {
@@ -377,17 +378,95 @@ export default function StRecordings() {
                 );
               })()
             ) : isCoordinator ? (
-              // ── Координатордың аггрегат-календары: сол ағымдағы барлық
-              // куратордың бекітілген уақыты бір календарьда, тек оқу үшін ──
-              loading ? (
-                <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Жүктелуде...</div>
-              ) : (
-                <WeekBookingCalendar
-                  monday={monday}
-                  bookings={rows.flatMap(r => (r.bookings || []).map(b => ({ ...b, curator_name: r.curator_name })))}
-                  readOnly
-                />
-              )
+              // ── Координатордың аггрегат-көрінісі: сол ағымдағы барлық
+              // куратордың деректері, тек оқу үшін. Күнтізбе немесе
+              // админдікіндей кесте түрінде таңдап қарауға болады. ──
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'inline-flex', gap: 4, padding: 4, borderRadius: 12, background: 'var(--surface2)', width: 'fit-content' }}>
+                  {[{ id: 'calendar', label: 'Күнтізбе' }, { id: 'table', label: 'Кесте' }].map(v => (
+                    <button key={v.id} onClick={() => setCoordinatorView(v.id)}
+                      style={{
+                        padding: '7px 16px', borderRadius: 9, fontSize: 12.5, fontWeight: 700, border: 'none', cursor: 'pointer',
+                        background: coordinatorView === v.id ? '#f59e0b' : 'transparent',
+                        color: coordinatorView === v.id ? '#fff' : 'var(--text-sub)',
+                      }}>
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+
+                {loading ? (
+                  <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Жүктелуде...</div>
+                ) : coordinatorView === 'calendar' ? (
+                  <WeekBookingCalendar
+                    monday={monday}
+                    bookings={rows.flatMap(r => (r.bookings || []).map(b => ({ ...b, curator_name: r.curator_name })))}
+                    readOnly
+                  />
+                ) : (
+                  <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
+                    <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 12.5, minWidth: 700 }}>
+                      <thead>
+                        <tr style={{ background: 'var(--surface2)', borderBottom: '1px solid var(--border)', color: 'var(--text-sub)', fontWeight: 700 }}>
+                          <th style={{ padding: '14px 16px' }}>Куратор аты-жөні</th>
+                          <th style={{ padding: '14px 12px', width: 110 }}>СТ тапсырды</th>
+                          <th style={{ padding: '14px 12px' }}>Запись сілтемелері</th>
+                          <th style={{ padding: '14px 12px' }}>Отслежка сілтемелері</th>
+                          <th style={{ padding: '14px 12px' }}>Ескеру керек жағдайлар</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.length === 0 ? (
+                          <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Кураторлар қосылмаған</td></tr>
+                        ) : rows.map((row) => {
+                          const videoLinks = row.video_links || (row.video_link ? [row.video_link] : []);
+                          const attendanceLinks = row.attendance_links || (row.attendance_link ? [row.attendance_link] : []);
+                          const bookings = row.bookings || [];
+                          return (
+                            <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                              <td style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--text)' }}>{row.curator_name}</td>
+                              <td style={{ padding: '12px', textAlign: 'center' }}>{row.students_count || '0'}</td>
+                              <td style={{ padding: '12px' }}>
+                                {videoLinks.length > 0 ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    {videoLinks.map((v, idx) => (
+                                      <a key={idx} href={v} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#2563eb', fontWeight: 600, textDecoration: 'none', fontSize: 11.5 }}>
+                                        <IconVideo style={{ width: 12, height: 12 }} /> Запись {videoLinks.length > 1 ? idx + 1 : ''}
+                                      </a>
+                                    ))}
+                                  </div>
+                                ) : bookings.length > 0 ? (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#d97706', fontSize: 11, fontWeight: 600 }}><IconClock style={{ width: 12, height: 12 }} /> Жазба дайындалуда</span>
+                                ) : (
+                                  <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>—</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '12px' }}>
+                                {attendanceLinks.length > 0 ? (
+                                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                    {attendanceLinks.map((a, idx) => (
+                                      <a key={idx} href={a} target="_blank" rel="noreferrer" title="Отслежка">
+                                        {SHEETS_LOGO
+                                          ? <img src={SHEETS_LOGO} alt="Отслежка" style={{ width: 18, height: 18 }} />
+                                          : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: '#059669', fontWeight: 600, fontSize: 11.5 }}><IconTable style={{ width: 12, height: 12 }} /> Отслежка {attendanceLinks.length > 1 ? idx + 1 : ''}</span>}
+                                      </a>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>—</span>
+                                )}
+                              </td>
+                              <td style={{ padding: '12px', color: 'var(--text-sub)' }}>{row.notes || '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
             <>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
