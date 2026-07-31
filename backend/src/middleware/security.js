@@ -2,6 +2,9 @@
 // Rate limiting + security headers middleware
 
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = require('express-rate-limit');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = require('../config/jwtSecret');
 
 // ── Rate limiters ──────────────────────────────────────────────────────────────
 
@@ -15,13 +18,34 @@ const loginLimiter = rateLimit({
   skipSuccessfulRequests: true, // сәтті кірулер есептелмейді
 });
 
-// API жалпы: 100 рет / минут
+// Токеннен пайдаланушы id-ін алады (аутентификацияланбаса — null).
+// apiLimiter `auth` middleware-ден БҰРЫН орындалады, сондықтан req.user
+// әлі жоқ — токенді осында өзіміз оқимыз.
+function authenticatedUserKey(req) {
+  const token = req.headers.authorization?.split(' ')[1] || req.query.token;
+  if (!token) return null;
+  try {
+    return String(jwt.verify(token, JWT_SECRET).id);
+  } catch {
+    return null;
+  }
+}
+
+// API жалпы: 100 рет / минут. Бір мектеп/ғимарат бір ортақ IP-мен
+// шықса, барлық кураторы бір "себетке" түсіп қалмас үшін, авторизация
+// бар сұраныстарды IP емес, нақты пайдаланушы id-і бойынша шектейміз —
+// әркімнің өз лимиті болады. Токен жоқ/жарамсыз сұраныстар ғана IP
+// бойынша шектеледі (мыс. логинге дейінгі сұраныстар).
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 100,
   message: { error: 'Тым көп сұраныс. Бір минуттан кейін қайталаңыз.' },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    const userKey = authenticatedUserKey(req);
+    return userKey ? `user:${userKey}` : ipKeyGenerator(req.ip);
+  },
 });
 
 // ── Security headers ──────────────────────────────────────────────────────────
@@ -59,4 +83,4 @@ const sanitizeInput = (req, res, next) => {
   next();
 };
 
-module.exports = { loginLimiter, apiLimiter, securityHeaders, sanitizeInput };
+module.exports = { loginLimiter, apiLimiter, securityHeaders, sanitizeInput, authenticatedUserKey };
