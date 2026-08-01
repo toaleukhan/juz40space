@@ -59,16 +59,18 @@ export default function StRecordings() {
 
   const [liveStatus, setLiveStatus] = useState({});
 
-  // Координатордың күнтізбе көрінісінде — бүгінгі Мит-тардың "қазір жүріп
-  // жатыр ма, неше адам бар" статусын мезгіл-мезгіл сұрап отырады (тек
-  // бүгінгі күн, өткен/келешек броньдарды сұраудың мағынасы жоқ).
+  // Координатордың күнтізбе көрінісінде — экранда тұрған аптаның Мит-тарының
+  // "қазір жүріп жатыр ма, неше адам бар" статусын мезгіл-мезгіл сұрап
+  // отырады. scheduled_date бойынша "бүгін" деп шектемейміз: куратор
+  // жоспарланған уақытынан тыс кіріп қалуы (не бронь мерзімі әдейі басқа
+  // күнге қойылуы) мүмкін — Google Meet API-дың өзі "лайв пе, жоқ па"
+  // растайды, бізге күнді болжаудың қажеті жоқ.
   useEffect(() => {
     if (!isCoordinator || coordinatorView !== 'calendar') return;
 
-    const todayIso = toLocalISODate(new Date());
     const codes = rows
       .flatMap(r => r.bookings || [])
-      .filter(b => b.meet_code && String(b.scheduled_date).slice(0, 10) === todayIso)
+      .filter(b => b.meet_code)
       .map(b => b.meet_code);
 
     if (!codes.length) return;
