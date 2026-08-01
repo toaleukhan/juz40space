@@ -7,7 +7,16 @@ const { getGoogleAuth } = require('../utils/googleAuth');
 const { syncRecordDrive } = require('../jobs/driveSync');
 const { retryGoogleApi, isRetryableGoogleError } = require('../utils/retryGoogleApi');
 const { notifyCoordinatorsOfBooking } = require('../utils/telegramNotify');
-const { getMeetStatus } = require('../utils/meetStatus');
+const { getMeetStatus, getMeetJournal } = require('../utils/meetStatus');
+
+// 0a. Бір Мит-тың толық қатысушылар журналы (кім қашан кірді/шықты) —
+// координатор карточкадағы "Журнал" батырмасын басқанда сұралады.
+router.get('/meet-journal', auth, async (req, res) => {
+  const code = String(req.query.code || '').trim();
+  if (!code) return res.json([]);
+  const journal = await getMeetJournal(req.user.subject, code);
+  res.json(journal);
+});
 
 // 0. Бір топ Мит-тың лайв статусы (координатор терезесіндегі "Жүріп жатыр
 // (N адам)" badge үшін) — meet_code бойынша Google Meet API-дан сұралады.
