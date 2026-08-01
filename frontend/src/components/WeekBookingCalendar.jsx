@@ -6,7 +6,11 @@ import { IconMeetLogo } from './icons';
 const DAY_LABELS = ['Дүйсенбі', 'Сейсенбі', 'Сәрсенбі', 'Бейсенбі', 'Жұма', 'Сенбі', 'Жексенбі'];
 const START_HOUR = 8;
 const END_HOUR = 22;
-const HOUR_H = 56;
+// 56px-те 60 минуттық бронь дәл "compact" шегінің астында қалып,
+// координатор badge-індегі қатысушылар саны сыймай қалатын — сағат
+// биіктігін ұлғайтып, қалыпты (60 мин) бронь толық ("compact" емес)
+// күйде, барлық ақпаратымен көрінетіндей еттік.
+const HOUR_H = 80;
 
 export function getMonday(date = new Date()) {
   const d = new Date(date);
