@@ -208,30 +208,38 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
                             {isSt ? 'СТ' : 'Жеке сөйлесу'}{isSt && b.students_count ? ` · ${b.students_count} оқ.` : ''}
                           </span>
                         </div>
-                        {!tiny && b.curator_name && (
-                          <div style={{
-                            fontSize: 9.5, fontWeight: 600, color: primary, opacity: 0.75,
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          }}>
-                            {b.curator_name}
-                          </div>
-                        )}
-                        {!tiny && readOnly && liveStatus && (() => {
-                          const badge = resolveMeetBadge(b, liveStatus);
-                          return badge ? (
-                            <div style={{
-                              display: 'flex', alignItems: 'center', gap: 4,
-                              fontSize: 9, fontWeight: 700, color: badge.color,
-                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            }}>
-                              {badge.pulse && (
-                                <span className="wbc-live-dot" style={{
-                                  width: 6, height: 6, borderRadius: '50%', background: badge.color, flexShrink: 0,
-                                }} />
+                        {!tiny && (() => {
+                          const badge = readOnly && liveStatus ? resolveMeetBadge(b, liveStatus) : null;
+                          // Тар карточкада (compact) куратор аты мен лайв badge
+                          // екеуі сыймайды — badge маңыздырақ ақпарат болғандықтан
+                          // сонда есімнің орнына соны көрсетеміз.
+                          const showName = b.curator_name && !(compact && badge);
+                          return (
+                            <>
+                              {showName && (
+                                <div style={{
+                                  fontSize: 9.5, fontWeight: 600, color: primary, opacity: 0.75,
+                                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                }}>
+                                  {b.curator_name}
+                                </div>
                               )}
-                              {badge.label}
-                            </div>
-                          ) : null;
+                              {badge && (
+                                <div style={{
+                                  display: 'flex', alignItems: 'center', gap: 4,
+                                  fontSize: 9, fontWeight: 700, color: badge.color,
+                                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                }}>
+                                  {badge.pulse && (
+                                    <span className="wbc-live-dot" style={{
+                                      width: 6, height: 6, borderRadius: '50%', background: badge.color, flexShrink: 0,
+                                    }} />
+                                  )}
+                                  {badge.label}
+                                </div>
+                              )}
+                            </>
+                          );
                         })()}
                         {!tiny && (
                           <span style={{
