@@ -82,7 +82,22 @@ export function layoutDayBookings(dayBookings) {
   return result.map(b => ({ ...b, _cf: b._ci / totalCols, _wf: 1 / totalCols }));
 }
 
-export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onDeleteBooking, readOnly }) {
+// Броньның scheduled_date/start_time/end_time-ін ағымдағы уақытпен
+// салыстырып, liveStatus (Google Meet API-дан келген {live, participantCount})
+// болмаса да "Жоспарда/Аяқталды" деп шамалап көрсетеді.
+function resolveMeetBadge(booking, liveStatus) {
+  const status = liveStatus?.[booking.meet_code];
+  const now = Date.now();
+  const start = new Date(`${String(booking.scheduled_date).slice(0, 10)}T${booking.start_time}`).getTime();
+  const end = new Date(`${String(booking.scheduled_date).slice(0, 10)}T${booking.end_time}`).getTime();
+
+  if (status?.live) return { label: `Жүріп жатыр · ${status.participantCount ?? 0} адам`, color: '#10b981', pulse: true };
+  if (now > end) return { label: 'Аяқталды', color: 'var(--text-muted)', pulse: false };
+  if (now >= start) return { label: 'Әлі кірмеді', color: '#d97706', pulse: false };
+  return null;
+}
+
+export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onDeleteBooking, readOnly, liveStatus }) {
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
   const totalH = (END_HOUR - START_HOUR) * HOUR_H;
 
@@ -201,6 +216,23 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
                             {b.curator_name}
                           </div>
                         )}
+                        {!tiny && readOnly && liveStatus && (() => {
+                          const badge = resolveMeetBadge(b, liveStatus);
+                          return badge ? (
+                            <div style={{
+                              display: 'flex', alignItems: 'center', gap: 4,
+                              fontSize: 9, fontWeight: 700, color: badge.color,
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>
+                              {badge.pulse && (
+                                <span className="wbc-live-dot" style={{
+                                  width: 6, height: 6, borderRadius: '50%', background: badge.color, flexShrink: 0,
+                                }} />
+                              )}
+                              {badge.label}
+                            </div>
+                          ) : null;
+                        })()}
                         {!tiny && (
                           <span style={{
                             alignSelf: 'flex-start', marginTop: 'auto', fontSize: 9, color: '#fff', background: primary,
