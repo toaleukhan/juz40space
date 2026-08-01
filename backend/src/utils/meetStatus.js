@@ -32,6 +32,19 @@ async function countActiveParticipants(accessToken, conferenceRecordName) {
   return count;
 }
 
+// Жазба (recording) кімде-кім "Record" басқанда ғана пайда болады —
+// state: 'STARTED' болса әлі жазылып жатыр, 'ENDED'/'FILE_GENERATED' болса
+// тоқтаған. autoRecordingGeneration өшірулі болса (әдепкі), ешкім баспаса
+// мүлде жазба ресурсы болмайды — бос тізім қалыпты жағдай.
+async function isRecordingActive(accessToken, conferenceRecordName) {
+  const res = await fetch(`https://meet.googleapis.com/v2/${conferenceRecordName}/recordings`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) return false;
+  const body = await res.json();
+  return (body.recordings || []).some(r => r.state === 'STARTED');
+}
+
 async function getMeetStatus(subject, meetCode) {
   if (!meetCode) return { live: null };
 
@@ -51,8 +64,11 @@ async function getMeetStatus(subject, meetCode) {
         if (!conferenceRecord) {
           data = { live: false };
         } else {
-          const participantCount = await countActiveParticipants(accessToken, conferenceRecord);
-          data = { live: true, participantCount };
+          const [participantCount, recording] = await Promise.all([
+            countActiveParticipants(accessToken, conferenceRecord),
+            isRecordingActive(accessToken, conferenceRecord),
+          ]);
+          data = { live: true, participantCount, recording };
         }
       }
     }

@@ -91,7 +91,12 @@ function resolveMeetBadge(booking, liveStatus) {
   const start = new Date(`${String(booking.scheduled_date).slice(0, 10)}T${booking.start_time}`).getTime();
   const end = new Date(`${String(booking.scheduled_date).slice(0, 10)}T${booking.end_time}`).getTime();
 
-  if (status?.live) return { label: `Жүріп жатыр · ${status.participantCount ?? 0} адам`, color: '#10b981', pulse: true };
+  if (status?.live) {
+    return {
+      label: `Жүріп жатыр · ${status.participantCount ?? 0} адам${status.recording ? ' · ЖАЗЫЛУДА' : ''}`,
+      color: '#10b981', pulse: true, recording: !!status.recording,
+    };
+  }
   if (now > end) return { label: 'Аяқталды', color: 'var(--text-muted)', pulse: false };
   if (now >= start) return { label: 'Әлі кірмеді', color: '#d97706', pulse: false };
   return null;
@@ -198,48 +203,65 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
                           textDecoration: 'none',
                         }}
                       >
-                        <div style={{
-                          display: 'flex', alignItems: 'center', gap: 4,
-                          fontSize: tiny ? 9.5 : 11, fontWeight: 800, color: primary, lineHeight: 1.25,
-                          overflow: 'hidden', whiteSpace: 'nowrap', paddingRight: 16,
-                        }}>
-                          <IconMeetLogo style={{ width: tiny ? 10 : 12, height: tiny ? 10 : 12, flexShrink: 0 }} />
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {isSt ? 'СТ' : 'Жеке сөйлесу'}{isSt && b.students_count ? ` · ${b.students_count} оқ.` : ''}
-                          </span>
-                        </div>
-                        {!tiny && (() => {
+                        {(() => {
                           const badge = readOnly && liveStatus ? resolveMeetBadge(b, liveStatus) : null;
-                          // Тар карточкада (compact) куратор аты мен лайв badge
-                          // екеуі сыймайды — badge маңыздырақ ақпарат болғандықтан
-                          // сонда есімнің орнына соны көрсетеміз.
-                          const showName = b.curator_name && !(compact && badge);
                           return (
-                            <>
-                              {showName && (
-                                <div style={{
-                                  fontSize: 9.5, fontWeight: 600, color: primary, opacity: 0.75,
-                                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                }}>
-                                  {b.curator_name}
-                                </div>
-                              )}
+                            <div style={{
+                              display: 'flex', alignItems: 'center', gap: 4,
+                              fontSize: tiny ? 9.5 : 11, fontWeight: 800, color: primary, lineHeight: 1.25,
+                              overflow: 'hidden', whiteSpace: 'nowrap', paddingRight: 16,
+                            }}>
+                              <IconMeetLogo style={{ width: tiny ? 10 : 12, height: tiny ? 10 : 12, flexShrink: 0 }} />
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {isSt ? 'СТ' : 'Жеке сөйлесу'}{isSt && b.students_count ? ` · ${b.students_count} оқ.` : ''}
+                              </span>
+                              {/* Тар карточкада есімге орын қалмаса да, куратордың
+                                  атын жоғалтпау үшін статус — түсті нүкте ретінде
+                                  осында, тақырып жанында қалады (hover-де толық
+                                  жазуы title атрибутынан көрінеді). */}
                               {badge && (
-                                <div style={{
-                                  display: 'flex', alignItems: 'center', gap: 4,
-                                  fontSize: 9, fontWeight: 700, color: badge.color,
-                                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                }}>
-                                  {badge.pulse && (
-                                    <span className="wbc-live-dot" style={{
-                                      width: 6, height: 6, borderRadius: '50%', background: badge.color, flexShrink: 0,
-                                    }} />
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 3, marginLeft: 'auto' }}>
+                                  {badge.recording && (
+                                    <span
+                                      className="wbc-live-dot"
+                                      title="Жазылып жатыр"
+                                      style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', flexShrink: 0 }}
+                                    />
                                   )}
-                                  {badge.label}
-                                </div>
+                                  <span
+                                    className={badge.pulse ? 'wbc-live-dot' : undefined}
+                                    title={badge.label}
+                                    style={{ width: 6, height: 6, borderRadius: '50%', background: badge.color, flexShrink: 0 }}
+                                  />
+                                </span>
                               )}
-                            </>
+                            </div>
                           );
+                        })()}
+                        {!tiny && b.curator_name && (
+                          <div style={{
+                            fontSize: 9.5, fontWeight: 600, color: primary, opacity: 0.75,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                            {b.curator_name}
+                          </div>
+                        )}
+                        {!tiny && !compact && (() => {
+                          const badge = readOnly && liveStatus ? resolveMeetBadge(b, liveStatus) : null;
+                          return badge ? (
+                            <div style={{
+                              display: 'flex', alignItems: 'center', gap: 4,
+                              fontSize: 9, fontWeight: 700, color: badge.color,
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>
+                              {badge.pulse && (
+                                <span className="wbc-live-dot" style={{
+                                  width: 6, height: 6, borderRadius: '50%', background: badge.color, flexShrink: 0,
+                                }} />
+                              )}
+                              {badge.label}
+                            </div>
+                          ) : null;
                         })()}
                         {!tiny && (
                           <span style={{
