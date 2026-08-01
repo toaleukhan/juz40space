@@ -1,12 +1,16 @@
 // Куратордың өз аптасының Google Calendar-тәрізді уақыт кестесі: бос
 // уақытты басса — жаңа бронь (СТ немесе жеке сөйлесу) жасауға модал ашылады,
 // бар броньдар түрлі-түсті блок ретінде көрінеді.
-import { IconMeetLogo } from './icons';
+import { IconMeetLogo, IconUsers } from './icons';
 
 const DAY_LABELS = ['Дүйсенбі', 'Сейсенбі', 'Сәрсенбі', 'Бейсенбі', 'Жұма', 'Сенбі', 'Жексенбі'];
 const START_HOUR = 8;
 const END_HOUR = 22;
-const HOUR_H = 56;
+// 56px-те 60 минуттық бронь дәл "compact" шегінің астында қалып,
+// координатор badge-індегі қатысушылар саны сыймай қалатын — сағат
+// биіктігін ұлғайтып, қалыпты (60 мин) бронь толық ("compact" емес)
+// күйде, барлық ақпаратымен көрінетіндей еттік.
+const HOUR_H = 80;
 
 export function getMonday(date = new Date()) {
   const d = new Date(date);
@@ -102,7 +106,7 @@ function resolveMeetBadge(booking, liveStatus) {
   return null;
 }
 
-export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onDeleteBooking, readOnly, liveStatus }) {
+export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onDeleteBooking, readOnly, liveStatus, onOpenJournal }) {
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
   const totalH = (END_HOUR - START_HOUR) * HOUR_H;
 
@@ -283,6 +287,18 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
                             display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0,
                           }}
                         >×</button>
+                      )}
+                      {readOnly && b.meet_code && onOpenJournal && (
+                        <button
+                          className="wbc-del"
+                          title="Қатысушылар журналы"
+                          onClick={(e) => { e.stopPropagation(); onOpenJournal(b); }}
+                          style={{
+                            position: 'absolute', top: 3, right: 3, zIndex: 2, width: 16, height: 16, borderRadius: '50%',
+                            border: 'none', background: 'rgba(0,0,0,0.14)', color: primary, fontSize: 11, lineHeight: 1,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0,
+                          }}
+                        ><IconUsers style={{ width: 9, height: 9 }} /></button>
                       )}
                     </div>
                   );

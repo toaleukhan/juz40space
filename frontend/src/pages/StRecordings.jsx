@@ -8,6 +8,7 @@ import { SHEETS_LOGO } from '../components/brandLogos';
 import { IconMeetLogo, IconBolt, IconVideo, IconClock, IconClose, IconTable } from '../components/icons';
 import WeekBookingCalendar, { getFilterMonday, minutesToTime, toLocalISODate } from '../components/WeekBookingCalendar';
 import BookingModal from '../components/BookingModal';
+import MeetJournalModal from '../components/MeetJournalModal';
 
 const SUBJECTS = [
   { code:'ФИЗ',   name:'Физика',           months: 5 },
@@ -58,15 +59,17 @@ export default function StRecordings() {
   }, [currentSubjectCode, currentStream, currentMonth, currentWeek]);
 
   const [liveStatus, setLiveStatus] = useState({});
+  const [journalBooking, setJournalBooking] = useState(null); // { meet_code, curator_name } | null
 
-  // Координатордың күнтізбе көрінісінде — экранда тұрған аптаның Мит-тарының
-  // "қазір жүріп жатыр ма, неше адам бар" статусын мезгіл-мезгіл сұрап
-  // отырады. scheduled_date бойынша "бүгін" деп шектемейміз: куратор
-  // жоспарланған уақытынан тыс кіріп қалуы (не бронь мерзімі әдейі басқа
-  // күнге қойылуы) мүмкін — Google Meet API-дың өзі "лайв пе, жоқ па"
-  // растайды, бізге күнді болжаудың қажеті жоқ.
+  // Координатор экранында (Күнтізбе де, Кесте де — жоғарғы жиынтық жолақ
+  // екеуінде де көрінеді) — экранда тұрған аптаның Мит-тарының "қазір жүріп
+  // жатыр ма, неше адам бар" статусын мезгіл-мезгіл сұрап отырады.
+  // scheduled_date бойынша "бүгін" деп шектемейміз: куратор жоспарланған
+  // уақытынан тыс кіріп қалуы (не бронь мерзімі әдейі басқа күнге қойылуы)
+  // мүмкін — Google Meet API-дың өзі "лайв пе, жоқ па" растайды, бізге
+  // күнді болжаудың қажеті жоқ.
   useEffect(() => {
-    if (!isCoordinator || coordinatorView !== 'calendar') return;
+    if (!isCoordinator) return;
 
     const codes = rows
       .flatMap(r => r.bookings || [])
@@ -427,6 +430,31 @@ export default function StRecordings() {
                   ))}
                 </div>
 
+                {(() => {
+                  const liveEntries = Object.values(liveStatus).filter(s => s.live);
+                  if (!liveEntries.length) return null;
+                  const recordingCount = liveEntries.filter(s => s.recording).length;
+                  const totalParticipants = liveEntries.reduce((sum, s) => sum + (s.participantCount || 0), 0);
+                  return (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+                      padding: '10px 16px', borderRadius: 12, background: 'var(--surface2)', border: '1px solid var(--border)',
+                      fontSize: 12.5, fontWeight: 700, color: 'var(--text)',
+                    }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span className="wbc-live-dot" style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981' }} />
+                        Қазір {liveEntries.length} Мит жүріп жатыр · {totalParticipants} адам
+                      </span>
+                      {recordingCount > 0 && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#ef4444' }}>
+                          <span className="wbc-live-dot" style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444' }} />
+                          {recordingCount} жазылуда
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {loading ? (
                   <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Жүктелуде...</div>
                 ) : coordinatorView === 'calendar' ? (
@@ -435,6 +463,7 @@ export default function StRecordings() {
                     bookings={rows.flatMap(r => (r.bookings || []).map(b => ({ ...b, curator_name: r.curator_name })))}
                     readOnly
                     liveStatus={liveStatus}
+                    onOpenJournal={setJournalBooking}
                   />
                 ) : (
                   <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
@@ -634,6 +663,14 @@ export default function StRecordings() {
           onClose={() => setModalSlot(null)}
           onSubmit={handleCreateBooking}
           loading={bookingLoading}
+        />
+      )}
+
+      {journalBooking && (
+        <MeetJournalModal
+          meetCode={journalBooking.meet_code}
+          curatorName={journalBooking.curator_name}
+          onClose={() => setJournalBooking(null)}
         />
       )}
     </div>
