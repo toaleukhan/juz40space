@@ -91,7 +91,12 @@ function resolveMeetBadge(booking, liveStatus) {
   const start = new Date(`${String(booking.scheduled_date).slice(0, 10)}T${booking.start_time}`).getTime();
   const end = new Date(`${String(booking.scheduled_date).slice(0, 10)}T${booking.end_time}`).getTime();
 
-  if (status?.live) return { label: `Жүріп жатыр · ${status.participantCount ?? 0} адам`, color: '#10b981', pulse: true };
+  if (status?.live) {
+    return {
+      label: `Жүріп жатыр · ${status.participantCount ?? 0} адам${status.recording ? ' · ЖАЗЫЛУДА' : ''}`,
+      color: '#10b981', pulse: true, recording: !!status.recording,
+    };
+  }
   if (now > end) return { label: 'Аяқталды', color: 'var(--text-muted)', pulse: false };
   if (now >= start) return { label: 'Әлі кірмеді', color: '#d97706', pulse: false };
   return null;
@@ -215,14 +220,20 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
                                   осында, тақырып жанында қалады (hover-де толық
                                   жазуы title атрибутынан көрінеді). */}
                               {badge && (
-                                <span
-                                  className={badge.pulse ? 'wbc-live-dot' : undefined}
-                                  title={badge.label}
-                                  style={{
-                                    width: 6, height: 6, borderRadius: '50%', background: badge.color,
-                                    flexShrink: 0, marginLeft: 'auto',
-                                  }}
-                                />
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 3, marginLeft: 'auto' }}>
+                                  {badge.recording && (
+                                    <span
+                                      className="wbc-live-dot"
+                                      title="Жазылып жатыр"
+                                      style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', flexShrink: 0 }}
+                                    />
+                                  )}
+                                  <span
+                                    className={badge.pulse ? 'wbc-live-dot' : undefined}
+                                    title={badge.label}
+                                    style={{ width: 6, height: 6, borderRadius: '50%', background: badge.color, flexShrink: 0 }}
+                                  />
+                                </span>
                               )}
                             </div>
                           );
