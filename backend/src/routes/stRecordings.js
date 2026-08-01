@@ -7,6 +7,26 @@ const { getGoogleAuth } = require('../utils/googleAuth');
 const { syncRecordDrive } = require('../jobs/driveSync');
 const { retryGoogleApi, isRetryableGoogleError } = require('../utils/retryGoogleApi');
 const { notifyCoordinatorsOfBooking } = require('../utils/telegramNotify');
+const { getMeetStatus } = require('../utils/meetStatus');
+
+// 0. Бір топ Мит-тың лайв статусы (координатор терезесіндегі "Жүріп жатыр
+// (N адам)" badge үшін) — meet_code бойынша Google Meet API-дан сұралады.
+// Scope жоқ пәндерде live=null қайтады, бұл фронтта badge-ті жай көрсетпей
+// қалдырады.
+router.get('/meet-status', auth, async (req, res) => {
+  const codes = String(req.query.codes || '')
+    .split(',')
+    .map(c => c.trim())
+    .filter(Boolean)
+    .slice(0, 50);
+  if (!codes.length) return res.json({});
+
+  const subject = req.user.subject;
+  const entries = await Promise.all(
+    codes.map(async (code) => [code, await getMeetStatus(subject, code)])
+  );
+  res.json(Object.fromEntries(entries));
+});
 
 // 1. СТ Кестесін алу (КУРАТОРҒА ТЕК ӨЗ ДЕРЕКТЕРІ КӨРІНЕДІ)
 router.get('/', auth, async (req, res) => {

@@ -57,6 +57,37 @@ export default function StRecordings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSubjectCode, currentStream, currentMonth, currentWeek]);
 
+  const [liveStatus, setLiveStatus] = useState({});
+
+  // Координатордың күнтізбе көрінісінде — бүгінгі Мит-тардың "қазір жүріп
+  // жатыр ма, неше адам бар" статусын мезгіл-мезгіл сұрап отырады (тек
+  // бүгінгі күн, өткен/келешек броньдарды сұраудың мағынасы жоқ).
+  useEffect(() => {
+    if (!isCoordinator || coordinatorView !== 'calendar') return;
+
+    const todayIso = toLocalISODate(new Date());
+    const codes = rows
+      .flatMap(r => r.bookings || [])
+      .filter(b => b.meet_code && String(b.scheduled_date).slice(0, 10) === todayIso)
+      .map(b => b.meet_code);
+
+    if (!codes.length) return;
+
+    let cancelled = false;
+    const fetchStatus = async () => {
+      try {
+        const { data } = await api.get(`/st-recordings/meet-status?codes=${codes.join(',')}`);
+        if (!cancelled) setLiveStatus(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 20000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [isCoordinator, coordinatorView, rows]);
+
   const updateFilters = (newParams) => {
     const updated = new URLSearchParams(searchParams);
     Object.entries(newParams).forEach(([k, v]) => {
@@ -401,6 +432,7 @@ export default function StRecordings() {
                     monday={monday}
                     bookings={rows.flatMap(r => (r.bookings || []).map(b => ({ ...b, curator_name: r.curator_name })))}
                     readOnly
+                    liveStatus={liveStatus}
                   />
                 ) : (
                   <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
