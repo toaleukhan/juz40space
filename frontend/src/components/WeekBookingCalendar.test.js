@@ -7,20 +7,21 @@ import {
   layoutDayBookings,
 } from './WeekBookingCalendar';
 
-// Бұл файлдағы даталар осы сессияда нақты өндірісте расталған үш нүктеге
-// сүйенеді: 1-ай/1-апта = 2026-07-06 (дүйсенбі), 1-ай/4-апта = 2026-07-27,
-// 2-ай/1-апта = 2026-08-03 (келесі апта).
+// Даталар сапа бөлімінің "SMART | СТ ЗАПИСЬ" кестесінен алынған: сол
+// кестеде 1-ай/3-апта = 27.07, 1-ай/4-апта = 03.08. Қалғаны содан шығады:
+// 1-ай/1-апта = 13.07, 2-ай/1-апта = 10.08.
 describe('getFilterMonday', () => {
-  it('anchors month 1 / week 1 to 2026-07-06', () => {
-    expect(toLocalISODate(getFilterMonday(1, 1))).toBe('2026-07-06');
+  it('anchors month 1 / week 1 to 2026-07-13', () => {
+    expect(toLocalISODate(getFilterMonday(1, 1))).toBe('2026-07-13');
   });
 
   it('advances by 7 days per week within the same month', () => {
-    expect(toLocalISODate(getFilterMonday(1, 4))).toBe('2026-07-27');
+    expect(toLocalISODate(getFilterMonday(1, 3))).toBe('2026-07-27');
+    expect(toLocalISODate(getFilterMonday(1, 4))).toBe('2026-08-03');
   });
 
   it('rolls over into the next month after 4 weeks', () => {
-    expect(toLocalISODate(getFilterMonday(2, 1))).toBe('2026-08-03');
+    expect(toLocalISODate(getFilterMonday(2, 1))).toBe('2026-08-10');
   });
 });
 
@@ -38,12 +39,12 @@ describe('toLocalISODate', () => {
 
 describe('isoDateOfDay', () => {
   it('returns the Monday itself at dayIndex 0', () => {
-    const monday = getFilterMonday(1, 4);
+    const monday = getFilterMonday(1, 3);
     expect(isoDateOfDay(monday, 0)).toBe('2026-07-27');
   });
 
   it('rolls over the month boundary correctly at dayIndex 6 (Sunday)', () => {
-    const monday = getFilterMonday(1, 4);
+    const monday = getFilterMonday(1, 3);
     expect(isoDateOfDay(monday, 6)).toBe('2026-08-02');
   });
 });
