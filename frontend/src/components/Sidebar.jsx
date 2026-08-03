@@ -4,43 +4,68 @@ import useIsMobile from '../hooks/useIsMobile';
 import juz40Logo from '../assets/juz40-logo.png';
 import { IconMenu, IconClose, IconUser, IconCalendar, IconVideo, IconUsers, IconLogout, IconChart } from './icons';
 
-export const RAIL_WIDTH = 68;
-export const RAIL_WIDTH_EXPANDED = 236;
+// Панель беттің шетіне жабыспай, айналасында бос орын қалдырып "қалқып"
+// тұрады — сондықтан ені мен шет аралығы бөлек. .app-shell-дің сол жақ
+// padding-і осы үшеуінің қосындысына тең болуы керек (index.css: 84px).
+export const RAIL_INSET = 10;
+export const RAIL_WIDTH = 64;
+// "Кураторлар базасы" — ең ұзын жазу; ені содан аз болса, ол да, куратордың
+// аты-жөні де көп нүктемен қиылып қалады.
+export const RAIL_WIDTH_EXPANDED = 252;
 
-// Hover/active күйлерін inline style жаза алмайды, сондықтан осы шағын
-// парақша. Белсенді сілтеме — қанық градиент емес, жай ғана баса көрсететін
-// жұмсақ фон: көз шаршатпайды әрі қай бетте тұрғаныңыз бірден оқылады.
+// Сайдбар — түсті екпінсіз, таза сұр-ақ аймақ. Беттің өзі көгілдір
+// градиент болғандықтан, ақ панель одан өзі бөлініп тұрады: жиек те,
+// бренд түсі де қажет емес. Белсенді сілтеме — ашық сұр таңба, түсті
+// батырма емес.
 const SIDEBAR_CSS = `
+  .sb-panel {
+    --sb-hover:  rgba(10,42,53,0.045);
+    --sb-active: rgba(10,42,53,0.075);
+    --sb-text:   #64757d;
+    --sb-strong: #10262f;
+    --sb-faint:  #9aa9b0;
+  }
+  [data-theme="dark"] .sb-panel {
+    --sb-hover:  rgba(255,255,255,0.055);
+    --sb-active: rgba(255,255,255,0.09);
+    --sb-text:   #8fa3ab;
+    --sb-strong: #eaf3f5;
+    --sb-faint:  #5d7079;
+  }
+
   .sb-link {
     display: flex; align-items: center; gap: 11px;
-    border-radius: 10px; text-decoration: none;
-    font-size: 13.5px; font-weight: 500; line-height: 1;
-    color: var(--text-sub); background: transparent;
+    border-radius: 9px; text-decoration: none;
+    font-size: 13.5px; font-weight: 450; line-height: 1;
+    color: var(--sb-text); background: transparent;
     white-space: nowrap; overflow: hidden;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background 0.13s ease, color 0.13s ease;
   }
-  .sb-link:hover { background: var(--surface2); color: var(--text); }
-  .sb-link.is-active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-  .sb-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .sb-link:hover { background: var(--sb-hover); color: var(--sb-strong); }
+  .sb-link.is-active { background: var(--sb-active); color: var(--sb-strong); font-weight: 550; }
+  .sb-link:focus-visible { outline: 2px solid var(--sb-strong); outline-offset: -2px; }
+  .sb-link svg { stroke-width: 1.6; opacity: 0.85; }
+  .sb-link.is-active svg { opacity: 1; }
 
   .sb-logout {
     display: flex; align-items: center; gap: 11px;
     width: 100%; border: none; background: transparent; cursor: pointer;
-    border-radius: 10px; font-family: inherit;
-    font-size: 13px; font-weight: 500; color: var(--text-muted);
+    border-radius: 9px; font-family: inherit;
+    font-size: 13px; font-weight: 450; color: var(--sb-faint);
     white-space: nowrap; overflow: hidden;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background 0.13s ease, color 0.13s ease;
   }
-  .sb-logout:hover { background: rgba(239,68,68,0.10); color: #dc2626; }
-  .sb-logout:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .sb-logout:hover { background: var(--sb-hover); color: var(--sb-strong); }
+  .sb-logout:focus-visible { outline: 2px solid var(--sb-strong); outline-offset: -2px; }
+  .sb-logout svg { stroke-width: 1.6; }
 
   .sb-icon-btn {
     display: flex; align-items: center; justify-content: center;
-    border-radius: 9px; border: 1px solid var(--border);
-    background: var(--surface2); color: var(--text-sub); cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    border-radius: 9px; border: none;
+    background: var(--sb-hover); color: var(--sb-text); cursor: pointer;
+    transition: background 0.13s ease, color 0.13s ease;
   }
-  .sb-icon-btn:hover { background: var(--surface); color: var(--text); }
+  .sb-icon-btn:hover { background: var(--sb-active); color: var(--sb-strong); }
 `;
 
 function SidebarContent({ collapsed, onNavigate }) {
@@ -87,25 +112,24 @@ function SidebarContent({ collapsed, onNavigate }) {
     : isCoordinator ? 'Координатор'
     : 'Басқарушы';
 
-  const rowPad = collapsed ? { padding: '11px 0', justifyContent: 'center' } : { padding: '10px 12px' };
+  const rowPad = collapsed ? { padding: '11px 0', justifyContent: 'center' } : { padding: '10px 11px' };
 
   return (
     <>
-      <style>{SIDEBAR_CSS}</style>
-
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 10, height: 30, marginBottom: 22,
+        display: 'flex', alignItems: 'center', gap: 10, height: 28, marginBottom: 20,
+        padding: collapsed ? 0 : '0 3px',
         justifyContent: collapsed ? 'center' : 'flex-start',
       }}>
-        <img src={juz40Logo} alt="JUZ40" style={{ height: 26, width: 26, objectFit: 'contain', flexShrink: 0 }} />
+        <img src={juz40Logo} alt="JUZ40" style={{ height: 24, width: 24, objectFit: 'contain', flexShrink: 0, borderRadius: 6 }} />
         {!collapsed && (
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.2px', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--sb-strong)', letterSpacing: '-0.1px', whiteSpace: 'nowrap' }}>
             JUZ40
           </span>
         )}
       </div>
 
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1 }}>
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
         {links.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
@@ -121,17 +145,17 @@ function SidebarContent({ collapsed, onNavigate }) {
         ))}
       </nav>
 
-      <div style={{ marginTop: 'auto', paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+      <div style={{ marginTop: 'auto' }}>
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 11, marginBottom: 4,
-          padding: collapsed ? '8px 0' : '8px 12px',
+          display: 'flex', alignItems: 'center', gap: 11, marginBottom: 2,
+          padding: collapsed ? '8px 0' : '8px 11px',
           justifyContent: collapsed ? 'center' : 'flex-start',
         }}>
           <div style={{
-            width: 28, height: 28, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-            background: 'var(--accent-soft)', color: 'var(--accent)',
+            width: 26, height: 26, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+            background: 'var(--sb-active)', color: 'var(--sb-strong)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 700, fontSize: 12,
+            fontWeight: 600, fontSize: 11,
           }}>
             {user.avatarUrl
               ? <img src={user.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -139,10 +163,10 @@ function SidebarContent({ collapsed, onNavigate }) {
           </div>
           {!collapsed && (
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 12.5, fontWeight: 550, color: 'var(--sb-strong)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {user.fullName || user.username}
               </div>
-              <div style={{ fontSize: 10.5, color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 10.5, color: 'var(--sb-faint)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {roleLine}
               </div>
             </div>
@@ -165,53 +189,55 @@ export default function Sidebar() {
   if (!isMobile) {
     const expanded = hovered;
     return (
-      <aside
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          width: expanded ? RAIL_WIDTH_EXPANDED : RAIL_WIDTH,
-          flexShrink: 0, background: 'var(--sidebar-bg)',
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          borderRight: '1px solid var(--border)',
-          display: 'flex', flexDirection: 'column', height: '100vh',
-          position: 'fixed', top: 0, left: 0, padding: '20px 12px', zIndex: 60,
-          overflow: 'hidden', transition: 'width 0.18s ease, box-shadow 0.18s ease',
-          boxShadow: expanded ? '1px 0 24px rgba(0,0,0,0.06)' : 'none',
-        }}>
-        <SidebarContent collapsed={!expanded} />
-      </aside>
+      <>
+        <style>{SIDEBAR_CSS}</style>
+        <aside
+          className="sb-panel"
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          style={{
+            width: expanded ? RAIL_WIDTH_EXPANDED : RAIL_WIDTH,
+            position: 'fixed', top: RAIL_INSET, left: RAIL_INSET, bottom: RAIL_INSET, zIndex: 60,
+            background: 'var(--surface-solid)', borderRadius: 16,
+            boxShadow: '0 1px 2px rgba(16,38,47,0.05), 0 10px 30px -12px rgba(16,38,47,0.16)',
+            display: 'flex', flexDirection: 'column', padding: '16px 10px',
+            overflow: 'hidden', transition: 'width 0.18s ease',
+          }}>
+          <SidebarContent collapsed={!expanded} />
+        </aside>
+      </>
     );
   }
 
   return (
     <>
-      <div style={{
+      <style>{SIDEBAR_CSS}</style>
+      <div className="sb-panel" style={{
         position: 'sticky', top: 0, zIndex: 60, height: 54, flexShrink: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px',
-        background: 'var(--header-bg)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid var(--border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px',
+        background: 'var(--surface-solid)',
+        boxShadow: '0 1px 2px rgba(16,38,47,0.06)',
       }}>
-        <style>{SIDEBAR_CSS}</style>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <img src={juz40Logo} alt="JUZ40" style={{ height: 24, width: 24, objectFit: 'contain' }} />
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.2px' }}>JUZ40</span>
+          <img src={juz40Logo} alt="JUZ40" style={{ height: 23, width: 23, objectFit: 'contain', borderRadius: 6 }} />
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--sb-strong)', letterSpacing: '-0.1px' }}>JUZ40</span>
         </div>
-        <button onClick={() => setOpen(true)} aria-label="Меню" className="sb-icon-btn" style={{ width: 36, height: 36 }}>
+        <button onClick={() => setOpen(true)} aria-label="Меню" className="sb-icon-btn" style={{ width: 34, height: 34 }}>
           <IconMenu />
         </button>
       </div>
 
       {open && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex' }}>
-          <div onClick={() => setOpen(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)' }} />
-          <aside style={{
-            position: 'relative', width: 'min(80vw, 272px)', height: '100%',
-            background: 'var(--surface-solid, var(--surface))',
-            display: 'flex', flexDirection: 'column', padding: '16px 14px',
-            boxShadow: '1px 0 32px rgba(0,0,0,0.16)', overflow: 'hidden',
+          <div onClick={() => setOpen(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(16,38,47,0.32)' }} />
+          <aside className="sb-panel" style={{
+            position: 'relative', width: 'min(78vw, 258px)',
+            margin: 10, borderRadius: 16, background: 'var(--surface-solid)',
+            display: 'flex', flexDirection: 'column', padding: '14px 10px',
+            boxShadow: '0 10px 40px -8px rgba(16,38,47,0.30)', overflow: 'hidden',
           }}>
             <button onClick={() => setOpen(false)} aria-label="Жабу" className="sb-icon-btn"
-              style={{ alignSelf: 'flex-end', width: 30, height: 30, marginBottom: 8 }}>
+              style={{ alignSelf: 'flex-end', width: 28, height: 28, marginBottom: 6 }}>
               <IconClose />
             </button>
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
