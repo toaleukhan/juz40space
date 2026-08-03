@@ -12,20 +12,32 @@ async function syncRecordDrive(record) {
 
   const drive = google.drive({ version: 'v3', auth: authClient });
 
-  // Осы куратордың КЕЛЕСІ аптасының жолы бар ма — болса, іздеуді содан
-  // бұрынғымен шектейміз, әйтпесе кейінгі апталардың жазбасын да қосып алар едік.
-  const nextRow = await pool.query(
-    `SELECT created_at FROM st_recordings
-     WHERE subject = $1 AND stream_id = $2 AND curator_name = $3
-       AND (month_num, week_num) > ($4, $5)
-     ORDER BY month_num ASC, week_num ASC LIMIT 1`,
-    [record.subject, record.stream_id, record.curator_name, record.month_num, record.week_num]
+  // Іздеу шекарасы — МИТ АШЫЛҒАН нақты уақыт (st_bookings.created_at), жолдың
+  // өз created_at-ы емес. st_recordings жолдары кесте беті ашылған сәтте
+  // автоматты жасалады, сондықтан куратор/әкімші келесі апталарды бір рет
+  // қарап шықса, сол апталардың жолдары ерте жасалып қалады да, "келесі жол"
+  // шекарасы осы аптаның жазбасын кесіп тастайтын. Мит ашылған уақыт —
+  // шынайы хронология, оны бет ашу бұзбайды.
+  const bounds = await pool.query(
+    `SELECT
+       (SELECT MIN(created_at) FROM st_bookings
+         WHERE recording_id = $6 AND meeting_type = 'st') AS lower_at,
+       (SELECT MIN(b.created_at) FROM st_bookings b
+          JOIN st_recordings r2 ON r2.id = b.recording_id
+         WHERE r2.subject = $1 AND r2.stream_id = $2 AND r2.curator_name = $3
+           AND (r2.month_num, r2.week_num) > ($4, $5)
+           AND b.meeting_type = 'st') AS upper_at`,
+    [record.subject, record.stream_id, record.curator_name, record.month_num, record.week_num, record.id]
   );
+  const { lower_at: lowerAt, upper_at: upperAt } = bounds.rows[0];
+
+  // Мит әлі ашылмаған болса, жолдың жасалу уақытына қайта түсеміз.
+  const from = lowerAt || record.created_at;
 
   const searchText = `СТ: ${record.subject} - ${record.curator_name}`.replace(/'/g, "\\'");
-  let query = `name contains '${searchText}' and trashed = false and createdTime > '${record.created_at.toISOString()}'`;
-  if (nextRow.rows.length) {
-    query += ` and createdTime < '${nextRow.rows[0].created_at.toISOString()}'`;
+  let query = `name contains '${searchText}' and trashed = false and createdTime > '${from.toISOString()}'`;
+  if (upperAt) {
+    query += ` and createdTime < '${upperAt.toISOString()}'`;
   }
 
   const driveRes = await drive.files.list({
@@ -79,10 +91,18 @@ async function syncRecordDrive(record) {
 
 const AUTO_SYNC_INTERVAL_MS = 30 * 60 * 1000; // 30 минут сайын
 
-// Соңғы 3 күнде СТ бекітілген (booking) жолдардың ішінен видео/отслежка әлі
-// толық жиналмағандарын таңдап, автоматты синхрондайды. Куратор енді
-// "Синхрондау" батырмасын өзі баспайды — жазба Drive-қа шыққан сайын осы
-// job оны келесі айналымда (ең көбі 30 мин ішінде) тауып алады.
+// Мит ашылғанына 14 күн болмаған, бірақ видео/отслежкасы әлі толық
+// жиналмаған жолдарды автоматты синхрондайды. Куратор "Синхрондау"
+// батырмасын өзі баспайды — жазба Drive-қа шыққан сайын осы job оны келесі
+// айналымда (ең көбі 30 мин ішінде) тауып алады.
+//
+// Шарт booking-тің scheduled_date-іне ЕМЕС, created_at-іне қойылады.
+// scheduled_date "1-ай 2-апта" деген абстракт фильтрден шығады да, нақты
+// күнтізбемен байланыспайды: болашақ аптаға бекітілген Мит бүгін өтуі де,
+// өткен аптаның Миті кеше өтуі де мүмкін. Күнге қарасақ, ондай жолдар
+// ешқашан кезекке ілікпейді — жазба Drive-та тұрса да сайтта шықпайды.
+const AUTO_SYNC_LOOKBACK = '14 days';
+
 async function runAutoSync() {
   let candidates;
   try {
@@ -90,8 +110,7 @@ async function runAutoSync() {
       SELECT DISTINCT r.* FROM st_recordings r
       JOIN st_bookings b ON b.recording_id = r.id
       WHERE b.meeting_type = 'st'
-        AND b.scheduled_date <= CURRENT_DATE
-        AND b.scheduled_date >= CURRENT_DATE - INTERVAL '3 days'
+        AND b.created_at >= NOW() - INTERVAL '${AUTO_SYNC_LOOKBACK}'
         AND (
           r.video_links IS NULL OR cardinality(r.video_links) = 0
           OR r.attendance_links IS NULL OR cardinality(r.attendance_links) = 0
