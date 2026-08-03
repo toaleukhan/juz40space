@@ -6,7 +6,7 @@ import { SUBJECT_COLORS, SUBJECT_LOGOS } from './scheduleData';
 import { motion } from 'framer-motion';
 import { SHEETS_LOGO } from '../components/brandLogos';
 import { IconMeetLogo, IconBolt, IconVideo, IconClock, IconClose, IconTable, IconRefresh } from '../components/icons';
-import WeekBookingCalendar, { getFilterWeekStart, minutesToTime, toLocalISODate } from '../components/WeekBookingCalendar';
+import WeekBookingCalendar, { getFilterWeekStart, getCurrentFilter, minutesToTime, toLocalISODate } from '../components/WeekBookingCalendar';
 import BookingModal from '../components/BookingModal';
 import MeetJournalModal from '../components/MeetJournalModal';
 
@@ -38,8 +38,11 @@ export default function StRecordings() {
 
   const currentSubjectCode = searchParams.get('subject') || ((isCurator || isCoordinator) ? currentUser.subject : null);
   const currentStream = searchParams.get('stream') || ((isCurator || isCoordinator) ? (currentUser.streamId || '01') : '01');
-  const currentMonth = parseInt(searchParams.get('month') || '1', 10);
-  const currentWeek = parseInt(searchParams.get('week') || '1', 10);
+  // Сілтемеде ай/апта көрсетілмесе, 1-ай/1-аптаға емес, БҮГІНГІ аптаға
+  // түсеміз: әйтпесе бүгін ашылған Мит ескі аптаға тіркеліп қалады.
+  const todayFilter = getCurrentFilter();
+  const currentMonth = parseInt(searchParams.get('month') || String(todayFilter.monthNum), 10);
+  const currentWeek = parseInt(searchParams.get('week') || String(todayFilter.weekNum), 10);
 
   const selectedSubject = SUBJECTS.find(s => s.code === currentSubjectCode) || null;
   const availableMonths = Array.from({ length: selectedSubject ? selectedSubject.months : 5 }, (_, i) => i + 1);
@@ -486,7 +489,16 @@ export default function StRecordings() {
                 </div>
 
                 {(() => {
-                  const liveEntries = Object.values(liveStatus).filter(s => s.live);
+                  // liveStatus апта ауысқанда өзі тазармайды (жаңа аптада
+                  // Мит болмаса, сұраныс жіберілмейді де, ескі жауап
+                  // қалады) — сондықтан тек ЭКРАНДАҒЫ аптаның Мит-тарын
+                  // санаймыз, әйтпесе бос аптада да "жүріп жатыр" деп тұрады.
+                  const visibleCodes = new Set(
+                    rows.flatMap(r => r.bookings || []).map(b => b.meet_code).filter(Boolean)
+                  );
+                  const liveEntries = Object.entries(liveStatus)
+                    .filter(([code, s]) => s.live && visibleCodes.has(code))
+                    .map(([, s]) => s);
                   if (!liveEntries.length) return null;
                   const recordingCount = liveEntries.filter(s => s.recording).length;
                   const totalParticipants = liveEntries.reduce((sum, s) => sum + (s.participantCount || 0), 0);

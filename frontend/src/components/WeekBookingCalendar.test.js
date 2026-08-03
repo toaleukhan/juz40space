@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   getFilterWeekStart,
+  getCurrentFilter,
   toLocalISODate,
   isoDateOfDay,
   minutesToTime,
@@ -35,6 +36,33 @@ describe('getFilterWeekStart', () => {
     const start = getFilterWeekStart(month, week);
     const days = Array.from({ length: 7 }, (_, i) => isoDateOfDay(start, i));
     expect(days).toContain(stDate);
+  });
+});
+
+describe('getCurrentFilter', () => {
+  // Күн аптаның қай жерінде тұрса да, сол аптаның нөмірін беруі керек.
+  it.each([
+    ['2026-07-30', 1, 4],  // аптаның бірінші күні (бейсенбі)
+    ['2026-08-03', 1, 4],  // СТ күні (дүйсенбі)
+    ['2026-08-05', 1, 4],  // аптаның соңғы күні (сәрсенбі)
+    ['2026-08-06', 2, 1],  // келесі апта басталды
+    ['2026-07-27', 1, 3],
+  ])('%s -> %i-ай %i-апта', (iso, month, week) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    expect(getCurrentFilter(new Date(y, m - 1, d))).toEqual({ monthNum: month, weekNum: week });
+  });
+
+  it('clamps to the first week before the year starts', () => {
+    expect(getCurrentFilter(new Date(2026, 0, 1))).toEqual({ monthNum: 1, weekNum: 1 });
+  });
+
+  it('is the inverse of getFilterWeekStart', () => {
+    for (let month = 1; month <= 6; month++) {
+      for (let week = 1; week <= 4; week++) {
+        const start = getFilterWeekStart(month, week);
+        expect(getCurrentFilter(start)).toEqual({ monthNum: month, weekNum: week });
+      }
+    }
   });
 });
 

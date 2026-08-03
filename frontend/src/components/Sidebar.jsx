@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import useIsMobile from '../hooks/useIsMobile';
 import juz40Logo from '../assets/juz40-logo.png';
 import { IconMenu, IconClose, IconUser, IconCalendar, IconVideo, IconUsers, IconLogout, IconChart } from './icons';
+import { getCurrentFilter } from './WeekBookingCalendar';
 
 // Панель беттің шетіне жабыспай, айналасында бос орын қалдырып "қалқып"
 // тұрады — сондықтан ені мен шет аралығы бөлек. .app-shell-дің сол жақ
@@ -81,14 +82,20 @@ function SidebarContent({ collapsed, onNavigate }) {
     navigate('/login');
   };
 
+  // Сілтеме әрқашан БҮГІНГІ аптаға апарады. Бұрын мұнда month=1&week=1
+  // қатып жазылған болатын — куратор соған түсіп, бүгін ашқан Миті сол
+  // ескі аптаға тіркеліп қалатын.
+  const { monthNum, weekNum } = getCurrentFilter();
+  const stLink = `/st-recordings?subject=${user.subject || 'ФИЗ'}&stream=${user.streamId || '01'}&month=${monthNum}&week=${weekNum}`;
+
   const curatorLinks = [
     { to: '/profile', label: 'Менің профилім', Icon: IconUser },
-    { to: `/st-recordings?subject=${user.subject || 'ФИЗ'}&stream=${user.streamId || '01'}&month=1&week=1`, label: 'СТ запись', Icon: IconVideo },
+    { to: stLink, label: 'СТ запись', Icon: IconVideo },
     { to: '/schedule', label: 'Сабақ кестесі', Icon: IconCalendar },
   ];
   const coordinatorLinks = [
     { to: '/profile', label: 'Менің профилім', Icon: IconUser },
-    { to: `/st-recordings?subject=${user.subject || 'ФИЗ'}&stream=${user.streamId || '01'}&month=1&week=1`, label: 'СТ жазбалар', Icon: IconVideo },
+    { to: stLink, label: 'СТ жазбалар', Icon: IconVideo },
     { to: '/schedule', label: 'Сабақ кестесі', Icon: IconCalendar },
   ];
   const adminLinks = [

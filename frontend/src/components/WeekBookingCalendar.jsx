@@ -45,6 +45,28 @@ export function getFilterWeekStart(monthNum, weekNum) {
   return d;
 }
 
+// getFilterWeekStart-тың кері амалы: бүгінгі күн қай ай/аптаға түсетінін
+// табады. Куратор сілтемені басқанда дәл сол аптаға түсуі керек — әйтпесе
+// әдепкі 1-ай/1-апта болып қалады да, бүгін ашылған Мит бір айдан ертерек
+// тұрған аптаға тіркеліп, кейін ешкім таба алмайды.
+export function getCurrentFilter(today = new Date(), maxMonths = 12) {
+  const first = new Date(FILTER_ANCHOR_MONDAY);
+  first.setDate(first.getDate() + FILTER_WEEK_START_OFFSET);
+  first.setHours(0, 0, 0, 0);
+
+  const d = new Date(today);
+  d.setHours(0, 0, 0, 0);
+
+  const weekIndex = Math.floor((d - first) / (7 * 24 * 60 * 60 * 1000));
+  // Оқу жылы басталмай тұрып (немесе жоспардан асып кеткенде) шектен
+  // шықпаймыз — фильтр әрқашан бар аптаны көрсетуі керек.
+  const clamped = Math.max(0, Math.min(weekIndex, maxMonths * 4 - 1));
+  return {
+    monthNum: Math.floor(clamped / 4) + 1,
+    weekNum: (clamped % 4) + 1,
+  };
+}
+
 // toISOString() әрдайым UTC-ге айналдырады — GMT+5 секілді белдеуде жергілікті
 // түн ортасы кешкі уақытта алдыңғы күнге "сырғып" кетеді (мыс. Дүйсенбі
 // 07-27 → 07-26 болып шығады). Сондықтан жергілікті жыл/ай/күннен қолмен
