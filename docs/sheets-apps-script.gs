@@ -12,7 +12,8 @@
  * Тек мына бағандарды жазады: C (СТ тапсырды), D (запись), E (отслежка),
  * F (ескеру керек жағдайлар). A мен B-ға тимейді.
  *
- * Куратордың аты-жөні (A бағаны) сайттағы жазылуымен ДӘЛ сәйкес келуі керек.
+ * Куратордың аты-жөні (A бағаны) сайттағыдан сәл өзгеше жазылса да табылады:
+ * әкесінің аты артық болса да, қазақша/орысша әріп айырмасы болса да.
  */
 
 // ─── БАПТАУ ──────────────────────────────────────────────────────────────
@@ -58,13 +59,15 @@ function promptAndFill() {
 
   try {
     var r = fillWeek(monthNum, weekNum);
-    ui.alert(
-      'Дайын.\n\n' +
-      'Толтырылды: ' + r.filled + ' куратор\n' +
-      (r.missing.length
-        ? 'Кестеде бар, бірақ сайтта табылмады (' + r.missing.length + '):\n' + r.missing.join(', ')
-        : 'Барлық куратор сәйкес келді.')
-    );
+    var msg = 'Толтырылды: ' + r.filled + ' куратор';
+    if (r.missing.length) {
+      msg += '\n\nСайтта табылмады (' + r.missing.length + '):\n' + r.missing.join(', ');
+    }
+    if (r.ambiguous.length) {
+      msg += '\n\nЕкі кураторға бірдей келді, қолмен қараңыз (' + r.ambiguous.length + '):\n' + r.ambiguous.join('\n');
+    }
+    if (!r.missing.length && !r.ambiguous.length) msg += '\n\nБарлық куратор сәйкес келді.';
+    ui.alert('Дайын.\n\n' + msg);
   } catch (e) {
     ui.alert('Қателік: ' + e.message);
   }
@@ -118,6 +121,38 @@ function findWeekBlock(sheet, monthNum, weekNum) {
   return { start: start, end: end };
 }
 
+// ─── Есімдерді сәйкестендіру ─────────────────────────────────────────────
+// Кестеде толық аты-жөні (әкесінің атымен) жазылады, сайтта қысқаша: "Темірхан
+// Нұржас Жандосұлы" ↔ "Темірхан Нұржас". Оның үстіне қазақша әріптер бірде
+// қазақша, бірде орысша теріледі: "Қуандық" ↔ "Куандык". Сондықтан дәл
+// салыстыруға болмайды.
+var LETTER_MAP = { 'қ':'к', 'ғ':'г', 'ң':'н', 'ә':'а', 'ө':'о', 'ұ':'у', 'ү':'у', 'і':'и', 'һ':'х', 'ё':'е' };
+
+function normalizeName(s) {
+  return String(s).toLowerCase()
+    .split('').map(function (c) { return LETTER_MAP[c] || c; }).join('')
+    .replace(/[^a-zа-я0-9\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function nameTokens(s) {
+  return normalizeName(s).split(' ').filter(Boolean);
+}
+
+/** Екі есім бір адамдікі ме? */
+function sameName(a, b) {
+  var A = nameTokens(a), B = nameTokens(b);
+  if (!A.length || !B.length) return false;
+  if (A.join(' ') === B.join(' ')) return true;
+  // Бірі екіншісінің басы: "Семгалиева Мадина" ⊂ "Семгалиева Мадина Нұрлыбековна"
+  var n = Math.min(A.length, B.length);
+  if (A.slice(0, n).join(' ') === B.slice(0, n).join(' ')) return true;
+  // Аты мен тегі орын алмасқан: "Жайлаубек Тоғжан" ↔ "Тоғжан Жайлаубек"
+  if (n >= 2 && A.slice(0, 2).sort().join(' ') === B.slice(0, 2).sort().join(' ')) return true;
+  return false;
+}
+
 /**
  * Бір ұяшыққа бірнеше атаулы гиперсілтеме жасайды:
  *   "запись 1  запись 2" — әрқайсысы өз URL-іне сілтейді.
@@ -140,34 +175,39 @@ function fillWeek(monthNum, weekNum) {
   var parsed = parseSheetName(sheet.getName());
   var data = fetchWeek(parsed.subject, parsed.streamId, monthNum, weekNum);
 
-  var byName = {};
-  data.rows.forEach(function (r) { byName[String(r.curatorName).trim()] = r; });
-
   var block = findWeekBlock(sheet, monthNum, weekNum);
-  if (block.end < block.start) return { filled: 0, missing: [] };
+  if (block.end < block.start) return { filled: 0, missing: [], ambiguous: [] };
 
   var count = block.end - block.start + 1;
   var nameCells = sheet.getRange(block.start, COL.name, count, 1).getValues();
   var filled = 0;
   var missing = [];
+  var ambiguous = [];
 
   for (var i = 0; i < count; i++) {
     var name = String(nameCells[i][0]).trim();
     if (!name) continue;
-    var row = byName[name];
-    if (!row) { missing.push(name); continue; }
 
-    var r = block.start + i;
-    if (row.studentsCount !== '') sheet.getRange(r, COL.submitted).setValue(row.studentsCount);
-    if (row.notes) sheet.getRange(r, COL.notes).setValue(row.notes);
+    var hits = data.rows.filter(function (cand) { return sameName(name, cand.curatorName); });
+    if (hits.length === 0) { missing.push(name); continue; }
+    if (hits.length > 1) {
+      // Екі кураторға бірдей келсе, қателеспей тұрып тоқтаймыз.
+      ambiguous.push(name + ' → ' + hits.map(function (h) { return h.curatorName; }).join(' / '));
+      continue;
+    }
+    var row = hits[0];
+
+    var rowIndex = block.start + i;
+    if (row.studentsCount !== '') sheet.getRange(rowIndex, COL.submitted).setValue(row.studentsCount);
+    if (row.notes) sheet.getRange(rowIndex, COL.notes).setValue(row.notes);
 
     if (row.videos && row.videos.length) {
-      sheet.getRange(r, COL.video).setRichTextValue(linkedCell(row.videos, 'запись'));
+      sheet.getRange(rowIndex, COL.video).setRichTextValue(linkedCell(row.videos, 'запись'));
     }
     if (row.attendance && row.attendance.length) {
-      sheet.getRange(r, COL.attendance).setRichTextValue(linkedCell(row.attendance, 'отслежка'));
+      sheet.getRange(rowIndex, COL.attendance).setRichTextValue(linkedCell(row.attendance, 'отслежка'));
     }
     filled++;
   }
-  return { filled: filled, missing: missing };
+  return { filled: filled, missing: missing, ambiguous: ambiguous };
 }
