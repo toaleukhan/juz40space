@@ -27,6 +27,7 @@ function SidebarContent({ collapsed, onNavigate }) {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const isCurator = user.role === 'curator';
   const isCoordinator = user.role === 'coordinator';
+  const isTeacher = user.role === 'teacher';
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -50,7 +51,15 @@ function SidebarContent({ collapsed, onNavigate }) {
     { to: '/curators', label: 'Кураторлар базасы', Icon: IconUsers },
     { to: '/dashboard', label: 'Дэшборд', Icon: IconChart },
   ];
-  const links = isCurator ? curatorLinks : isCoordinator ? coordinatorLinks : adminLinks;
+  // Мұғалім — сабақ беретін адам, СТ жүйесіне қатысы жоқ: оған тек өз
+  // апталық кестесі көрінеді.
+  const teacherLinks = [
+    { to: '/my-schedule', label: 'Менің кестем', Icon: IconCalendar },
+  ];
+  const links = isCurator ? curatorLinks
+    : isCoordinator ? coordinatorLinks
+    : isTeacher ? teacherLinks
+    : adminLinks;
 
   return (
     <>
@@ -60,7 +69,7 @@ function SidebarContent({ collapsed, onNavigate }) {
           <div style={{ minWidth: 0, overflow: 'hidden' }}>
             <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.3px', whiteSpace: 'nowrap' }}>JUZ40</div>
             <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
-              {isCurator ? 'Куратор Кабинеті' : isCoordinator ? 'Координатор Кабинеті' : 'Online Education'}
+              {isCurator ? 'Куратор Кабинеті' : isCoordinator ? 'Координатор Кабинеті' : isTeacher ? 'Мұғалім Кабинеті' : 'Online Education'}
             </div>
           </div>
         )}
@@ -69,7 +78,7 @@ function SidebarContent({ collapsed, onNavigate }) {
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
         {!collapsed && (
           <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', padding: '0 12px 4px', textTransform: 'uppercase', letterSpacing: '1px', whiteSpace: 'nowrap' }}>
-            {isCurator || isCoordinator ? 'Жеке кабинет' : 'Басқару'}
+            {isCurator || isCoordinator || isTeacher ? 'Жеке кабинет' : 'Басқару'}
           </div>
         )}
         {links.map(({ to, label, Icon }) => (
@@ -87,7 +96,7 @@ function SidebarContent({ collapsed, onNavigate }) {
           borderRadius: 14, background: 'var(--surface2)', border: '1px solid var(--border)', marginBottom: 8,
         }}>
           <div style={{
-            width: 36, height: 36, borderRadius: '50%', background: isCurator ? '#8b5cf6' : isCoordinator ? '#f59e0b' : '#10b981', color: '#fff',
+            width: 36, height: 36, borderRadius: '50%', background: isCurator ? '#8b5cf6' : isCoordinator ? '#f59e0b' : isTeacher ? '#0ea5e9' : '#10b981', color: '#fff',
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, overflow: 'hidden', flexShrink: 0,
           }}>
             {user.avatarUrl
@@ -100,7 +109,7 @@ function SidebarContent({ collapsed, onNavigate }) {
                 {user.fullName || user.username}
               </div>
               <div style={{ fontSize: 10.5, color: 'var(--text-muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                {isCurator || isCoordinator ? `${user.subject || ''} · ${user.streamId || '01'} ағым` : 'Басқарушы (Admin)'}
+                {isTeacher ? `${user.subject || ''} · мұғалім` : isCurator || isCoordinator ? `${user.subject || ''} · ${user.streamId || '01'} ағым` : 'Басқарушы (Admin)'}
               </div>
             </div>
           )}

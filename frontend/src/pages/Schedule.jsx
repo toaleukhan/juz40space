@@ -4,6 +4,7 @@ import {
 } from './scheduleData';
 import { loadOverrides, saveOverrides, mergeDays, addLessonOverride, getAllTeacherNames, EMPTY_OVERRIDES } from './scheduleOverrides';
 import juz40Logo from '../assets/juz40-logo.png';
+import api from '../services/api';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -770,7 +771,38 @@ function toMin(s) {
   return h*60+(m||0);
 }
 
-function TeacherWeeklyTimeline({ entries }) {
+// TeacherWeeklyTimeline осы беттен тыс та (мұғалімнің жеке кабинетінде)
+// қолданылатындықтан, қажет стильдері өзімен бірге жүреді — әйтпесе жаһандық
+// G жүктелмеген бетте tooltip-тер әрқашан ашық тұрып қалады. Ережелер G-дегі
+// нұсқаларымен бірдей, сондықтан осы бетте қайталанғаны әсер етпейді.
+const TIMELINE_CSS = `
+  .g-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .lesson-wrap { position: relative; cursor: default; }
+  .l-tip {
+    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    background: var(--surface); color: var(--text); border-radius: 12px; padding: 12px 16px;
+    font-size: 11px; white-space: nowrap; min-width: 170px;
+    opacity: 0; transition: opacity 0.15s; z-index: 50;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.06);
+    border: 1px solid var(--border); pointer-events: none;
+  }
+  .lesson-wrap:hover .l-tip { opacity: 1; }
+  .tl-block {
+    position: absolute; display: flex; align-items: center;
+    padding: 0 7px; overflow: hidden; cursor: default;
+    transition: transform 0.2s, box-shadow 0.2s, z-index 0s;
+    border-radius: 7px;
+  }
+  .tl-block:hover { transform: scaleY(1.12); z-index: 5; box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important; }
+  .tl-block:hover .l-tip { opacity: 1; }
+`;
+
+export function TeacherWeeklyTimeline({ entries }) {
   const dayOrder = ['Дүйсенбі','Сейсенбі','Сәрсенбі','Бейсенбі','Жұма','Сенбі'];
 
   const byDay = useMemo(()=>{
@@ -789,11 +821,30 @@ function TeacherWeeklyTimeline({ entries }) {
     return map;
   },[entries]);
 
-  const activeDays = dayOrder.filter(d => byDay[d]);
+  // Аптаның БАРЛЫҚ жұмыс күні көрсетіледі — сабағы жоқ күн де қатарда тұрады.
+  // "Қай күні бос, қай күнге сабақ қоюға болады?" деген сұрақтың жауабы тек
+  // бос күндер де көрініп тұрғанда ғана бірден оқылады.
+  const activeDays = dayOrder;
+  const hasAnyLesson = dayOrder.some(d => byDay[d]);
   const hourLabels = [13,14,15,16,17,18,19];
+
+  // Күн ішіндегі бос аралықтар (11 минуттан қысқа үзілістер бос деп
+  // саналмайды — олар сабақ арасындағы қалыпты үзіліс).
+  const freeByDay = useMemo(() => {
+    const map = {};
+    dayOrder.forEach(day => {
+      const segs = byDay[day] || [];
+      map[day] = computeFreeSlots(
+        segs.map(s => ({ start: s.startMin, end: s.endMin })),
+        TL_START_MIN, TL_END_MIN
+      ).filter(s => s.free);
+    });
+    return map;
+  }, [byDay]);
 
   return (
     <div className="g-card" style={{padding:'22px 24px',marginBottom:16,background:'var(--surface)'}}>
+      <style>{TIMELINE_CSS}</style>
       <div style={{fontSize:14,fontWeight:700,color:C.titleColor,marginBottom:18,display:'flex',alignItems:'center',gap:8}}>
         <IconCalendar style={{width:17,height:17}}/> Апталық кесте
       </div>
@@ -820,11 +871,16 @@ function TeacherWeeklyTimeline({ entries }) {
       {/* Day rows */}
       <div style={{display:'flex',flexDirection:'column',gap:10}}>
         {activeDays.map(day=>{
-          const segs = [...byDay[day]].sort((a,b)=>a.startMin-b.startMin);
+          const segs = [...(byDay[day]||[])].sort((a,b)=>a.startMin-b.startMin);
+          const freeSegs = freeByDay[day] || [];
+          const freeMin = freeSegs.reduce((a,s)=>a+(s.end-s.start),0);
           return (
-            <div key={day} style={{display:'flex',alignItems:'center',gap:12}}>
-              <div style={{width:60,fontSize:11,fontWeight:700,color:C.textSub,textAlign:'right',flexShrink:0,letterSpacing:'0.3px'}}>
-                {day.slice(0,3)}
+            <div key={day} style={{display:'flex',alignItems:'center',gap:12,opacity:segs.length?1:0.75}}>
+              <div style={{width:60,flexShrink:0,textAlign:'right'}}>
+                <div style={{fontSize:11,fontWeight:700,color:C.textSub,letterSpacing:'0.3px'}}>{day.slice(0,3)}</div>
+                <div style={{fontSize:9,fontWeight:600,color:freeMin?'#12965f':C.textMuted,fontVariantNumeric:'tabular-nums'}}>
+                  {freeMin ? `${Math.round(freeMin/60*10)/10} сағ бос` : 'бос емес'}
+                </div>
               </div>
 
               <div style={{flex:1,position:'relative',height:42,background:'var(--surface2)',border:'1px solid #eef0f3',borderRadius:10,overflow:'visible'}}>
@@ -836,6 +892,26 @@ function TeacherWeeklyTimeline({ entries }) {
                     top:0,bottom:0,width:1,background:'rgba(0,0,0,0.08)',
                   }}/>
                 ))}
+
+                {/* Бос аралықтар — сабақ қоюға болатын терезелер */}
+                {freeSegs.map((s,i)=>{
+                  const leftPct  = Math.max(0, (s.start - TL_START_MIN) / TL_RANGE * 100);
+                  const widthPct = Math.min(100 - leftPct, (s.end - s.start) / TL_RANGE * 100);
+                  const wide     = (s.end - s.start) >= 60;
+                  return (
+                    <div key={`free-${i}`} title={`Бос: ${minutesToTime(s.start)}–${minutesToTime(s.end)}`} style={{
+                      position:'absolute', left:`${leftPct}%`, width:`${widthPct}%`, top:4, bottom:4,
+                      borderRadius:8, background:'rgba(18,150,95,0.10)', border:'1px dashed rgba(18,150,95,0.45)',
+                      display:'flex', alignItems:'center', justifyContent:'center', pointerEvents:'none',
+                    }}>
+                      {wide && (
+                        <span style={{fontSize:9.5,fontWeight:700,color:'#12965f',whiteSpace:'nowrap',fontVariantNumeric:'tabular-nums'}}>
+                          {minutesToTime(s.start)}–{minutesToTime(s.end)}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
 
                 {/* Segments */}
                 {segs.map((seg,i)=>{
@@ -875,7 +951,7 @@ function TeacherWeeklyTimeline({ entries }) {
       </div>
 
       {/* Legend */}
-      {activeDays.length > 0 && (() => {
+      {hasAnyLesson && (() => {
         const subjects = [...new Set(entries.map(e=>e.subject))];
         return (
           <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:16,paddingTop:14,borderTop:`1px solid ${C.divider}`}}>
@@ -1002,6 +1078,43 @@ function TeachersView({ teachersIndex, filters }) {
   const [activeTeacher, setActiveTeacher] = useState(null);
   const dayOrder = ['Дүйсенбі','Сейсенбі','Сәрсенбі','Бейсенбі','Жұма','Сенбі'];
 
+  // ── Мұғалім аккаунттары ──────────────────────────────────────────────
+  // Аккаунт кестедегі есіммен (full_name) байланысады, сондықтан бұл жерде
+  // — кестенің өзінде — жасаған ыңғайлы: әкімші көріп тұрған адамға дәл
+  // сол жазылуымен аккаунт ашылады, есім қолмен қайта терілмейді.
+  const me = useMemo(()=>JSON.parse(localStorage.getItem('user')||'{}'), []);
+  const canSeeAccounts = me.role === 'admin' || me.role === 'coordinator';
+  const isAdmin = me.role === 'admin';
+  const [accounts, setAccounts] = useState({});      // full_name -> {id, username}
+  const [newCred, setNewCred] = useState(null);      // {full_name, username, password}
+  const [creating, setCreating] = useState(false);
+
+  useEffect(()=>{
+    if (!canSeeAccounts) return;
+    let cancelled = false;
+    api.get('/teachers')
+      .then(({data})=>{
+        if (cancelled) return;
+        setAccounts(Object.fromEntries(data.map(t=>[t.full_name, t])));
+      })
+      .catch(()=>{ /* аккаунт тізімі жоқ болса, кесте бәрібір көрінеді */ });
+    return ()=>{ cancelled = true; };
+  },[canSeeAccounts]);
+
+  const handleCreateAccount = async (fullName, subject) => {
+    setCreating(true);
+    try {
+      const { data } = await api.post('/teachers', { fullName, subject });
+      const { password, ...row } = data;
+      setAccounts(prev=>({ ...prev, [row.full_name]: row }));
+      setNewCred({ ...row, password });
+    } catch (err) {
+      alert('Қателік: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const groupedBySubject = useMemo(()=>{
     const res={};
     Object.entries(teachersIndex).forEach(([name,entries])=>{
@@ -1097,6 +1210,46 @@ function TeachersView({ teachersIndex, filters }) {
             </div>
           </div>
         </div>
+
+        {/* Аккаунт күйі */}
+        {canSeeAccounts && (
+          <div className="g-card" style={{padding:'14px 20px',marginBottom:16,background:'var(--surface)',
+            display:'flex',alignItems:'center',gap:14,flexWrap:'wrap'}}>
+            <div style={{fontSize:12.5,fontWeight:700,color:C.titleColor}}>Аккаунт</div>
+            {accounts[activeTeacher] ? (
+              <span style={{fontSize:12,color:C.textSub}}>
+                Логин: <b style={{fontFamily:'monospace'}}>{accounts[activeTeacher].username}</b>
+              </span>
+            ) : (
+              <>
+                <span style={{fontSize:12,color:C.textMuted}}>Әзірге жасалмаған</span>
+                {isAdmin && (
+                  <button
+                    disabled={creating}
+                    onClick={()=>handleCreateAccount(activeTeacher, subjs[0])}
+                    style={{marginLeft:'auto',padding:'7px 16px',borderRadius:10,border:'none',
+                      background:col.primary,color:'#fff',fontSize:12,fontWeight:700,
+                      cursor:creating?'default':'pointer',opacity:creating?0.6:1}}>
+                    {creating ? 'Жасалуда...' : '+ Аккаунт жасау'}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Жаңа аккаунттың логин/паролі — бір рет қана көрсетіледі */}
+        {newCred && newCred.full_name === activeTeacher && (
+          <div className="g-card" style={{padding:'14px 20px',marginBottom:16,
+            background:'rgba(18,150,95,0.08)',border:'1px solid rgba(18,150,95,0.35)'}}>
+            <div style={{fontSize:12,fontWeight:700,color:'#0c7b4c',marginBottom:6}}>
+              Дайын — мына деректерді мұғалімге беріңіз (парольді кейін көру мүмкін емес)
+            </div>
+            <div style={{fontFamily:'monospace',fontSize:13,color:C.text}}>
+              {newCred.username} / {newCred.password}
+            </div>
+          </div>
+        )}
 
         {/* Visual weekly timeline */}
         <TeacherWeeklyTimeline entries={entries} />

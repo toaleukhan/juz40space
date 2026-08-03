@@ -5,8 +5,16 @@ import StRecordings from './pages/StRecordings';
 import CuratorsDatabase from './pages/CuratorsDatabase';
 import Dashboard from './pages/Dashboard';
 import CuratorCabinet from './pages/CuratorCabinet';
+import TeacherCabinet from './pages/TeacherCabinet';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
+
+// Рөлге қарай бастапқы бет: мұғалімге жалпы кестенің қажеті жоқ, оған
+// бірден өз апталық кестесі ашылады.
+function HomeRedirect() {
+  const role = JSON.parse(localStorage.getItem('user') || '{}').role;
+  return <Navigate to={role === 'teacher' ? '/my-schedule' : '/schedule'} replace />;
+}
 
 export default function App() {
   return (
@@ -23,7 +31,10 @@ export default function App() {
         <Route path="/profile" element={<ProtectedRoute><CuratorCabinet /></ProtectedRoute>} />
         <Route path="/my-recordings" element={<Navigate to="/profile" replace />} />
 
-        <Route path="*" element={<Navigate to="/schedule" replace />} />
+        {/* 👩‍🏫 Мұғалімнің жеке кабинеті — тек өз апталық кестесі */}
+        <Route path="/my-schedule" element={<ProtectedRoute><TeacherCabinet /></ProtectedRoute>} />
+
+        <Route path="*" element={<HomeRedirect />} />
       </Routes>
     </AuthProvider>
   );
