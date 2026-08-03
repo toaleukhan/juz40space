@@ -1,6 +1,6 @@
 import {
   months, smartScheduleByMonth, smartAdditionalScheduleByMonth, juniorScheduleByMonth,
-  buildTeachersIndex, SUBJECT_COLORS, SUBJECT_LOGOS, juniorStreamNames
+  buildTeachersIndex, SUBJECT_COLORS, SUBJECT_LOGOS
 } from './scheduleData';
 import { loadOverrides, saveOverrides, mergeDays, addLessonOverride, getAllTeacherNames, EMPTY_OVERRIDES } from './scheduleOverrides';
 import juz40Logo from '../assets/juz40-logo.png';
@@ -10,7 +10,7 @@ import Sidebar from '../components/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   IconPlus, IconCalendar, IconClock, IconFile, IconCheck, IconAlert,
-  IconWrench, IconBolt, IconTable, IconUser, IconDownload,
+  IconBolt, IconTable, IconUser, IconDownload,
 } from '../components/icons';
 
 const JUZ = {
@@ -1691,7 +1691,6 @@ function LessonEntryModal({ month, onClose, onSubmit, teacherNames }) {
 export default function Schedule({ onGoToCabinet }) {
   const [view, setView]             = useState('calendar');
   const [supervisorMode, setSM]     = useState(false);
-  const [supervisorAuth, setSA]     = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [showEntry, setShowEntry]   = useState(false);
 
@@ -1700,6 +1699,7 @@ export default function Schedule({ onGoToCabinet }) {
 
   const currentUser = useMemo(()=>JSON.parse(localStorage.getItem('user')||'{}'), []);
   const isCurator = currentUser.role === 'curator';
+  const isAdminUser = currentUser.role === 'admin';
   const [showAllSubjects, setShowAllSubjects] = useState(!isCurator);
 
   const [filters, setFilters] = useState({
@@ -1781,10 +1781,6 @@ export default function Schedule({ onGoToCabinet }) {
     setShowEntry(false);
   };
 
-  const activeMonthName=months.find(m=>m.id===filters.month)?.name||'';
-  const streamName=filters.dir==='JUNIOR'
-    ?(juniorStreamNames[filters.month]?juniorStreamNames[filters.month].toUpperCase():'—')
-    :filters.dir==='SMART'?'SMART':'SMART + JUNIOR';
 
   const hasFilter=filters.dir!=='Барлығы'||filters.subjects.length>0;
   const filterLabel=()=>{
@@ -1795,7 +1791,7 @@ export default function Schedule({ onGoToCabinet }) {
     return parts.length?parts.join(' · '):'Фильтр';
   };
 
-  if (supervisorMode) return <SupervisorDashboard onLogout={()=>{setSM(false);setSA(false);}} onBack={()=>setSM(false)}/>;
+  if (supervisorMode) return <SupervisorDashboard onLogout={()=>setSM(false)} onBack={()=>setSM(false)}/>;
 
   const NAV_ITEMS=[
     {id:'schedule',icon:IconTable,label:'Тізім'},
@@ -1820,25 +1816,13 @@ export default function Schedule({ onGoToCabinet }) {
           <div style={{width:1,height:18,background:'#eef0f3'}}/>
           <span style={{fontSize:12,color:C.textMuted,fontWeight:500}}>Сабақ кестесі</span>
         </div>
-        <div style={{display:'flex',gap:8}}>
-          <button onClick={()=>{setSM(true);setSA(true);}}
-            style={{display:'flex',alignItems:'center',gap:6,padding:'6px 13px',borderRadius:8,fontSize:11,cursor:'pointer',
-              background: supervisorAuth ? '#1B6E7E' : '#f5f7fa',
-              border:`1px solid ${supervisorAuth?'#1B6E7E':'#eef0f3'}`,
-              color: supervisorAuth ? '#fff' : C.textMuted,
-              fontWeight:600, transition:'all 0.2s'}}>
-            <IconWrench style={{width:12,height:12}}/> Басқару{supervisorAuth?<IconCheck style={{width:12,height:12}}/>:''}
-          </button>
-        </div>
       </header>
 
       {/* ── Page header */}
       <div style={{ padding:'24px 28px 0', background:'var(--surface)', borderBottom:'1px solid #eef0f3' }}>
         <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', marginBottom:16 }}>
           <div>
-            <div style={{ fontSize:10, fontWeight:700, letterSpacing:'2px', color:'var(--text-muted)', textTransform:'uppercase', marginBottom:6 }}>JUZ40 · БАСҚАРУ</div>
             <h1 style={{ fontSize:22, fontWeight:800, color:'#0a1f2e', margin:0, letterSpacing:'-0.4px' }}>Сабақ кестесі</h1>
-            <p style={{ fontSize:12, color:'#90a4ae', margin:'4px 0 0', fontWeight:500 }}>{activeMonthName} айы · {streamName} ағыны</p>
           </div>
           {/* View switcher tabs */}
           <div style={{ display:'flex', background:'#f4f6f8', borderRadius:12, padding:4, gap:2 }}>
@@ -1907,7 +1891,10 @@ export default function Schedule({ onGoToCabinet }) {
             </div>
           )}
 
-          {supervisorAuth && (
+          {/* Бұрын бұл екі батырма жоғарыдағы "Басқару"-ды басқанда ғана
+              шығатын. Ол құлып ешнәрсе сұрамайтын, тек жасырып тұратын —
+              сондықтан нақты рөлге ауыстырылды: әкімшіге әрқашан көрінеді. */}
+          {isAdminUser && (
             <div style={{ display:'flex', gap:6, marginBottom:6 }}>
               <button onClick={()=>setShowEntry(true)}
                 style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 13px', borderRadius:9,
