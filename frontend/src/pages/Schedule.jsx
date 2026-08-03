@@ -2,15 +2,15 @@ import {
   months, smartScheduleByMonth, smartAdditionalScheduleByMonth, juniorScheduleByMonth,
   buildTeachersIndex, SUBJECT_COLORS, SUBJECT_LOGOS
 } from './scheduleData';
-import { loadOverrides, saveOverrides, mergeDays, addLessonOverride, getAllTeacherNames, EMPTY_OVERRIDES } from './scheduleOverrides';
+import { loadOverrides, mergeDays, EMPTY_OVERRIDES } from './scheduleOverrides';
 import juz40Logo from '../assets/juz40-logo.png';
 import api from '../services/api';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  IconPlus, IconCalendar, IconClock, IconFile, IconCheck, IconAlert,
-  IconBolt, IconTable, IconUser, IconDownload,
+  IconPlus, IconCalendar, IconClock,
+  IconBolt, IconTable, IconUser,
 } from '../components/icons';
 
 const JUZ = {
@@ -1419,287 +1419,16 @@ function TeachersView({ teachersIndex, filters }) {
   );
 }
 
-// ─── Supervisor ───────────────────────────────────────────────────────────────
-
-function SupervisorDashboard({ onLogout, onBack }) {
-  const [file,setFile]=useState(null); const [fileName,setFileName]=useState('');
-  const [parsing,setParsing]=useState(false); const [parseResult,setParseResult]=useState(null);
-  const [preview,setPreview]=useState(''); const [status,setStatus]=useState(null);
-  const [error,setError]=useState(''); const [targetDir,setTargetDir]=useState('SMART');
-  const [targetMonth,setTargetMonth]=useState('01'); const fileRef=useRef();
-
-  const handleFile=(e)=>{
-    const f=e.target.files[0]; if(!f) return;
-    setFile(f); setFileName(f.name); setParseResult(null); setPreview(''); setStatus(null); setError('');
-  };
-  const handleParse=async()=>{
-    if(!file) return; setParsing(true); setError(''); setStatus(null); setParseResult(null);
-    try {
-      const base64=await new Promise((res,rej)=>{
-        const r=new FileReader();
-        r.onload=()=>res(r.result.split(',')[1]);
-        r.onerror=()=>rej(new Error('Файл оқылмады'));
-        r.readAsDataURL(file);
-      });
-      const monthName=months.find(m=>m.id===targetMonth)?.name||'';
-      const apiBase=import.meta.env.VITE_API_URL||'http://localhost:3001/api';
-      const response=await fetch(`${apiBase}/parse-schedule`,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ base64, direction:targetDir, monthId:targetMonth, monthName }),
-      });
-      if(!response.ok){const err=await response.json();throw new Error(err.error||`Сервер қате: ${response.status}`);}
-      const data=await response.json();
-      setParseResult({teachers:data.teachers,days:data.days,chars:data.result?.length||0});
-      setPreview(data.result||'');
-      setStatus({ok:true,text:`Дайын — ${data.days} күн, ${data.teachers} мұғалім`});
-    } catch(err) { setError(err.message); } finally { setParsing(false); }
-  };
-  const handleDownload=()=>{
-    if(!preview) return;
-    const note=`// JUZ40 — ${targetDir}, ${months.find(m=>m.id===targetMonth)?.name}\n// scheduleData.js ішіне қойып push жасаңыз\n\n${preview}`;
-    const blob=new Blob([note],{type:'text/javascript;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url; a.download=`schedule_${targetDir}_${targetMonth}_parsed.js`; a.click();
-    URL.revokeObjectURL(url);
-    setStatus({ok:false,text:'Жүктелді. GitHub push жасаңыз.'});
-  };
-  const sel={fontSize:13,padding:'8px 12px',borderRadius:9,border:`1.5px solid ${C.divider}`,
-    background:'rgba(255,255,255,0.9)',color:C.text,fontFamily:'inherit',outline:'none',cursor:'pointer'};
-  return (
-    <div style={{minHeight:'100vh',background:C.pageBg}}>
-      <style>{G}</style>
-      <header className="g-panel" style={{position:'sticky',top:0,zIndex:50,padding:'0 24px',height:58,
-        display:'flex',alignItems:'center',justifyContent:'space-between',borderRadius:0}}>
-        <div style={{display:'flex',alignItems:'center',gap:12}}>
-          <Logo h={24}/>
-          <span style={{fontSize:11,color:C.textSub,fontWeight:500}}>Басқарушы кабинеті</span>
-        </div>
-        <button onClick={onLogout} style={{padding:'6px 14px',borderRadius:8,fontSize:12,cursor:'pointer',
-          background:'transparent',border:`1px solid ${C.divider}`,color:C.textMuted}}>Шығу</button>
-      </header>
-      <div style={{maxWidth:820,margin:'14px auto 0',padding:'0 24px'}}>
-        <button onClick={onBack} style={{padding:'6px 14px',borderRadius:8,fontSize:12,cursor:'pointer',
-          background:'transparent',border:`1px solid ${C.divider}`,color:C.textSub,fontWeight:600}}>← Кестеге оралу</button>
-      </div>
-      <div style={{maxWidth:820,margin:'0 auto',padding:'28px 24px',display:'flex',flexDirection:'column',gap:16}}>
-        <div className="g-card" style={{padding:'16px 20px',background:'rgba(232,244,246,0.7)'}}>
-          <div style={{fontSize:14,fontWeight:700,color:C.titleColor,marginBottom:10,display:'flex',alignItems:'center',gap:8}}><IconFile style={{width:15,height:15}}/> Автоматты парсинг — docx → scheduleData.js</div>
-          <div style={{fontSize:12,color:C.textSub,lineHeight:2}}>
-            <b>1.</b> Бағыт пен ай таңдаңыз &nbsp; <b>2.</b> .docx жүктеңіз &nbsp; <b>3.</b> Оқу → .js жүктеу &nbsp; <b>4.</b> scheduleData.js-ке қойып, GitHub push
-          </div>
-        </div>
-        <div className="g-card" style={{padding:'16px 20px'}}>
-          <div style={{display:'flex',gap:14,flexWrap:'wrap'}}>
-            <div style={{display:'flex',flexDirection:'column',gap:5}}>
-              <label style={{fontSize:11,color:C.textMuted,fontWeight:600}}>Бағыт</label>
-              <select value={targetDir} onChange={e=>setTargetDir(e.target.value)} style={sel}>
-                <option>SMART</option><option>JUNIOR</option>
-              </select>
-            </div>
-            <div style={{display:'flex',flexDirection:'column',gap:5}}>
-              <label style={{fontSize:11,color:C.textMuted,fontWeight:600}}>Ай</label>
-              <select value={targetMonth} onChange={e=>setTargetMonth(e.target.value)} style={sel}>
-                {months.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}
-              </select>
-            </div>
-          </div>
-        </div>
-        <div className="g-card" style={{padding:'24px',textAlign:'center',border:`2px dashed ${C.divider}`}}>
-          <input ref={fileRef} type="file" accept=".docx" onChange={handleFile} style={{display:'none'}}/>
-          <div style={{marginBottom:8,display:'flex',justifyContent:'center'}}><IconFile style={{width:30,height:30,color:JUZ.teal}}/></div>
-          <button onClick={()=>fileRef.current?.click()}
-            style={{padding:'9px 22px',borderRadius:9,background:JUZ.teal,border:'none',color:'#fff',fontSize:13,cursor:'pointer',fontWeight:700,boxShadow:'0 4px 14px rgba(27,110,126,0.28)'}}>
-            .docx файл таңдау
-          </button>
-          {fileName&&<div style={{marginTop:10,fontSize:13,color:JUZ.teal,fontWeight:500,display:'flex',alignItems:'center',justifyContent:'center',gap:6}}><IconCheck style={{width:13,height:13}}/> {fileName}</div>}
-        </div>
-        {file&&(
-          <button onClick={handleParse} disabled={parsing}
-            style={{padding:'12px',borderRadius:10,fontSize:14,fontWeight:700,
-              background:parsing?C.textMuted:JUZ.teal,border:'none',color:'#fff',cursor:parsing?'not-allowed':'pointer',
-              display:'flex',alignItems:'center',justifyContent:'center',gap:8,boxShadow:'0 4px 14px rgba(27,110,126,0.28)'}}>
-            {parsing?(<><span style={{display:'inline-block',width:16,height:16,border:'2px solid rgba(255,255,255,0.3)',borderTop:'2px solid #fff',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}/>Оқып жатыр...</>):(<><IconFile style={{width:14,height:14}}/> Кестені оқу</>)}
-          </button>
-        )}
-        {error&&<div style={{display:'flex',alignItems:'center',gap:8,padding:'12px 16px',borderRadius:9,background:'rgba(239,68,68,0.06)',border:'1px solid rgba(239,68,68,0.18)',fontSize:13,color:'#dc2626'}}><IconAlert style={{width:14,height:14,flexShrink:0}}/> {error}</div>}
-        {parseResult&&(
-          <div style={{padding:'14px',borderRadius:10,background:'rgba(240,255,244,0.9)',border:'1px solid rgba(154,230,180,0.8)'}}>
-            <div style={{fontSize:13,fontWeight:600,color:'#276749',marginBottom:4}}>Нәтиже:</div>
-            <div style={{fontSize:12,color:'#276749',lineHeight:2,display:'flex',flexWrap:'wrap',gap:'0 6px',alignItems:'center'}}>
-              <IconCalendar style={{width:13,height:13}}/> Күндер: <b>{parseResult.days}</b> &nbsp; <IconUser style={{width:13,height:13}}/> Мұғалімдер: <b>{parseResult.teachers}</b>
-            </div>
-          </div>
-        )}
-        {status&&<div style={{display:'flex',alignItems:'center',gap:8,padding:'12px 16px',borderRadius:9,fontSize:13,
-          background:status.ok?'rgba(240,255,244,0.9)':'rgba(232,244,246,0.9)',
-          border:`1px solid ${status.ok?'rgba(154,230,180,0.8)':C.divider}`,
-          color:status.ok?'#276749':JUZ.teal}}>{status.ok?<IconCheck style={{width:14,height:14}}/>:<IconFile style={{width:14,height:14}}/>} {status.text}</div>}
-        {preview&&(
-          <>
-            <button onClick={handleDownload}
-              style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'9px 22px',borderRadius:9,background:JUZ.teal,border:'none',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',alignSelf:'flex-end',boxShadow:'0 3px 12px rgba(27,110,126,0.25)'}}>
-              <IconDownload style={{width:14,height:14}}/> .js жүктеу
-            </button>
-            <details style={{borderRadius:12,border:`1px solid ${C.divider}`,overflow:'hidden'}}>
-              <summary style={{padding:'10px 16px',background:'#F8FAFC',fontSize:12,color:C.textSub,cursor:'pointer'}}>
-                Нәтиже ({preview.split('\n').length} жол)
-              </summary>
-              <pre style={{padding:'14px',fontSize:11,overflowX:'auto',margin:0,background:'var(--surface)',color:'#334',maxHeight:400,overflowY:'auto'}}>{preview}</pre>
-            </details>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Lesson Entry Modal (Енгізу) ────────────────────────────────────────────────
-const WEEKDAYS = ['Дүйсенбі','Сейсенбі','Сәрсенбі','Бейсенбі','Жұма','Сенбі','Жексенбі'];
-const NEW_TEACHER = '__new__';
-
-function LessonEntryModal({ month, onClose, onSubmit, teacherNames }) {
-  const [direction, setDirection] = useState('SMART');
-  const [kind, setKind]           = useState('live');
-  const [monthId, setMonthId]     = useState(month);
-  const [day, setDay]             = useState('Сәрсенбі');
-  const [subject, setSubject]     = useState(Object.keys(SUBJECT_COLORS)[0]);
-  const [stream, setStream]       = useState(`${Object.keys(SUBJECT_COLORS)[0]}-01`);
-  const [teacherSel, setTeacherSel] = useState(teacherNames[0] || NEW_TEACHER);
-  const [newTeacher, setNewTeacher] = useState('');
-  const [times, setTimes]         = useState('13:00-14:00');
-  const [err, setErr]             = useState('');
-
-  const subjects = Object.keys(SUBJECT_COLORS);
-
-  const inputStyle={width:'100%',padding:'9px 12px',borderRadius:8,
-    border:`1.5px solid ${C.divider}`,fontSize:13,color:C.text,
-    background:'var(--surface)',outline:'none',fontFamily:'inherit',boxSizing:'border-box'};
-  const labelStyle={fontSize:11,fontWeight:600,color:C.textSub,display:'block',marginBottom:5};
-
-  const submit = () => {
-    const teacherName = teacherSel===NEW_TEACHER ? newTeacher.trim() : teacherSel;
-    if (!teacherName) { setErr('Мұғалім атын енгізіңіз'); return; }
-    const timesArr = times.split(',').map(t=>t.trim()).filter(Boolean).map(t=>t.replace(/-/g,'–'));
-    if (!timesArr.length) { setErr('Кемінде бір уақыт енгізіңіз (мыс. 13:00-14:00)'); return; }
-
-    const lesson = {
-      subject,
-      ...(stream.trim() ? { stream: stream.trim() } : {}),
-      teachers: [{ name: teacherName, times: timesArr }],
-    };
-    const bucket = direction==='JUNIOR' ? 'junior' : (kind==='additional' ? 'additional' : 'live');
-    onSubmit({ bucket, monthId, day, type: kind, lesson });
-  };
-
-  return (
-    <div style={{ position:'fixed', inset:0, background:'rgba(10,20,30,0.45)', zIndex:200,
-      display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
-      onClick={onClose}>
-      <div className="g-card" style={{ width:440, maxHeight:'88vh', overflowY:'auto', padding:'24px 24px 20px' }}
-        onClick={e=>e.stopPropagation()}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:18 }}>
-          <div style={{ fontSize:16, fontWeight:800, color:C.titleColor, display:'flex', alignItems:'center', gap:8 }}><IconPlus style={{width:15,height:15}}/> Сабақ енгізу</div>
-          <span style={{ cursor:'pointer', fontSize:18, color:C.textMuted }} onClick={onClose}>×</span>
-        </div>
-
-        <div style={{ display:'flex', flexDirection:'column', gap:13 }}>
-          <div style={{ display:'flex', gap:10 }}>
-            <div style={{ flex:1 }}>
-              <label style={labelStyle}>Бағыт</label>
-              <select value={direction} onChange={e=>setDirection(e.target.value)} style={inputStyle}>
-                <option value="SMART">SMART</option>
-                <option value="JUNIOR">JUNIOR</option>
-              </select>
-            </div>
-            <div style={{ flex:1 }}>
-              <label style={labelStyle}>Поток / ай</label>
-              <select value={monthId} onChange={e=>setMonthId(e.target.value)} style={inputStyle}>
-                {months.map(m=><option key={m.id} value={m.id}>{m.label}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {direction==='SMART' && (
-            <div>
-              <label style={labelStyle}>Түрі</label>
-              <div style={{ display:'flex', gap:8 }}>
-                {[{id:'live',label:'LIVE сабақ'},{id:'additional',label:'ҚОСЫМША сабақ'}].map(k=>(
-                  <button key={k.id} type="button" onClick={()=>setKind(k.id)}
-                    style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 10px', borderRadius:8, fontSize:11.5, fontWeight:700, cursor:'pointer',
-                      border:`1.5px solid ${kind===k.id?JUZ.teal:C.divider}`,
-                      background: kind===k.id ? `${JUZ.teal}12` : 'transparent',
-                      color: kind===k.id ? JUZ.teal : C.textMuted }}>
-                    {k.id==='live' ? <span className="live-dot"/> : <IconPlus style={{width:11,height:11}}/>} {k.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label style={labelStyle}>Күні</label>
-            <select value={day} onChange={e=>setDay(e.target.value)} style={inputStyle}>
-              {WEEKDAYS.map(d=><option key={d} value={d}>{d}</option>)}
-            </select>
-          </div>
-
-          <div style={{ display:'flex', gap:10 }}>
-            <div style={{ flex:1 }}>
-              <label style={labelStyle}>Пән</label>
-              <select value={subject} onChange={e=>{ setSubject(e.target.value); setStream(`${e.target.value}-01`); }} style={inputStyle}>
-                {subjects.map(s=><option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div style={{ flex:1 }}>
-              <label style={labelStyle}>Поток коды</label>
-              <input value={stream} onChange={e=>setStream(e.target.value)} placeholder="МАТ-01" style={inputStyle}/>
-            </div>
-          </div>
-
-          <div>
-            <label style={labelStyle}>Мұғалім</label>
-            <select value={teacherSel} onChange={e=>setTeacherSel(e.target.value)} style={inputStyle}>
-              {teacherNames.map(n=><option key={n} value={n}>{n}</option>)}
-              <option value={NEW_TEACHER}>+ Жаңа мұғалім қосу...</option>
-            </select>
-            {teacherSel===NEW_TEACHER && (
-              <input value={newTeacher} onChange={e=>setNewTeacher(e.target.value)}
-                placeholder="Аты-жөні" style={{...inputStyle, marginTop:8}}/>
-            )}
-          </div>
-
-          <div>
-            <label style={labelStyle}>Уақыттар (үтірмен бөліп жазыңыз)</label>
-            <input value={times} onChange={e=>setTimes(e.target.value)} placeholder="13:00-14:00, 14:10-15:10" style={inputStyle}/>
-          </div>
-
-          {err && <div style={{fontSize:12,color:'#dc2626',padding:'6px',background:'rgba(239,68,68,0.06)',borderRadius:7,textAlign:'center'}}>{err}</div>}
-
-          <button onClick={submit}
-            style={{padding:'11px',borderRadius:9,background:JUZ.teal,border:'none',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer',boxShadow:'0 4px 14px rgba(27,110,126,0.30)'}}>
-            Сақтау
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function Schedule({ onGoToCabinet }) {
   const [view, setView]             = useState('calendar');
-  const [supervisorMode, setSM]     = useState(false);
   const [showFilter, setShowFilter] = useState(false);
-  const [showEntry, setShowEntry]   = useState(false);
 
   const [overrides, setOverrides] = useState(EMPTY_OVERRIDES);
   useEffect(()=>{ loadOverrides().then(setOverrides); }, []);
 
   const currentUser = useMemo(()=>JSON.parse(localStorage.getItem('user')||'{}'), []);
   const isCurator = currentUser.role === 'curator';
-  const isAdminUser = currentUser.role === 'admin';
   const [showAllSubjects, setShowAllSubjects] = useState(!isCurator);
 
   const [filters, setFilters] = useState({
@@ -1768,19 +1497,6 @@ export default function Schedule({ onGoToCabinet }) {
     return buildTeachersIndex(filters.month,'ALL',{ smart: extraSmart, junior: overrides.junior?.[filters.month]||[] });
   },[filters.month,overrides]);
 
-  const allTeacherNames = useMemo(()=>getAllTeacherNames(filters.month, overrides, {
-    smart: smartScheduleByMonth, smartAdditional: smartAdditionalScheduleByMonth, junior: juniorScheduleByMonth,
-  }),[filters.month,overrides]);
-
-  const handleAddLesson = (entry) => {
-    setOverrides(prev => {
-      const next = addLessonOverride(prev, entry);
-      saveOverrides(next);
-      return next;
-    });
-    setShowEntry(false);
-  };
-
 
   const hasFilter=filters.dir!=='Барлығы'||filters.subjects.length>0;
   const filterLabel=()=>{
@@ -1791,7 +1507,6 @@ export default function Schedule({ onGoToCabinet }) {
     return parts.length?parts.join(' · '):'Фильтр';
   };
 
-  if (supervisorMode) return <SupervisorDashboard onLogout={()=>setSM(false)} onBack={()=>setSM(false)}/>;
 
   const NAV_ITEMS=[
     {id:'schedule',icon:IconTable,label:'Тізім'},
@@ -1804,19 +1519,6 @@ export default function Schedule({ onGoToCabinet }) {
       <style>{G}</style>
       <Sidebar />
       <div style={{flex:1,display:'flex',flexDirection:'column',minWidth:0}}>
-
-      {/* ── Header */}
-      <header className="g-panel" style={{
-        position:'sticky',top:0,zIndex:50,borderRadius:0,
-        padding:'0 24px',height:56,
-        display:'flex',alignItems:'center',justifyContent:'space-between',
-      }}>
-        <div style={{display:'flex',alignItems:'center',gap:12}}>
-          <Logo h={22}/>
-          <div style={{width:1,height:18,background:'#eef0f3'}}/>
-          <span style={{fontSize:12,color:C.textMuted,fontWeight:500}}>Сабақ кестесі</span>
-        </div>
-      </header>
 
       {/* ── Page header */}
       <div style={{ padding:'24px 28px 0', background:'var(--surface)', borderBottom:'1px solid #eef0f3' }}>
@@ -1891,36 +1593,8 @@ export default function Schedule({ onGoToCabinet }) {
             </div>
           )}
 
-          {/* Бұрын бұл екі батырма жоғарыдағы "Басқару"-ды басқанда ғана
-              шығатын. Ол құлып ешнәрсе сұрамайтын, тек жасырып тұратын —
-              сондықтан нақты рөлге ауыстырылды: әкімшіге әрқашан көрінеді. */}
-          {isAdminUser && (
-            <div style={{ display:'flex', gap:6, marginBottom:6 }}>
-              <button onClick={()=>setShowEntry(true)}
-                style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 13px', borderRadius:9,
-                  border:'none', cursor:'pointer', fontFamily:'inherit', fontSize:11.5, fontWeight:700,
-                  background:'#1B6E7E', color:'#fff', boxShadow:'0 3px 10px rgba(27,110,126,0.3)' }}>
-                <IconPlus style={{width:12,height:12}}/> Енгізу
-              </button>
-              <button onClick={()=>setSM(true)}
-                style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 13px', borderRadius:9,
-                  border:'1px solid #eef0f3', cursor:'pointer', fontFamily:'inherit', fontSize:11.5, fontWeight:600,
-                  background:'#f5f7fa', color:C.textMuted }}>
-                <IconFile style={{width:12,height:12}}/> Docx парсинг
-              </button>
-            </div>
-          )}
         </div>
       </div>
-
-      {showEntry && (
-        <LessonEntryModal
-          month={filters.month}
-          onClose={()=>setShowEntry(false)}
-          onSubmit={handleAddLesson}
-          teacherNames={allTeacherNames}
-        />
-      )}
 
       {/* ── Layout */}
       <div style={{ padding:'20px 28px' }}>
