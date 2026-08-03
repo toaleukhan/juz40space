@@ -6,7 +6,7 @@ import { SUBJECT_COLORS, SUBJECT_LOGOS } from './scheduleData';
 import { motion } from 'framer-motion';
 import { SHEETS_LOGO } from '../components/brandLogos';
 import { IconMeetLogo, IconBolt, IconVideo, IconClock, IconClose, IconTable, IconRefresh } from '../components/icons';
-import WeekBookingCalendar, { getFilterMonday, minutesToTime, toLocalISODate } from '../components/WeekBookingCalendar';
+import WeekBookingCalendar, { getFilterWeekStart, minutesToTime, toLocalISODate } from '../components/WeekBookingCalendar';
 import BookingModal from '../components/BookingModal';
 import MeetJournalModal from '../components/MeetJournalModal';
 
@@ -51,7 +51,7 @@ export default function StRecordings() {
   const [modalSlot, setModalSlot] = useState(null); // { date, startTime } | null
   const [bookingLoading, setBookingLoading] = useState(false);
   const [coordinatorView, setCoordinatorView] = useState('calendar'); // 'calendar' | 'table'
-  const monday = getFilterMonday(currentMonth, currentWeek);
+  const weekStart = getFilterWeekStart(currentMonth, currentWeek);
 
   useEffect(() => {
     if (selectedSubject) loadTable();
@@ -420,7 +420,7 @@ export default function StRecordings() {
                     )}
 
                     <WeekBookingCalendar
-                      monday={monday}
+                      weekStart={weekStart}
                       bookings={bookings}
                       onSlotClick={handleSlotClick}
                       onDeleteBooking={(b) => handleDeleteBooking(b.id)}
@@ -514,7 +514,7 @@ export default function StRecordings() {
                   <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Жүктелуде...</div>
                 ) : coordinatorView === 'calendar' ? (
                   <WeekBookingCalendar
-                    monday={monday}
+                    weekStart={weekStart}
                     bookings={rows.flatMap(r => (r.bookings || []).map(b => ({ ...b, curator_name: r.curator_name })))}
                     readOnly
                     liveStatus={liveStatus}

@@ -3,7 +3,10 @@
 // бар броньдар түрлі-түсті блок ретінде көрінеді.
 import { IconMeetLogo, IconUsers } from './icons';
 
-const DAY_LABELS = ['Дүйсенбі', 'Сейсенбі', 'Сәрсенбі', 'Бейсенбі', 'Жұма', 'Сенбі', 'Жексенбі'];
+// СТ аптасы бейсенбіден басталып, келесі сәрсенбіде бітеді — сондықтан
+// бағандар да сол реттен басталады (төмендегі FILTER_WEEK_START_OFFSET-ті
+// қараңыз).
+const DAY_LABELS = ['Бейсенбі', 'Жұма', 'Сенбі', 'Жексенбі', 'Дүйсенбі', 'Сейсенбі', 'Сәрсенбі'];
 const START_HOUR = 8;
 const END_HOUR = 22;
 // 56px-те 60 минуттық бронь дәл "compact" шегінің астында қалып,
@@ -21,19 +24,24 @@ export function getMonday(date = new Date()) {
   return d;
 }
 
-// "1-ай 1-апта" фильтрінің дүйсенбісі. Әр апта +7 күн, әр ай 4 аптадан
-// тұрады деп есептеледі — осыдан кез келген ай/апта таңдауының нақты
-// дүйсенбісін шығарамыз.
+// СТ аптасы дүйсенбіден емес, БЕЙСЕНБІДЕН басталып, келесі сәрсенбіде
+// бітеді. Себебі СТ негізінен дүйсенбі-сәрсенбі аралығында алынады, ал
+// сол үш күн аптаның СОҢЫНДА тұруы керек: әйтпесе дүйсенбіде тапсырылған
+// СТ келесі аптаға түсіп кетеді.
 //
-// Бұл нүкте сапа бөлімінің "SMART | СТ ЗАПИСЬ" кестесімен сәйкес келуі
-// МІНДЕТТІ: онда 1-ай 3-апта = 27.07, 1-ай 4-апта = 03.08. Бұрын бір апта
-// ерте (06.07) тұрғандықтан, кураторлар кестеде 4-аптаға тапсырғанын
-// жүйе келесі айдың 1-аптасы деп көрсететін.
-const FILTER_ANCHOR_MONDAY = new Date(2026, 6, 13);
-export function getFilterMonday(monthNum, weekNum) {
+// Сапа бөлімінің "SMART | СТ ЗАПИСЬ" кестесімен тексерілген екі нүкте:
+//   1-ай 3-апта → 23.07 (бс) – 29.07 (ср), ішінде СТ күні 27.07
+//   1-ай 4-апта → 30.07 (бс) – 05.08 (ср), ішінде СТ күні 03.08
+//
+// FILTER_ANCHOR_MONDAY — "1-ай 1-апта"-ның дүйсенбісі; аптаның нақты
+// басталуы содан үш күн кейін (бейсенбі).
+const FILTER_ANCHOR_MONDAY = new Date(2026, 6, 6);
+const FILTER_WEEK_START_OFFSET = 3; // дүйсенбі → бейсенбі
+
+export function getFilterWeekStart(monthNum, weekNum) {
   const weekIndex = (monthNum - 1) * 4 + (weekNum - 1);
   const d = new Date(FILTER_ANCHOR_MONDAY);
-  d.setDate(d.getDate() + weekIndex * 7);
+  d.setDate(d.getDate() + weekIndex * 7 + FILTER_WEEK_START_OFFSET);
   return d;
 }
 
@@ -48,8 +56,8 @@ export function toLocalISODate(d) {
   return `${y}-${m}-${day}`;
 }
 
-export function isoDateOfDay(monday, dayIndex) {
-  const d = new Date(monday);
+export function isoDateOfDay(weekStart, dayIndex) {
+  const d = new Date(weekStart);
   d.setDate(d.getDate() + dayIndex);
   return toLocalISODate(d);
 }
@@ -110,7 +118,7 @@ function resolveMeetBadge(booking, liveStatus) {
   return null;
 }
 
-export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onDeleteBooking, readOnly, liveStatus, onOpenJournal }) {
+export default function WeekBookingCalendar({ weekStart, bookings, onSlotClick, onDeleteBooking, readOnly, liveStatus, onOpenJournal }) {
   const hours = Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, i) => START_HOUR + i);
   const totalH = (END_HOUR - START_HOUR) * HOUR_H;
 
@@ -128,7 +136,7 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
   // жасырғаннан гөрі, скролл жасаған әлдеқайда "аккуратно" көрінеді.
   const EVENT_COL_W = 130;
   const DAY_MIN_W = 130;
-  const dayLayouts = DAY_LABELS.map((_, dayIndex) => layoutDayBookings(byDate[isoDateOfDay(monday, dayIndex)] || []));
+  const dayLayouts = DAY_LABELS.map((_, dayIndex) => layoutDayBookings(byDate[isoDateOfDay(weekStart, dayIndex)] || []));
   const dayWidths = dayLayouts.map(laid => {
     const maxCols = laid.reduce((m, b) => Math.max(m, Math.round(1 / b._wf)), 1);
     return Math.max(DAY_MIN_W, maxCols * EVENT_COL_W);
@@ -142,7 +150,7 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
     const minutesFromTop = (y / HOUR_H) * 60;
     const maxMin = (END_HOUR - START_HOUR) * 60 - 30;
     const clamped = Math.max(0, Math.min(maxMin, Math.round(minutesFromTop / 5) * 5));
-    onSlotClick(isoDateOfDay(monday, dayIndex), START_HOUR * 60 + clamped);
+    onSlotClick(isoDateOfDay(weekStart, dayIndex), START_HOUR * 60 + clamped);
   };
 
   return (
@@ -153,7 +161,7 @@ export default function WeekBookingCalendar({ monday, bookings, onSlotClick, onD
           {DAY_LABELS.map((label, i) => (
             <div key={label} style={{ padding: '10px 8px', borderLeft: '1px solid var(--border)', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{label}</div>
-              <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{isoDateOfDay(monday, i).slice(5)}</div>
+              <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>{isoDateOfDay(weekStart, i).slice(5)}</div>
             </div>
           ))}
 
