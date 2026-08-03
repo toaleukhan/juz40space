@@ -5,7 +5,7 @@ import api from '../services/api';
 import { SUBJECT_COLORS, SUBJECT_LOGOS } from './scheduleData';
 import { motion } from 'framer-motion';
 import { SHEETS_LOGO } from '../components/brandLogos';
-import { IconMeetLogo, IconBolt, IconVideo, IconClock, IconClose, IconTable } from '../components/icons';
+import { IconMeetLogo, IconBolt, IconVideo, IconClock, IconClose, IconTable, IconRefresh } from '../components/icons';
 import WeekBookingCalendar, { getFilterMonday, minutesToTime, toLocalISODate } from '../components/WeekBookingCalendar';
 import BookingModal from '../components/BookingModal';
 import MeetJournalModal from '../components/MeetJournalModal';
@@ -116,6 +116,31 @@ export default function StRecordings() {
     }
   };
 
+  // Осы аптадағы барлық кураторды бірден Drive-тан іздеу. Автосинхрондау
+  // тек соңғы 14 күнде ашылған Миттерді қарайтындықтан, ескі аптаны немесе
+  // Google кеш дайындаған жазбаны осы батырмамен қуып жетеді.
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
+
+  const handleSyncAll = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const { data } = await api.post('/st-recordings/sync-drive-all', {
+        subject: currentSubjectCode,
+        streamId: currentStream,
+        monthNum: currentMonth,
+        weekNum: currentWeek,
+      });
+      setSyncResult(data);
+      await loadTable();
+    } catch (err) {
+      alert('Қателік: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const handleAddCurator = async () => {
     if (!newCurator.trim()) return;
     try {
@@ -219,13 +244,43 @@ export default function StRecordings() {
               СТ Жүйесі {selectedSubject ? `· ${selectedSubject.name}` : ''}
             </h1>
           </div>
-          {selectedSubject && !isCurator && !isCoordinator && (
-            <button onClick={() => updateFilters({ subject: null })}
-              style={{ padding: '8px 16px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-sub)', fontWeight: 600, fontSize: 12 }}>
-              ← Барлық пәндер
-            </button>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {selectedSubject && !isCurator && (
+              <button onClick={handleSyncAll} disabled={syncing}
+                title="Осы аптадағы барлық кураторға Drive-тан жазба мен отслежканы іздеу"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  padding: '8px 16px', borderRadius: 12, border: '1px solid var(--border)',
+                  background: 'var(--surface)', color: syncing ? 'var(--text-muted)' : 'var(--text-sub)',
+                  fontWeight: 700, fontSize: 12, cursor: syncing ? 'default' : 'pointer',
+                }}>
+                <IconRefresh style={{ width: 13, height: 13, ...(syncing ? { opacity: 0.5 } : {}) }} />
+                {syncing ? 'Ізделуде...' : 'Синхрондау'}
+              </button>
+            )}
+            {selectedSubject && !isCurator && !isCoordinator && (
+              <button onClick={() => updateFilters({ subject: null })}
+                style={{ padding: '8px 16px', borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-sub)', fontWeight: 600, fontSize: 12 }}>
+                ← Барлық пәндер
+              </button>
+            )}
+          </div>
         </div>
+
+        {syncResult && (
+          <div style={{
+            marginBottom: 16, padding: '10px 16px', borderRadius: 12, fontSize: 12.5, fontWeight: 600,
+            background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text-sub)',
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+          }}>
+            <span>{syncResult.total} куратор тексерілді</span>
+            <span style={{ color: '#059669' }}>· жазбасы бар: {syncResult.video}</span>
+            <span style={{ color: '#059669' }}>· отслежкасы бар: {syncResult.attendance}</span>
+            {syncResult.failed > 0 && <span style={{ color: '#d97706' }}>· қате: {syncResult.failed}</span>}
+            <button onClick={() => setSyncResult(null)}
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 16, lineHeight: 1, padding: 0 }}>×</button>
+          </div>
+        )}
 
         {!selectedSubject ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 18 }}>
