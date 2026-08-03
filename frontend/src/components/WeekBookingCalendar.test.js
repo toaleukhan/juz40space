@@ -1,27 +1,40 @@
 import { describe, it, expect } from 'vitest';
 import {
-  getFilterMonday,
+  getFilterWeekStart,
   toLocalISODate,
   isoDateOfDay,
   minutesToTime,
   layoutDayBookings,
 } from './WeekBookingCalendar';
 
-// Даталар сапа бөлімінің "SMART | СТ ЗАПИСЬ" кестесінен алынған: сол
-// кестеде 1-ай/3-апта = 27.07, 1-ай/4-апта = 03.08. Қалғаны содан шығады:
-// 1-ай/1-апта = 13.07, 2-ай/1-апта = 10.08.
-describe('getFilterMonday', () => {
-  it('anchors month 1 / week 1 to 2026-07-13', () => {
-    expect(toLocalISODate(getFilterMonday(1, 1))).toBe('2026-07-13');
+// СТ аптасы бейсенбіден келесі сәрсенбіге дейін созылады, сондықтан
+// дүйсенбі-сәрсенбіде алынған СТ аптаның СОҢЫНА түседі. Сапа бөлімінің
+// "SMART | СТ ЗАПИСЬ" кестесімен тексерілген нүктелер: 1-ай/3-аптада СТ
+// 27.07-де, 1-ай/4-аптада 03.08-де алынған.
+describe('getFilterWeekStart', () => {
+  it('starts month 1 / week 1 on a Thursday', () => {
+    const d = getFilterWeekStart(1, 1);
+    expect(toLocalISODate(d)).toBe('2026-07-09');
+    expect(d.getDay()).toBe(4); // бейсенбі
   });
 
   it('advances by 7 days per week within the same month', () => {
-    expect(toLocalISODate(getFilterMonday(1, 3))).toBe('2026-07-27');
-    expect(toLocalISODate(getFilterMonday(1, 4))).toBe('2026-08-03');
+    expect(toLocalISODate(getFilterWeekStart(1, 3))).toBe('2026-07-23');
+    expect(toLocalISODate(getFilterWeekStart(1, 4))).toBe('2026-07-30');
   });
 
   it('rolls over into the next month after 4 weeks', () => {
-    expect(toLocalISODate(getFilterMonday(2, 1))).toBe('2026-08-10');
+    expect(toLocalISODate(getFilterWeekStart(2, 1))).toBe('2026-08-06');
+  });
+
+  // Ең маңызды тексеріс: кестедегі СТ күні дәл сол аптаның ішіне түсуі керек.
+  it.each([
+    [1, 3, '2026-07-27'],
+    [1, 4, '2026-08-03'],
+  ])('week %i/%i contains the sheet\'s СТ Monday %s', (month, week, stDate) => {
+    const start = getFilterWeekStart(month, week);
+    const days = Array.from({ length: 7 }, (_, i) => isoDateOfDay(start, i));
+    expect(days).toContain(stDate);
   });
 });
 
@@ -38,14 +51,14 @@ describe('toLocalISODate', () => {
 });
 
 describe('isoDateOfDay', () => {
-  it('returns the Monday itself at dayIndex 0', () => {
-    const monday = getFilterMonday(1, 3);
-    expect(isoDateOfDay(monday, 0)).toBe('2026-07-27');
+  it('returns the week start itself at dayIndex 0', () => {
+    const start = getFilterWeekStart(1, 4);
+    expect(isoDateOfDay(start, 0)).toBe('2026-07-30');
   });
 
-  it('rolls over the month boundary correctly at dayIndex 6 (Sunday)', () => {
-    const monday = getFilterMonday(1, 3);
-    expect(isoDateOfDay(monday, 6)).toBe('2026-08-02');
+  it('rolls over the month boundary correctly at dayIndex 6 (last day)', () => {
+    const start = getFilterWeekStart(1, 4);
+    expect(isoDateOfDay(start, 6)).toBe('2026-08-05');
   });
 });
 
