@@ -290,6 +290,56 @@ router.post('/sync-drive', auth, async (req, res) => {
   }
 });
 
+// 4b. Экранда тұрған аптадағы БАРЛЫҚ куратордың жазба/отслежкасын бірден
+// іздеу. Автоматты scheduler тек соңғы 14 күнде ашылған Миттерді қарайды —
+// одан ескі аптаны (немесе Google жазбаны кеш дайындаған жағдайды) қолмен
+// қуып жету үшін керек.
+router.post('/sync-drive-all', auth, async (req, res) => {
+  const isAdmin = req.user.role === 'admin';
+  const isCoordinator = req.user.role === 'coordinator';
+  if (!isAdmin && !isCoordinator) {
+    return res.status(403).json({ error: 'Тек admin немесе координатор рұқсаты бар' });
+  }
+
+  // Координатор өз ағымына құлыпталған — GET /-тегі ережемен бірдей.
+  const subj = isCoordinator ? req.user.subject : (req.body.subject || 'ФИЗ');
+  const strId = isCoordinator ? req.user.streamId : (req.body.streamId || '01');
+  const mNum = parseInt(req.body.monthNum) || 1;
+  const wNum = parseInt(req.body.weekNum) || 1;
+
+  try {
+    const rowsRes = await pool.query(
+      `SELECT * FROM st_recordings
+       WHERE subject = $1 AND (stream_id = $2 OR month_id = $2)
+         AND (month_num = $3::int OR month_id = $3::text) AND week_num = $4
+       ORDER BY id ASC`,
+      [subj, strId, mNum, wNum]
+    );
+    const rows = rowsRes.rows;
+    if (!rows.length) return res.json({ total: 0, video: 0, attendance: 0, failed: 0 });
+
+    // Drive-тың сұраныс шегіне тірелмеу үшін бесеуден топтап жүреміз —
+    // бір пәннің аккаунтына 40-қа жуық куратор тиесілі болуы мүмкін.
+    const BATCH = 5;
+    let video = 0, attendance = 0, failed = 0;
+
+    for (let i = 0; i < rows.length; i += BATCH) {
+      const batch = rows.slice(i, i + BATCH);
+      const results = await Promise.allSettled(batch.map(r => syncRecordDrive(r)));
+      results.forEach((r) => {
+        if (r.status !== 'fulfilled' || !r.value?.synced) { failed++; return; }
+        const rec = r.value.record;
+        if (rec?.video_links?.length) video++;
+        if (rec?.attendance_links?.length) attendance++;
+      });
+    }
+
+    res.json({ total: rows.length, video, attendance, failed });
+  } catch (err) {
+    res.status(500).json({ error: 'Драйв іздеу қатесі: ' + err.message });
+  }
+});
+
 // 5. Өрістерді жаңарту
 router.put('/:id', auth, async (req, res) => {
   const { studentsCount, notes } = req.body;
