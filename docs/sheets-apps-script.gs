@@ -170,6 +170,29 @@ function linkedCell(urls, label) {
   return builder.build();
 }
 
+/** Бір куратордың бірнеше жолын бір жолға біріктіреді (қайталанбайтын сілтемелер). */
+function mergeRows(rows) {
+  if (rows.length === 1) return rows[0];
+  var uniq = function (arrays) {
+    var seen = {}, out = [];
+    arrays.forEach(function (a) {
+      (a || []).forEach(function (v) { if (v && !seen[v]) { seen[v] = true; out.push(v); } });
+    });
+    return out;
+  };
+  var firstNonEmpty = function (key) {
+    for (var i = 0; i < rows.length; i++) if (rows[i][key]) return rows[i][key];
+    return '';
+  };
+  return {
+    curatorName: rows[0].curatorName,
+    studentsCount: firstNonEmpty('studentsCount'),
+    notes: firstNonEmpty('notes'),
+    videos: uniq(rows.map(function (r) { return r.videos; })),
+    attendance: uniq(rows.map(function (r) { return r.attendance; })),
+  };
+}
+
 function fillWeek(monthNum, weekNum) {
   var sheet = SpreadsheetApp.getActiveSheet();
   var parsed = parseSheetName(sheet.getName());
@@ -190,12 +213,18 @@ function fillWeek(monthNum, weekNum) {
 
     var hits = data.rows.filter(function (cand) { return sameName(name, cand.curatorName); });
     if (hits.length === 0) { missing.push(name); continue; }
-    if (hits.length > 1) {
-      // Екі кураторға бірдей келсе, қателеспей тұрып тоқтаймыз.
+
+    // Базада бір куратордың бір аптада бірнеше жолы болуы мүмкін (мыс.
+    // апта нөмірін түзету кезінде бос жол қосарланып қалса). Есімдері
+    // бірдей болса — бұл сол адамның бөлшектенген деректері, біріктіреміз.
+    // Ал есімдері шынымен әртүрлі болса, кімді жазуды өзіміз шеше алмаймыз.
+    var distinct = {};
+    hits.forEach(function (h) { distinct[normalizeName(h.curatorName)] = true; });
+    if (Object.keys(distinct).length > 1) {
       ambiguous.push(name + ' → ' + hits.map(function (h) { return h.curatorName; }).join(' / '));
       continue;
     }
-    var row = hits[0];
+    var row = mergeRows(hits);
 
     var rowIndex = block.start + i;
     if (row.studentsCount !== '') sheet.getRange(rowIndex, COL.submitted).setValue(row.studentsCount);
