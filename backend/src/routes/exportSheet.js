@@ -50,8 +50,9 @@ router.get('/st', async (req, res) => {
       [subject, streamId, monthNum, weekNum]
     );
 
-    // Бір бағанда бір сілтеме — кестедегі D/E "негізгі", G/H "толықтыратын"
-    // деп бөлінгендіктен, біріншісін бөлек, қалғанын бөлек береміз.
+    // Сілтемелер жалпақ тізіммен беріледі: кестеде олар бір ұяшықтың ішінде
+    // "запись 1", "запись 2" деп аталған сілтемелерге айналады (ҮЛГІ бетіндегі
+    // үлгі бойынша), сондықтан бірінші/қалғаны деп бөлудің қажеті жоқ.
     const rows = result.rows.map(r => {
       const videos = r.video_links?.length ? r.video_links : (r.video_link ? [r.video_link] : []);
       const attendance = r.attendance_links?.length ? r.attendance_links : (r.attendance_link ? [r.attendance_link] : []);
@@ -59,10 +60,8 @@ router.get('/st', async (req, res) => {
         curatorName: r.curator_name,
         studentsCount: r.students_count || '',
         notes: r.notes || '',
-        video: videos[0] || '',
-        videoExtra: videos.slice(1),
-        attendance: attendance[0] || '',
-        attendanceExtra: attendance.slice(1),
+        videos,
+        attendance,
       };
     });
 

@@ -5,37 +5,37 @@
  * тақырып жолын ("1-ай 4-апта") тауып, астындағы кураторлардың жолдарын
  * сайттағы деректермен толтырады.
  *
- * Қалай орнату керек:
- *   1. Кестені ашып: Кеңейтімдер → Apps Script
- *   2. Осы файлдың бүкіл мазмұнын сол жерге қойып, сақтаңыз
- *   3. Төмендегі EXPORT_TOKEN-ді Railway-дегі мәнмен ауыстырыңыз
- *   4. Кестені жаңартыңыз — жоғарыда "JUZ40" мәзірі пайда болады
+ * Сілтемелер ҮЛГІ бетіндегідей жазылады: бір ұяшықтың ішінде
+ * "запись 1  запись 2" деп аталған, әрқайсысы өз мекенжайына сілтейтін
+ * гиперсілтемелер. Ұзын URL көрінбейді.
  *
- * Ескерту: скрипт тек C–H бағандарын ғана жазады, басқасына тимейді.
- * Куратор аты (A бағаны) сайттағы жазылуымен дәл сәйкес келуі керек.
+ * Тек мына бағандарды жазады: C (СТ тапсырды), D (запись), E (отслежка),
+ * F (ескеру керек жағдайлар). A мен B-ға тимейді.
+ *
+ * Куратордың аты-жөні (A бағаны) сайттағы жазылуымен ДӘЛ сәйкес келуі керек.
  */
 
-// API_BASE — Railway-дегі backend мекенжайы. Дәл қандай екенін Railway →
-// juz40space сервисі → Settings → Domains бөлімінен көріңіз, соңына /api
-// қосылады. Сайттың Vercel-дегі VITE_API_URL айнымалысында да сол тұр.
+// ─── БАПТАУ ──────────────────────────────────────────────────────────────
+// Railway → juz40space сервисі → Settings → Domains бөліміндегі мекенжай,
+// соңына /api қосылады.
 var API_BASE = 'https://juz40space-production.up.railway.app/api';
+// Railway → juz40space → Variables → EXPORT_TOKEN мәні.
 var EXPORT_TOKEN = 'МҰНДА_RAILWAY-ДЕГІ_EXPORT_TOKEN';
+// ─────────────────────────────────────────────────────────────────────────
 
 // Кестедегі бағандар (1 = A)
 var COL = {
-  name: 1,            // A  АТЫ-ЖӨНІ
-  submitted: 3,       // C  СТ ТАПСЫРДЫ
-  video: 4,           // D  ЗАПИСЬ СІЛТЕМЕСІ
-  attendance: 5,      // E  ОТСЛЕЖКА СІЛТЕМЕСІ
-  notes: 6,           // F  ЕСКЕРУ КЕРЕК ЖАҒДАЙЛАР
-  videoExtra: 7,      // G  ТОЛЫҚТЫРАТЫН ЗАПИСЬ
-  attendanceExtra: 8, // H  ТОЛЫҚТЫРАТЫН ОТСЛЕЖКА
+  name: 1,        // A  АТЫ-ЖӨНІ
+  submitted: 3,   // C  СТ ТАПСЫРДЫ
+  video: 4,       // D  ЗАПИСЬ СІЛТЕМЕСІ
+  attendance: 5,  // E  ОТСЛЕЖКА СІЛТЕМЕСІ
+  notes: 6,       // F  ЕСКЕРУ КЕРЕК ЖАҒДАЙЛАР
 };
 
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('JUZ40')
-    .addItem('Осы аптаны тарту…', 'promptAndFill')
+    .addItem('Аптаны тарту…', 'promptAndFill')
     .addToUi();
 }
 
@@ -43,7 +43,7 @@ function promptAndFill() {
   var ui = SpreadsheetApp.getUi();
   var res = ui.prompt(
     'JUZ40 — тарту',
-    'Қай апта? Мысалы: 1-ай 4-апта деп "1 4" жазыңыз',
+    'Қай апта? "1-ай 4-апта" үшін "1 4" деп жазыңыз.',
     ui.ButtonSet.OK_CANCEL
   );
   if (res.getSelectedButton() !== ui.Button.OK) return;
@@ -57,16 +57,20 @@ function promptAndFill() {
   }
 
   try {
-    var filled = fillWeek(monthNum, weekNum);
-    ui.alert('Дайын: ' + filled + ' куратор толтырылды.');
+    var r = fillWeek(monthNum, weekNum);
+    ui.alert(
+      'Дайын.\n\n' +
+      'Толтырылды: ' + r.filled + ' куратор\n' +
+      (r.missing.length
+        ? 'Кестеде бар, бірақ сайтта табылмады (' + r.missing.length + '):\n' + r.missing.join(', ')
+        : 'Барлық куратор сәйкес келді.')
+    );
   } catch (e) {
     ui.alert('Қателік: ' + e.message);
   }
 }
 
-/**
- * Ашық тұрған беттің атынан пән мен ағынды алады: "ФИЗ-01" → ФИЗ, 01
- */
+/** Ашық тұрған беттің атынан пән мен ағынды алады: "ФИЗ-01" → ФИЗ, 01 */
 function parseSheetName(name) {
   var m = String(name).trim().match(/^(.+)-(\d{2})$/);
   if (!m) throw new Error('Бет атауы "ПӘН-АҒЫМ" түрінде болуы керек, мыс. ФИЗ-01. Қазір: ' + name);
@@ -86,15 +90,13 @@ function fetchWeek(subject, streamId, monthNum, weekNum) {
   });
   var code = response.getResponseCode();
   var text = response.getContentText();
-  if (code !== 200) {
-    throw new Error('Сервер ' + code + ': ' + text.slice(0, 200));
-  }
+  if (code !== 200) throw new Error('Сервер ' + code + ': ' + text.slice(0, 200));
   return JSON.parse(text);
 }
 
 /**
- * "1-ай 4-апта" тақырып жолын тауып, оның астындағы кураторлар блогының
- * жол аралығын қайтарады (келесі тақырыпқа немесе беттің соңына дейін).
+ * "1-ай 4-апта" тақырып жолын тауып, астындағы кураторлар блогының жол
+ * аралығын қайтарады (келесі тақырыпқа немесе беттің соңына дейін).
  */
 function findWeekBlock(sheet, monthNum, weekNum) {
   var lastRow = sheet.getLastRow();
@@ -111,9 +113,26 @@ function findWeekBlock(sheet, monthNum, weekNum) {
 
   var end = lastRow;
   for (var j = start - 1; j < names.length; j++) {
-    if (anyHeader.test(String(names[j][0]))) { end = j; break; }  // келесі тақырып
+    if (anyHeader.test(String(names[j][0]))) { end = j; break; } // келесі тақырып
   }
   return { start: start, end: end };
+}
+
+/**
+ * Бір ұяшыққа бірнеше атаулы гиперсілтеме жасайды:
+ *   "запись 1  запись 2" — әрқайсысы өз URL-іне сілтейді.
+ * ҮЛГІ бетіндегі көріністі осы береді.
+ */
+function linkedCell(urls, label) {
+  var parts = urls.map(function (_, i) { return label + ' ' + (i + 1); });
+  var SEP = '  ';
+  var builder = SpreadsheetApp.newRichTextValue().setText(parts.join(SEP));
+  var pos = 0;
+  parts.forEach(function (p, i) {
+    builder.setLinkUrl(pos, pos + p.length, urls[i]);
+    pos += p.length + SEP.length;
+  });
+  return builder.build();
 }
 
 function fillWeek(monthNum, weekNum) {
@@ -125,26 +144,30 @@ function fillWeek(monthNum, weekNum) {
   data.rows.forEach(function (r) { byName[String(r.curatorName).trim()] = r; });
 
   var block = findWeekBlock(sheet, monthNum, weekNum);
-  if (block.end < block.start) return 0;
+  if (block.end < block.start) return { filled: 0, missing: [] };
 
   var count = block.end - block.start + 1;
   var nameCells = sheet.getRange(block.start, COL.name, count, 1).getValues();
   var filled = 0;
+  var missing = [];
 
   for (var i = 0; i < count; i++) {
     var name = String(nameCells[i][0]).trim();
     if (!name) continue;
     var row = byName[name];
-    if (!row) continue;
+    if (!row) { missing.push(name); continue; }
 
     var r = block.start + i;
     if (row.studentsCount !== '') sheet.getRange(r, COL.submitted).setValue(row.studentsCount);
-    if (row.video) sheet.getRange(r, COL.video).setValue(row.video);
-    if (row.attendance) sheet.getRange(r, COL.attendance).setValue(row.attendance);
     if (row.notes) sheet.getRange(r, COL.notes).setValue(row.notes);
-    if (row.videoExtra.length) sheet.getRange(r, COL.videoExtra).setValue(row.videoExtra.join('\n'));
-    if (row.attendanceExtra.length) sheet.getRange(r, COL.attendanceExtra).setValue(row.attendanceExtra.join('\n'));
+
+    if (row.videos && row.videos.length) {
+      sheet.getRange(r, COL.video).setRichTextValue(linkedCell(row.videos, 'запись'));
+    }
+    if (row.attendance && row.attendance.length) {
+      sheet.getRange(r, COL.attendance).setRichTextValue(linkedCell(row.attendance, 'отслежка'));
+    }
     filled++;
   }
-  return filled;
+  return { filled: filled, missing: missing };
 }
