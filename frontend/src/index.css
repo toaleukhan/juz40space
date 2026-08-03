@@ -77,7 +77,7 @@ body {
   /* Sidebar.jsx-тегі рельс position:fixed болғандықтан аққынан шығады —
      мазмұн жиналған рельс енінің астында қалмас үшін орын қалдырамыз.
      Рельс hover-де кеңейгенде мазмұнның үстіне қалқып шығады, итермейді. */
-  .app-shell { padding-left: 76px; }
+  .app-shell { padding-left: 68px; }
 }
 @media (max-width: 768px) {
   .app-shell { flex-direction: column; }
