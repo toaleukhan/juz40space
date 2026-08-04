@@ -32,10 +32,31 @@ async function syncRecordDrive(record) {
   const { lower_at: lowerAt, upper_at: upperAt } = bounds.rows[0];
 
   // Мит әлі ашылмаған болса, жолдың жасалу уақытына қайта түсеміз.
-  const from = lowerAt || record.created_at;
+  let from = lowerAt || record.created_at;
 
-  const searchText = `СТ: ${record.subject} - ${record.curator_name}`.replace(/'/g, "\\'");
-  let query = `name contains '${searchText}' and trashed = false and createdTime > '${from.toISOString()}'`;
+  // Жүйе іске қосылғанға дейінгі сынақ жазбалары Drive-та жатыр. Жолда
+  // бронь болмаса, жоғарыдағы қайта түсу оларға дейін жетіп қалады —
+  // сондықтан ешқашан осы күннен ары қарамаймыз.
+  if (process.env.DRIVE_SYNC_NOT_BEFORE) {
+    const floor = new Date(process.env.DRIVE_SYNC_NOT_BEFORE);
+    if (!isNaN(floor) && floor > from) from = floor;
+  }
+
+  // Мит календарь оқиғасынан ашылса, жазба оқиға атымен ("СТ: ФИЗ - Аты")
+  // сақталады. Ал куратор сол сілтемеге кейін бөлек кіріп жазса, Google оны
+  // Мит КОДЫМЕН атайды: "zym-uyzm-sen (2026-08-03 19:40 GMT+5)". Тек атауды
+  // іздесек, бір Миттің екінші-үшінші жазбасы табылмай қалады — сондықтан
+  // осы жолдың барлық meet_code-ы да іздеуге қосылады.
+  const codesRes = await pool.query(
+    `SELECT DISTINCT meet_code FROM st_bookings
+      WHERE recording_id = $1 AND meet_code IS NOT NULL AND meet_code <> ''`,
+    [record.id]
+  );
+  const esc = (s) => String(s).replace(/'/g, "\\'");
+  const nameClauses = [`name contains '${esc(`СТ: ${record.subject} - ${record.curator_name}`)}'`]
+    .concat(codesRes.rows.map(r => `name contains '${esc(r.meet_code)}'`));
+
+  let query = `(${nameClauses.join(' or ')}) and trashed = false and createdTime > '${from.toISOString()}'`;
   if (upperAt) {
     query += ` and createdTime < '${upperAt.toISOString()}'`;
   }
