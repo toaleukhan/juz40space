@@ -119,6 +119,58 @@ const createTables = async () => {
       );
     `);
 
+    // 5. recording_reviews — координатор/тексеруші бір жазбаға жазатын
+    // бағалау (Google Doc-та қолмен жазылып жүрген «Ескерту/Ұсыныс»
+    // кестесінің орнын алады). Бір st_recordings жолында бір ғана бағалау
+    // болады — қайта ашса, соны жаңартады.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS recording_reviews (
+        id SERIAL PRIMARY KEY,
+        recording_id INT NOT NULL UNIQUE REFERENCES st_recordings(id) ON DELETE CASCADE,
+        reviewer_id INT REFERENCES users(id),
+        no_issues BOOLEAN NOT NULL DEFAULT false,
+        recommendation TEXT,
+        source VARCHAR(20) NOT NULL DEFAULT 'site',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    // Ескі жолдарда болмауы мүмкін бағанды бөлек қосамыз — CREATE TABLE
+    // IF NOT EXISTS қайта іске қосылғанда жаңа бағанды өзі қоспайды.
+    await pool.query(`ALTER TABLE recording_reviews ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NULL DEFAULT 'site';`);
+
+    // 6. review_findings — бір бағалаудың ішіндегі, нақты видео сәтіне
+    // байланған ескертулер. video_url — сол жазбаның video_links
+    // ішіндегі қайсысы екенін білдіреді (бір куратор бір аптада бірнеше
+    // рет жазып қоюы мүмкін). timestamp_seconds — «осы сәтті белгіле»
+    // батырмасы видео плеерден өзі алатын сан, қолмен теру қажет емес.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS review_findings (
+        id SERIAL PRIMARY KEY,
+        review_id INT NOT NULL REFERENCES recording_reviews(id) ON DELETE CASCADE,
+        video_url TEXT,
+        timestamp_seconds INT,
+        description TEXT NOT NULL,
+        screenshot_url TEXT,
+        order_index INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // 7. review_student_notes — «Рейтинг балл сәйкестігі» бөлімінің
+    // орны: оқушы бойынша жеке ескерту («талапқа сай» немесе нақты
+    // мәселе, мыс. «10,15 есептің жолын жазбаған»).
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS review_student_notes (
+        id SERIAL PRIMARY KEY,
+        review_id INT NOT NULL REFERENCES recording_reviews(id) ON DELETE CASCADE,
+        student_name TEXT NOT NULL,
+        ok BOOLEAN NOT NULL DEFAULT true,
+        note TEXT,
+        order_index INT NOT NULL DEFAULT 0
+      );
+    `);
+
     console.log('✅ Деректер базасы мен пайдаланушылар толық дайын!');
   } catch (err) {
     console.error('❌ Schema error:', err.message);
