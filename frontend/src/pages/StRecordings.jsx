@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import api from '../services/api';
 import { SUBJECT_COLORS, SUBJECT_LOGOS } from './scheduleData';
@@ -35,6 +35,7 @@ export default function StRecordings() {
   const isCoordinator = currentUser.role === 'coordinator';
 
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const currentSubjectCode = searchParams.get('subject') || ((isCurator || isCoordinator) ? currentUser.subject : null);
   const currentStream = searchParams.get('stream') || ((isCurator || isCoordinator) ? (currentUser.streamId || '01') : '01');
@@ -543,11 +544,12 @@ export default function StRecordings() {
                           <th style={{ padding: '14px 12px' }}>Запись сілтемелері</th>
                           <th style={{ padding: '14px 12px' }}>Отслежка сілтемелері</th>
                           <th style={{ padding: '14px 12px' }}>Ескеру керек жағдайлар</th>
+                          <th style={{ padding: '14px 12px', width: 100 }}>Бағалау</th>
                         </tr>
                       </thead>
                       <tbody>
                         {rows.length === 0 ? (
-                          <tr><td colSpan={5} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Кураторлар қосылмаған</td></tr>
+                          <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Кураторлар қосылмаған</td></tr>
                         ) : rows.map((row) => {
                           const videoLinks = row.video_links || (row.video_link ? [row.video_link] : []);
                           const attendanceLinks = row.attendance_links || (row.attendance_link ? [row.attendance_link] : []);
@@ -587,6 +589,14 @@ export default function StRecordings() {
                                 )}
                               </td>
                               <td style={{ padding: '12px', color: 'var(--text-sub)' }}>{row.notes || '—'}</td>
+                              <td style={{ padding: '12px' }}>
+                                {videoLinks.length > 0 && (
+                                  <button onClick={() => navigate(`/review/${row.id}`)}
+                                    style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#f59e0b', color: '#fff', fontWeight: 700, fontSize: 11.5, cursor: 'pointer' }}>
+                                    Бағалау
+                                  </button>
+                                )}
+                              </td>
                             </tr>
                           );
                         })}
@@ -621,13 +631,14 @@ export default function StRecordings() {
                     <th style={{ padding: '14px 12px' }}>Отслежка сілтемелері</th>
                     <th style={{ padding: '14px 12px' }}>Ескеру керек жағдайлар</th>
                     <th style={{ padding: '14px 16px', width: 200 }}>Автоматика</th>
+                    <th style={{ padding: '14px 12px', width: 100 }}>Бағалау</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Жүктелуде...</td></tr>
+                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Жүктелуде...</td></tr>
                   ) : rows.length === 0 ? (
-                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Кураторлар қосылмаған</td></tr>
+                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--text-muted)' }}>Кураторлар қосылмаған</td></tr>
                   ) : rows.map((row) => {
                     const videoLinks = row.video_links || (row.video_link ? [row.video_link] : []);
                     const attendanceLinks = row.attendance_links || (row.attendance_link ? [row.attendance_link] : []);
@@ -709,6 +720,14 @@ export default function StRecordings() {
                               <IconClose style={{ width: 12, height: 12 }} />
                             </button>
                           </div>
+                        </td>
+                        <td style={{ padding: '12px' }}>
+                          {videoLinks.length > 0 && (
+                            <button onClick={() => navigate(`/review/${row.id}`)}
+                              style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#f59e0b', color: '#fff', fontWeight: 700, fontSize: 11.5, cursor: 'pointer' }}>
+                              Бағалау
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );

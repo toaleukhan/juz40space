@@ -49,6 +49,7 @@ app.use('/api/coordinators', require('./routes/coordinators'));
 app.use('/api/teachers', require('./routes/teachers'));
 app.use('/api/export', require('./routes/exportSheet'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/recordings', require('./routes/recordingReviews'));
 
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 

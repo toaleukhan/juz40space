@@ -6,6 +6,7 @@ import CuratorsDatabase from './pages/CuratorsDatabase';
 import Dashboard from './pages/Dashboard';
 import CuratorCabinet from './pages/CuratorCabinet';
 import TeacherCabinet from './pages/TeacherCabinet';
+import RecordingReview from './pages/RecordingReview';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 
@@ -33,6 +34,9 @@ export default function App() {
 
         {/* 👩‍🏫 Мұғалімнің жеке кабинеті — тек өз апталық кестесі */}
         <Route path="/my-schedule" element={<ProtectedRoute><TeacherCabinet /></ProtectedRoute>} />
+
+        {/* 🎥 СТ жазбасын бағалау: видео + уақыт белгілі ескертулер */}
+        <Route path="/review/:recordingId" element={<ProtectedRoute><RecordingReview /></ProtectedRoute>} />
 
         <Route path="*" element={<HomeRedirect />} />
       </Routes>
