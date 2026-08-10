@@ -86,6 +86,125 @@ router.get('/status', auth, async (req, res) => {
   res.json(status);
 });
 
+const EVALUATION_SHEET_ID = process.env.EVALUATION_SHEET_ID;
+
+function normalizeCriteriaValue(v) {
+  const s = (v ?? '').toString().trim().toUpperCase();
+  if (s === 'TRUE') return true;
+  if (s === 'FALSE') return false;
+  return null;
+}
+
+function parseScore(v) {
+  const n = parseFloat((v ?? '').toString().trim().replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
+
+// Есімдерді салыстыру — import-review-doc.js / sheets-apps-script.gs-тегі
+// логикамен бірдей (тегі-аты ретін, қазақ-кирилл әріп вариантын ескереді).
+const LETTER_FOLD = { 'қ': 'к', 'ғ': 'г', 'ұ': 'у', 'ү': 'у', 'і': 'и', 'ң': 'н', 'ә': 'а', 'ө': 'о', 'һ': 'х' };
+function normalizeName(name) {
+  return String(name || '').toLowerCase()
+    .replace(/[қғұүіңәөһ]/g, (c) => LETTER_FOLD[c] || c)
+    .replace(/[^a-zа-я\s]/gi, '')
+    .split(/\s+/).filter(Boolean).sort().join(' ');
+}
+function sameName(a, b) {
+  const na = normalizeName(a).split(' ').filter(Boolean);
+  const nb = normalizeName(b).split(' ').filter(Boolean);
+  if (!na.length || !nb.length) return false;
+  const shared = na.filter((w) => nb.includes(w));
+  return shared.length >= 2 || (shared.length >= 1 && Math.min(na.length, nb.length) === 1);
+}
+
+// "СТ БАҒАЛАУ" кестесінің бір таб-ын (мыс. "ФИЗ-01") апта-блоктарға бөліп,
+// әр куратордың критерий бойынша (TRUE/FALSE) және "Бағалау" баллын алады.
+// Баған саны/атаулары апта сайын өзгеруі мүмкін (тарихи эволюция), сондықтан
+// "АТЫ-ЖӨНІ" деген жол кезіккен сайын активті header жаңартылады.
+function parseEvaluationTab(rows) {
+  const weeks = [];
+  let header = null;
+  let current = null;
+
+  for (const row of rows) {
+    const col0 = (row[0] || '').toString().trim();
+    if (col0 === 'АТЫ-ЖӨНІ') { header = row; continue; }
+
+    const weekMatch = col0.match(/^(\d+)-АЙ\s+(\d+)-АПТА/i);
+    if (weekMatch) {
+      current = { monthNum: Number(weekMatch[1]), weekNum: Number(weekMatch[2]), curators: [] };
+      weeks.push(current);
+      continue;
+    }
+
+    if (!col0 || col0 === 'Ескерту саны' || !current || !header) continue;
+
+    const entry = { name: col0, score: null, criteria: {}, metrics: {} };
+    for (let i = 1; i < header.length - 1; i++) {
+      const label = (header[i] || '').toString().trim();
+      if (!label) continue;
+      const raw = row[i];
+      const bool = normalizeCriteriaValue(raw);
+      if (bool !== null) { entry.criteria[label] = bool; continue; }
+      if (label === 'Бағалау') { entry.score = parseScore(raw); continue; }
+      if (raw !== undefined && raw !== '') entry.metrics[label] = raw;
+    }
+    current.curators.push(entry);
+  }
+
+  return weeks;
+}
+
+// 2ә. Куратордың өз СТ-бағалау прогресі: апта сайынғы балл + критерий
+// бойынша сәйкестік. Куратор — тек өзінікін, координатор/admin — кез
+// келген куратордың атын ?curatorName= арқылы сұрай алады.
+router.get('/:subject/evaluation', auth, async (req, res) => {
+  const { subject } = req.params;
+  if (!EVALUATION_SHEET_ID) {
+    return res.status(404).json({ error: 'Бағалау кестесі қосылмаған', connected: false });
+  }
+
+  let curatorName, streamId;
+  if (req.user.role === 'curator') {
+    curatorName = req.user.fullName;
+    streamId = req.user.streamId || '01';
+  } else if (['coordinator', 'admin'].includes(req.user.role)) {
+    curatorName = (req.query.curatorName || '').toString().trim();
+    streamId = (req.query.streamId || '01').toString();
+    if (!curatorName) return res.status(400).json({ error: 'curatorName міндетті' });
+    if (req.user.role === 'coordinator' && req.user.subject !== subject) {
+      return res.status(403).json({ error: 'Бұл пән сіздің ағымыңызда емес' });
+    }
+  } else {
+    return res.status(403).json({ error: 'Рұқсат жоқ' });
+  }
+
+  const authClient = getSapaAuth();
+  if (!authClient) {
+    return res.status(400).json({ error: 'Сапа бөлімінің Google авторизация кілттері табылмады', connected: false });
+  }
+
+  try {
+    const sheets = google.sheets({ version: 'v4', auth: authClient });
+    const result = await sheets.spreadsheets.values.get({
+      spreadsheetId: EVALUATION_SHEET_ID,
+      range: `${subject}-${streamId}!A1:ZZ2000`,
+    });
+    const weeks = parseEvaluationTab(result.data.values || []);
+
+    const curatorWeeks = weeks
+      .map((w) => {
+        const row = w.curators.find((c) => sameName(c.name, curatorName));
+        return row ? { monthNum: w.monthNum, weekNum: w.weekNum, score: row.score, criteria: row.criteria, metrics: row.metrics } : null;
+      })
+      .filter(Boolean);
+
+    res.json({ connected: true, subject, streamId, curatorName, weeks: curatorWeeks });
+  } catch (err) {
+    res.status(500).json({ error: 'Google Sheets оқу қатесі: ' + err.message, connected: false });
+  }
+});
+
 // 2. Пән бойынша айлық рейтинг кестесін алу (Google Sheets-тен тікелей оқиды)
 router.get('/:subject/monthly', auth, async (req, res) => {
   const { subject } = req.params;
