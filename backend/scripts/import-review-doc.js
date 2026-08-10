@@ -109,9 +109,27 @@ function parseMiddleCell(middle) {
   return {
     noIssues: /Ескерту жоқ/i.test(agymText),
     findings: parseFindings(agymText),
+    videoUrls: parseVideoUrls(agymText),
     recommendation: cleanBlock(usynysText),
     students: parseStudents(reytingText),
   };
+}
+
+// "ағым:" бөлігінде кездескен БАРЛЫҚ Drive сілтемелерін жинайды — тақырып
+// сілтемесі (findings-ке кірмейтін, тек "N. [text](url)" емес) де осыда
+// табылады. Ескі апталардың st_recordings.video_links-і бос болғандықтан
+// (Drive автосинхрондау сол кездерде болмаған), осы сілтемелер кейін
+// базаға backfill етіледі — докта адам қолмен жазған, растығы белгілі.
+function parseVideoUrls(text) {
+  const re = /\[[^\]]*\]\(([^)]+)\)/g;
+  const seen = new Set();
+  const urls = [];
+  let m;
+  while ((m = re.exec(text))) {
+    const id = driveFileId(m[1]);
+    if (id && !seen.has(id)) { seen.add(id); urls.push(m[1]); }
+  }
+  return urls;
 }
 
 // Сақталатын мәтін өрістерінде markdown жуан қаріп синтаксисі (**) қалмауы
@@ -192,7 +210,7 @@ async function run() {
   const weeks = parseDoc(raw);
 
   let totalRows = 0, skippedEmpty = 0, matched = 0;
-  let findingsInserted = 0, studentsInserted = 0, videoUnmatched = 0;
+  let findingsInserted = 0, studentsInserted = 0, videoUnmatched = 0, videoLinksBackfilled = 0;
   const unmatchedList = [];
 
   for (const week of weeks) {
@@ -213,12 +231,26 @@ async function run() {
       }
       matched++;
 
-      const recVideoLinks = rec.video_links?.length ? rec.video_links : (rec.video_link ? [rec.video_link] : []);
+      let recVideoLinks = rec.video_links?.length ? rec.video_links : (rec.video_link ? [rec.video_link] : []);
+      const knownIds = new Set(recVideoLinks.map(driveFileId));
+      const newUrls = c.videoUrls.filter((u) => !knownIds.has(driveFileId(u)));
 
       console.log(`\n[${week.monthNum}-${week.weekNum}] ${c.name} -> recording #${rec.id} (${rec.curator_name})`);
       console.log(`  no_issues=${c.noIssues} findings=${c.findings.length} students=${c.students.length} recommendation=${c.recommendation ? 'бар' : 'жоқ'}`);
+      if (newUrls.length) {
+        console.log(`  video_links толықтырылады (backfill): ${newUrls.length} жаңа сілтеме`);
+      }
 
       if (!APPLY) continue;
+
+      if (newUrls.length) {
+        await pool.query(
+          `UPDATE st_recordings SET video_links = COALESCE(video_links, '{}') || $1::text[] WHERE id = $2`,
+          [newUrls, rec.id]
+        );
+        recVideoLinks = recVideoLinks.concat(newUrls);
+        videoLinksBackfilled += newUrls.length;
+      }
 
       await pool.query(
         `INSERT INTO recording_reviews (recording_id, no_issues, recommendation, source)
@@ -267,7 +299,7 @@ async function run() {
     unmatchedList.forEach((u) => console.log('  - ' + u));
   }
   if (APPLY) {
-    console.log(`\nЖазылды: findings=${findingsInserted}, students=${studentsInserted}`);
+    console.log(`\nЖазылды: findings=${findingsInserted}, students=${studentsInserted}, video_links backfill=${videoLinksBackfilled}`);
     if (videoUnmatched) {
       console.log(`Ескерту: ${videoUnmatched} finding видео сілтемесі сол recording-тың video_links-імен сәйкес келмеді (видеосы жоқ, тек мәтіні сақталды).`);
     }
