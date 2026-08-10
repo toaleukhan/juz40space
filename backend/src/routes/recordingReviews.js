@@ -62,22 +62,34 @@ router.get('/:recordingId/video', auth, loadAccessibleRecording, async (req, res
 
   try {
     const { token } = await authClient.getAccessToken();
+    // ӘРҚАШАН Range жіберіледі, клиент сұрамаса да. Себебі: жазбалар
+    // бірнеше гигабайт болуы мүмкін (мыс. 3.5 ГБ), ал <video> тегінің
+    // БІРІНШІ сұранысы әдетте Range-сіз келеді — егер соны Range-сіз
+    // Drive-қа жіберсек, ол 200-мен БҮКІЛ файлды бір демде қайтарады,
+    // браузер оны ешқашан жүктеп бітіре алмайды да, видео "ашылмай"
+    // қалады. Range-пен сұрасақ, Drive әрдайым 206 қайтарады — сол
+    // арқылы браузер бірден "бұл сурьектің Range қолдауы бар" деп
+    // біліп, қалғанын өзі бөлшектеп сұрай бастайды.
+    const range = req.headers.range || 'bytes=0-';
     const upstream = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        // Клиенттің Range сұранысын сол күйінде Drive-қа жібереміз —
-        // осы болмаса, видеоны артқа/алдыға жылжыту (seek) істемейді.
-        ...(req.headers.range ? { Range: req.headers.range } : {}),
-      },
+      headers: { Authorization: `Bearer ${token}`, Range: range },
     });
 
     res.status(upstream.status);
-    ['content-type', 'content-length', 'content-range', 'accept-ranges'].forEach((h) => {
+    res.setHeader('Accept-Ranges', 'bytes');
+    ['content-type', 'content-length', 'content-range'].forEach((h) => {
       const v = upstream.headers.get(h);
       if (v) res.setHeader(h, v);
     });
     if (!upstream.body) return res.end();
-    Readable.fromWeb(upstream.body).pipe(res);
+    // Видео үлкен (бірнеше ГБ) болғандықтан, браузер жиі осы ағынды
+    // жарты жолда тоқтатып, кішірек Range-пен қайта сұрайды — бұл
+    // қалыпты жағдай, дегенмен соны 'error' ретінде ұстамасақ, процесс
+    // логында қажетсіз stack trace қалады (крашқа әкелмейді, себебі
+    // res.pipe өзі клиент жабылғанда destroy шақырады).
+    const stream = Readable.fromWeb(upstream.body);
+    stream.on('error', () => {});
+    stream.pipe(res);
   } catch (err) {
     res.status(502).json({ error: 'Drive-тан видео алу қатесі: ' + err.message });
   }
