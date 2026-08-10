@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import api from '../services/api';
-import { IconUser, IconTable, IconVideo, IconLink, IconCheck, IconAlert, IconMeetLogo } from '../components/icons';
+import { IconUser, IconTable, IconVideo, IconLink, IconCheck, IconAlert, IconMeetLogo, IconChart } from '../components/icons';
 import { SHEETS_LOGO } from '../components/brandLogos';
+import ScoreTrendChart from '../components/ScoreTrendChart';
 
 // Куратордың жеке кабинеті: профиль ақпараты + өз СТ-жазбаларының тарихы бір бетте.
 export default function CuratorCabinet() {
@@ -21,10 +22,22 @@ export default function CuratorCabinet() {
   const [recordings, setRecordings] = useState([]);
   const [loadingRecordings, setLoadingRecordings] = useState(true);
 
+  const [evaluation, setEvaluation] = useState(null);
+  const [loadingEvaluation, setLoadingEvaluation] = useState(true);
+
   useEffect(() => {
     fetchProfile();
     loadMyRecordings();
+    loadEvaluation();
   }, []);
+
+  const loadEvaluation = () => {
+    setLoadingEvaluation(true);
+    api.get(`/dashboard/${localUser.subject || 'ФИЗ'}/evaluation`)
+      .then(({ data }) => setEvaluation(data))
+      .catch((err) => setEvaluation({ connected: false, error: err.response?.data?.error }))
+      .finally(() => setLoadingEvaluation(false));
+  };
 
   const fetchProfile = async () => {
     try {
@@ -203,6 +216,68 @@ export default function CuratorCabinet() {
             </button>
           </form>
         </section>
+
+        {/* ── Прогресс дэшборды: СТ БАҒАЛАУ кестесінен live оқылады ── */}
+        {!loadingEvaluation && evaluation?.connected && evaluation.weeks?.length > 0 && (() => {
+          const weeks = evaluation.weeks;
+          const points = weeks.map((w) => ({ label: `${w.monthNum}-${w.weekNum}`, score: w.score }));
+          const criteriaLabels = [];
+          weeks.forEach((w) => Object.keys(w.criteria || {}).forEach((k) => {
+            if (!criteriaLabels.includes(k)) criteriaLabels.push(k);
+          }));
+
+          return (
+            <section className="card" style={{ padding: 'clamp(16px, 3vw, 24px)', marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                <IconChart />
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>Менің прогресім</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-sub)', marginTop: 2 }}>
+                    Апта сайынғы СТ-бағалау баллы мен критерий бойынша сәйкестік
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ padding: '4px 4px 0' }}>
+                <ScoreTrendChart points={points} />
+              </div>
+
+              {criteriaLabels.length > 0 && (
+                <div style={{ overflowX: 'auto', marginTop: 24 }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 12.5, minWidth: 480 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                        <th style={{ padding: '9px 10px', fontWeight: 700 }}>Критерий</th>
+                        {weeks.map((w, i) => (
+                          <th key={i} style={{ padding: '9px 8px', fontWeight: 700, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            {w.monthNum}-{w.weekNum}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {criteriaLabels.map((label) => (
+                        <tr key={label} style={{ borderBottom: '1px solid var(--border)' }}>
+                          <td style={{ padding: '9px 10px', color: 'var(--text)' }}>{label}</td>
+                          {weeks.map((w, i) => {
+                            const v = w.criteria?.[label];
+                            return (
+                              <td key={i} style={{ padding: '9px 8px', textAlign: 'center' }}>
+                                {v === true ? <span style={{ color: '#059669', fontWeight: 800 }}>✓</span>
+                                  : v === false ? <span style={{ color: '#dc2626', fontWeight: 800 }}>✗</span>
+                                  : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          );
+        })()}
 
         {/* ── ST-recordings history ── */}
         <section className="card" style={{ padding: 'clamp(16px, 3vw, 24px)' }}>
