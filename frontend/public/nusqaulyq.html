@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ФИЗ-11 куратор нұсқаулығы — JUZ40 Space</title>
+<meta name="description" content="СТ-ны сайт арқылы қалай ашу, өткізу және тапсыру керек. ФИЗ-11 кураторларына арналған нұсқаулық.">
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta property="og:title" content="ФИЗ-11 куратор нұсқаулығы">
+<meta property="og:description" content="СТ-ны сайт арқылы қалай ашу, өткізу және тапсыру керек.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://juz40.space/nusqaulyq.html">
+<meta property="og:image" content="https://juz40.space/og.png">
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;800&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+
+<style>
+:root{
+  --paper:#f6f7f9;
+  --card:#ffffff;
+  --ink:#161c24;
+  --ink-soft:#59636e;
+  --ink-faint:#8b949e;
+  --rule:#dfe3e8;
+  --rule-soft:#eaedf1;
+  --accent:#b26b00;
+  --accent-wash:#fdf4e4;
+  --live:#0e8f62;
+  --live-wash:#e6f4ee;
+  --rec:#c8393e;
+  --rec-wash:#fceceb;
+  --shadow:0 1px 2px rgba(22,28,36,.05), 0 12px 32px rgba(22,28,36,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0f1216;
+    --card:#161b21;
+    --ink:#e8ecf1;
+    --ink-soft:#a3adb8;
+    --ink-faint:#6c7681;
+    --rule:#28313a;
+    --rule-soft:#1f272e;
+    --accent:#e9a23b;
+    --accent-wash:#2a2114;
+    --live:#3fbf8f;
+    --live-wash:#12281f;
+    --rec:#ef6d70;
+    --rec-wash:#2a1718;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0f1216;
+  --card:#161b21;
+  --ink:#e8ecf1;
+  --ink-soft:#a3adb8;
+  --ink-faint:#6c7681;
+  --rule:#28313a;
+  --rule-soft:#1f272e;
+  --accent:#e9a23b;
+  --accent-wash:#2a2114;
+  --live:#3fbf8f;
+  --live-wash:#12281f;
+  --rec:#ef6d70;
+  --rec-wash:#2a1718;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.3);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:'Golos Text',system-ui,sans-serif;
+  font-size:16.5px;line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:760px;margin:0 auto;padding:clamp(28px,5vw,64px) clamp(18px,4vw,32px) 80px}
+
+h1,h2,h3{font-family:'Manrope',system-ui,sans-serif;text-wrap:balance;margin:0}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* ─── header ─── */
+.eyebrow{
+  font-family:'Manrope',sans-serif;font-size:11.5px;font-weight:800;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin:0 0 14px;
+}
+h1{font-size:clamp(30px,5.6vw,44px);line-height:1.08;font-weight:800;letter-spacing:-.03em}
+.sub{color:var(--ink-soft);margin:16px 0 0;max-width:60ch}
+
+/* ─── week band ─── */
+.band{
+  margin:34px 0 0;padding:20px 22px;border-radius:12px;
+  background:var(--accent-wash);border:1px solid color-mix(in srgb,var(--accent) 26%,transparent);
+  display:flex;flex-wrap:wrap;gap:6px 28px;align-items:baseline;
+}
+.band__k{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.band__v{font-size:17px;font-weight:600}
+.band__note{flex-basis:100%;font-size:14px;color:var(--ink-soft);margin-top:4px}
+
+/* ─── steps ─── */
+.steps{margin:52px 0 0;display:flex;flex-direction:column;gap:38px}
+.step{display:grid;grid-template-columns:44px minmax(0,1fr);gap:0 20px}
+.step__n{
+  font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
+  color:var(--accent);padding-top:5px;
+}
+.step__b{min-width:0}
+h2{font-size:21px;font-weight:700;letter-spacing:-.02em;line-height:1.25}
+.step p{margin:10px 0 0;color:var(--ink-soft)}
+.step p strong{color:var(--ink);font-weight:600}
+
+ol.sub-steps,ul.plain{margin:14px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+ol.sub-steps{counter-reset:s}
+ol.sub-steps li{position:relative;padding-left:26px;color:var(--ink-soft)}
+ol.sub-steps li::before{
+  counter-increment:s;content:counter(s) ".";position:absolute;left:0;top:0;
+  font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink-faint);
+}
+ul.plain li{position:relative;padding-left:26px;color:var(--ink-soft)}
+ul.plain li::before{
+  content:"";position:absolute;left:6px;top:11px;width:6px;height:6px;border-radius:50%;
+  background:var(--ink-faint);
+}
+
+/* ─── field list (the modal) ─── */
+.fields{
+  margin:16px 0 0;border:1px solid var(--rule);border-radius:11px;background:var(--card);
+  overflow:hidden;box-shadow:var(--shadow);
+}
+.fields__row{
+  display:grid;grid-template-columns:minmax(140px,.8fr) minmax(0,1.4fr);gap:4px 18px;
+  padding:13px 17px;border-bottom:1px solid var(--rule-soft);
+}
+.fields__row:last-child{border-bottom:0}
+.fields__k{font-weight:600;font-size:14.5px}
+.fields__v{color:var(--ink-soft);font-size:14.5px}
+@media(max-width:520px){.fields__row{grid-template-columns:1fr}}
+
+/* ─── callouts ─── */
+.note{
+  margin:18px 0 0;padding:15px 18px;border-radius:11px;
+  border-left:3px solid var(--accent);background:var(--card);
+  border-top:1px solid var(--rule);border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);
+  font-size:15px;
+}
+.note strong{font-weight:600}
+.note--warn{border-left-color:var(--rec)}
+
+/* ─── status chips ─── */
+.chip{
+  display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;
+  font-size:12.5px;font-weight:600;white-space:nowrap;
+  font-family:'Manrope',sans-serif;
+}
+.chip--live{background:var(--live-wash);color:var(--live)}
+.chip--rec{background:var(--rec-wash);color:var(--rec)}
+.chip i{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+
+kbd{
+  font-family:'JetBrains Mono',monospace;font-size:13.5px;
+  background:var(--rule-soft);border:1px solid var(--rule);border-radius:5px;
+  padding:1px 6px;color:var(--ink);white-space:nowrap;
+}
+
+/* ─── reference section ─── */
+.ref{margin:64px 0 0;padding-top:34px;border-top:1px solid var(--rule)}
+h3{font-size:16px;font-weight:700;letter-spacing:-.01em;margin:30px 0 0}
+h3:first-of-type{margin-top:22px}
+.ref p{margin:8px 0 0;color:var(--ink-soft)}
+
+.faq{margin:16px 0 0;display:flex;flex-direction:column;gap:2px}
+.faq details{border:1px solid var(--rule);border-radius:10px;background:var(--card);overflow:hidden}
+.faq summary{
+  cursor:pointer;padding:13px 17px;font-weight:600;font-size:15px;list-style:none;
+  display:flex;justify-content:space-between;gap:14px;align-items:center;
+}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-family:'JetBrains Mono',monospace;color:var(--accent);font-size:16px}
+.faq details[open] summary::after{content:"−"}
+.faq summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.faq p{padding:0 17px 15px;margin:0;font-size:15px;color:var(--ink-soft)}
+
+footer{margin:56px 0 0;padding-top:24px;border-top:1px solid var(--rule);font-size:13.5px;color:var(--ink-faint)}
+a{color:var(--accent)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">JUZ40 Space · ФИЗ-11</p>
+  <h1>Куратор нұсқаулығы</h1>
+  <p class="sub">
+    СТ-ны сайт арқылы қалай ашу, өткізу және тапсыру керек. Толық оқып шығыңыз —
+    әр қадам бір-бірімен байланысты.
+  </p>
+
+  <div class="band">
+    <div>
+      <div class="band__k">Осы апта</div>
+      <div class="band__v mono">2-ай · 3-апта</div>
+    </div>
+    <div>
+      <div class="band__k">Апта аралығы</div>
+      <div class="band__v mono">20.08 (Бс) — 26.08 (Ср)</div>
+    </div>
+    <p class="band__note">
+      Сайттағы апта бейсенбіден сәрсенбіге дейін саналады. 24.08 — дүйсенбі, осы аптаның ішінде.
+    </p>
+  </div>
+
+  <div class="steps">
+
+    <section class="step">
+      <div class="step__n">01</div>
+      <div class="step__b">
+        <h2>Сайтқа кіру</h2>
+        <p><kbd>juz40.space</kbd> сайтын ашып, логин мен парольді енгізіңіз.
+        Логин мен пароль сізге <strong>жеке жіберіледі</strong> — топқа таратылмайды.</p>
+        <div class="note">
+          <strong>Бірінші кіргенде парольді ауыстырыңыз.</strong>
+          Сол жақтағы «Менің профилім» → «Жаңа құпия сөз» → «Өзгерістерді сақтау».
+        </div>
+      </div>
+    </section>
+
+    <section class="step">
+      <div class="step__n">02</div>
+      <div class="step__b">
+        <h2>«СТ запись» бөліміне өту</h2>
+        <p>Кіргеннен кейін ашылатын «Дэшборд» беті сізге <strong>қажет емес</strong> — ол пәндерді
+        қосуға арналған. Сол жақтағы мәзірден <strong>«СТ запись»</strong> дегенді басыңыз.</p>
+        <p>Бет автоматты түрде дұрыс аптаны ашады. Жоғарыда
+        <kbd>ФИЗ-11 · 2-ай · 3-апта</kbd> деп тұрғанын тексеріңіз.</p>
+        <div class="note note--warn">
+          <strong>Аптаны өз бетіңізше ауыстырмаңыз.</strong> Басқа апта таңдасаңыз, жазбаңыз
+          қате аптаға түсіп кетеді де, сапа бөлімі оны таппайды.
+        </div>
+      </div>
+    </section>
+
+    <section class="step">
+      <div class="step__n">03</div>
+      <div class="step__b">
+        <h2>СТ уақытын белгілеу</h2>
+        <p>Кестеден өзіңізге керек <strong>күн мен уақытты</strong> басыңыз — «Жаңа уақыт белгілеу»
+        терезесі ашылады. Оны былай толтырасыз:</p>
+
+        <div class="fields">
+          <div class="fields__row">
+            <div class="fields__k">Түрі</div>
+            <div class="fields__v">«Сабақ тапсыру (СТ)» таңдаңыз</div>
+          </div>
+          <div class="fields__row">
+            <div class="fields__k">Оқушы саны</div>
+            <div class="fields__v">СТ-ге кіретін оқушылардың нақты саны</div>
+          </div>
+          <div class="fields__row">
+            <div class="fields__k">Күні</div>
+            <div class="fields__v mono">24.08.2026</div>
+          </div>
+          <div class="fields__row">
+            <div class="fields__k">Басталуы / Аяқталуы</div>
+            <div class="fields__v">СТ шын басталатын және аяқталатын уақыт</div>
+          </div>
+        </div>
+
+        <p>Соңында <strong>«Сақтау және Мит жасау»</strong> батырмасын басасыз. Meet сілтемесі
+        автоматты жасалады — өзіңіз бөлек Meet ашудың қажеті жоқ.</p>
+
+        <div class="note note--warn">
+          <strong>Қолмен ашылған Meet жүйеге көрінбейді.</strong> Сілтемені тек осы жерден
+          алыңыз, әйтпесе жазбаңыз бен отслежкаңыз сайтқа түспей қалады.
+        </div>
+      </div>
+    </section>
+
+    <section class="step">
+      <div class="step__n">04</div>
+      <div class="step__b">
+        <h2>СТ кезінде</h2>
+        <ul class="plain">
+          <li>Meet-ке сайттағы карточкадан кіріңіз.</li>
+          <li><strong>Жазбаны (запись) міндетті түрде қосыңыз</strong> — жазба болмаса, СТ
+          тексерілмеген болып саналады.</li>
+          <li>Камераңыз қосулы тұрсын, оқушыларды регламент бойынша тексеріңіз.</li>
+        </ul>
+        <p style="margin-top:16px">
+          Сессия жүріп жатқанда координатор сіздің карточкаңызда
+          <span class="chip chip--live"><i></i>Мит жүріп жатыр</span> және
+          <span class="chip chip--rec"><i></i>REC</span> белгілерін көреді.
+          Жазба қосылмаса, REC белгісі шықпайды.
+        </p>
+      </div>
+    </section>
+
+    <section class="step">
+      <div class="step__n">05</div>
+      <div class="step__b">
+        <h2>СТ-дан кейін</h2>
+        <p>Ешнәрсе жүктеудің қажеті жоқ. <strong>Жазба мен отслежка Google Drive-тан
+        автоматты табылып, сайтқа өзі тіркеледі.</strong></p>
+        <p>Тексеру үшін: «Менің профилім» → «Менің СТ-жазбаларым». Сол кестеде осы аптаның
+        жолында <strong>Видео</strong> және <strong>Отслежка</strong> бағандары толуы керек.</p>
+        <div class="note">
+          Бірнеше сағаттан кейін де бос тұрса — өзіңіз ештеңе істемей, координаторға айтыңыз.
+          Ол бір батырмамен қайта синхрондай алады.
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="ref">
+    <p class="eyebrow" style="color:var(--ink-faint)">Қосымша</p>
+
+    <h3>Менің профилім</h3>
+    <p>Мұнда парольді ауыстырасыз, атыңыз бен оқушы санын жазасыз, әрі барлық өткен
+    СТ-жазбаларыңыздың мұрағатын көресіз.</p>
+
+    <h3>«Ескеру керек жағдай» жолы</h3>
+    <p>СТ бетінің жоғарысындағы жол. Аптасында СТ ала алмайтын себебіңіз болса
+    (мысалы ауырып қалсаңыз), сонда жазып қойыңыз — координатор көреді.</p>
+
+    <div class="faq">
+      <details>
+        <summary>Басқа кураторлардың кестесін неге көрмеймін?</summary>
+        <p>Куратор күнтізбеде тек өз брондарын көреді. Бүкіл ағымның кестесін координатор көреді —
+        бұл қалыпты жағдай, қате емес.</p>
+      </details>
+      <details>
+        <summary>Бір аптада бірнеше рет СТ алсам бола ма?</summary>
+        <p>Иә. Әр СТ-ға бөлек уақыт белгілейсіз, әрқайсысының өз Meet сілтемесі мен жазбасы болады.</p>
+      </details>
+      <details>
+        <summary>Бір миттан бірнеше жазба шықса ше?</summary>
+        <p>Бәрі табылады. Профильдегі кестеде «Запись 1», «Запись 2» деп қатар тұрады.</p>
+      </details>
+      <details>
+        <summary>Уақытты қате қойып жіберсем?</summary>
+        <p>Карточканы басып өшіріп, дұрыс уақытпен қайта белгілеңіз. СТ басталып кеткен болса —
+        алдымен координаторға айтыңыз.</p>
+      </details>
+      <details>
+        <summary>Парольді ұмытып қалсам?</summary>
+        <p>Өзіңіз қалпына келтіре алмайсыз. Координаторға немесе әкімшіге жазыңыз — жаңасы беріледі.</p>
+      </details>
+    </div>
+  </div>
+
+  <footer>
+    ФИЗ-11 · Координатор: Тұрарова Аруна · Сұрақ болса координаторға жазыңыз.
+  </footer>
+
+</div>
+
+</body>
+</html>
