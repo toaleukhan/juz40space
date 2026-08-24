@@ -36,11 +36,6 @@
   ],
   "rewrites": [
     {
-      "comment": "Кураторларға арналған статикалық нұсқаулық — SPA-ның catch-all ережесіне түсіп кетпеуі керек",
-      "source": "/nusqaulyq.html",
-      "destination": "/nusqaulyq.html"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
