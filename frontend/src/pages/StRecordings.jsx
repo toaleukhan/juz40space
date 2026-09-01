@@ -145,6 +145,27 @@ export default function StRecordings() {
     }
   };
 
+  // Экрандағы аптаны жаңа Google Sheet-ке экспорттайды (пәннің өз Google
+  // аккаунтында) және жаңа бетте ашады — координатор/админға арналған.
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportSheet = async () => {
+    setExporting(true);
+    try {
+      const { data } = await api.post('/st-recordings/export-sheet', {
+        subject: currentSubjectCode,
+        streamId: currentStream,
+        monthNum: currentMonth,
+        weekNum: currentWeek,
+      });
+      window.open(data.url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      alert('Қателік: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handleAddCurator = async () => {
     if (!newCurator.trim()) return;
     try {
@@ -260,6 +281,21 @@ export default function StRecordings() {
                 }}>
                 <IconRefresh style={{ width: 13, height: 13, ...(syncing ? { opacity: 0.5 } : {}) }} />
                 {syncing ? 'Ізделуде...' : 'Синхрондау'}
+              </button>
+            )}
+            {selectedSubject && !isCurator && (
+              <button onClick={handleExportSheet} disabled={exporting}
+                title="Экрандағы апта деректерін жаңа Google Sheet-ке жазып, сілтемесін ашады"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  padding: '8px 16px', borderRadius: 12, border: '1px solid var(--border)',
+                  background: 'var(--surface)', color: exporting ? 'var(--text-muted)' : 'var(--text-sub)',
+                  fontWeight: 700, fontSize: 12, cursor: exporting ? 'default' : 'pointer',
+                }}>
+                {SHEETS_LOGO
+                  ? <img src={SHEETS_LOGO} alt="" style={{ width: 13, height: 13, ...(exporting ? { opacity: 0.5 } : {}) }} />
+                  : <IconTable style={{ width: 13, height: 13, ...(exporting ? { opacity: 0.5 } : {}) }} />}
+                {exporting ? 'Жасалуда...' : 'Экспорт'}
               </button>
             )}
             {selectedSubject && !isCurator && !isCoordinator && (
