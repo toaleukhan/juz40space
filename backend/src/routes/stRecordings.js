@@ -8,6 +8,7 @@ const { syncRecordDrive } = require('../jobs/driveSync');
 const { retryGoogleApi, isRetryableGoogleError } = require('../utils/retryGoogleApi');
 const { notifyCoordinatorsOfBooking } = require('../utils/telegramNotify');
 const { getMeetStatus, getMeetJournal } = require('../utils/meetStatus');
+const { createExportSheet } = require('../utils/exportToSheet');
 
 // 0a. Бір Мит-тың толық қатысушылар журналы (кім қашан кірді/шықты) —
 // координатор карточкадағы "Журнал" батырмасын басқанда сұралады.
@@ -337,6 +338,46 @@ router.post('/sync-drive-all', auth, async (req, res) => {
     res.json({ total: rows.length, video, attendance, failed });
   } catch (err) {
     res.status(500).json({ error: 'Драйв іздеу қатесі: ' + err.message });
+  }
+});
+
+// 4c. Экрандағы аптаны жаңа Google Sheet-ке экспорттау (тек admin/координатор).
+// SMART | СТ ЗАПИСЬ кестесіне Apps Script арқылы қолмен тартудың орнына —
+// пәннің өз Google аккаунтында дербес Sheet жасап, сілтемесі барға оқу
+// рұқсатымен қайтарады.
+router.post('/export-sheet', auth, async (req, res) => {
+  const isAdmin = req.user.role === 'admin';
+  const isCoordinator = req.user.role === 'coordinator';
+  if (!isAdmin && !isCoordinator) {
+    return res.status(403).json({ error: 'Тек admin немесе координатор рұқсаты бар' });
+  }
+
+  // Координатор өз ағымына құлыпталған — GET /-тегі ережемен бірдей.
+  const subj = isCoordinator ? req.user.subject : (req.body.subject || 'ФИЗ');
+  const strId = isCoordinator ? req.user.streamId : (req.body.streamId || '01');
+  const mNum = parseInt(req.body.monthNum) || 1;
+  const wNum = parseInt(req.body.weekNum) || 1;
+
+  try {
+    const rowsRes = await pool.query(
+      `SELECT curator_name, students_count, notes, video_links, attendance_links, video_link, attendance_link
+       FROM st_recordings
+       WHERE subject = $1 AND (stream_id = $2 OR month_id = $2)
+         AND (month_num = $3::int OR month_id = $3::text) AND week_num = $4
+       ORDER BY id ASC`,
+      [subj, strId, mNum, wNum]
+    );
+    if (!rowsRes.rows.length) {
+      return res.status(400).json({ error: 'Бұл аптада экспорттайтын жол жоқ' });
+    }
+
+    const { url } = await createExportSheet({ subject: subj, streamId: strId, monthNum: mNum, weekNum: wNum, rows: rowsRes.rows });
+    res.json({ url });
+  } catch (err) {
+    if (err.code === 'NO_AUTH') {
+      return res.status(400).json({ error: err.message });
+    }
+    res.status(500).json({ error: 'Экспорт қатесі: ' + err.message });
   }
 });
 
