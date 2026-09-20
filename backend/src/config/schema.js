@@ -171,6 +171,109 @@ const createTables = async () => {
       );
     `);
 
+    // ── ТІРІ ВИКТОРИНА (Kahoot типті ойын) ──────────────────────────────
+    // 8. quizzes — куратор/мұғалім құрастыратын викторина. Сұрақтары
+    // бөлек кестеде; викторинаны өңдеу жүріп жатқан ойынға әсер етпейді,
+    // себебі ойын басталғанда сұрақтардың КӨШІРМЕСІ game_sessions-қа
+    // сақталады.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS quizzes (
+        id SERIAL PRIMARY KEY,
+        owner_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(120) NOT NULL,
+        description VARCHAR(300),
+        subject VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_quizzes_owner ON quizzes(owner_id);`);
+
+    // 9. quiz_questions — options: жол массиві (2–4), correct: дұрыс
+    // нұсқалардың индекстері (1 немесе бірнешеу).
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS quiz_questions (
+        id SERIAL PRIMARY KEY,
+        quiz_id INT NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE,
+        position INT NOT NULL,
+        kind VARCHAR(12) NOT NULL DEFAULT 'choice',
+        prompt TEXT NOT NULL,
+        options JSONB NOT NULL,
+        correct JSONB NOT NULL,
+        time_limit INT NOT NULL DEFAULT 20,
+        points_mode VARCHAR(10) NOT NULL DEFAULT 'standard'
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_quiz_questions_quiz ON quiz_questions(quiz_id, position);`);
+
+    // 10. game_sessions — бір ойын. Күй машинасы: lobby → question →
+    // reveal → leaderboard → (question …) → finished. Уақыт серверде
+    // есептеледі (question_starts_at / question_ends_at), сондықтан
+    // қосылым үзілсе де, сервер қайта қосылса да таймер бұзылмайды.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS game_sessions (
+        id SERIAL PRIMARY KEY,
+        quiz_id INT REFERENCES quizzes(id) ON DELETE SET NULL,
+        host_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        pin VARCHAR(8) NOT NULL,
+        title VARCHAR(120) NOT NULL,
+        questions JSONB NOT NULL,
+        settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+        status VARCHAR(12) NOT NULL DEFAULT 'lobby',
+        current_index INT NOT NULL DEFAULT -1,
+        question_starts_at TIMESTAMPTZ,
+        question_ends_at TIMESTAMPTZ,
+        locked BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        finished_at TIMESTAMPTZ
+      );
+    `);
+    // PIN тек ОЙНАЛЫП ЖАТҚАН ойындар арасында бірегей болуы керек —
+    // біткен ойынның PIN-і қайта қолданыла алады (6 таңбалы кеңістік
+    // шектеулі).
+    await pool.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_game_active_pin
+      ON game_sessions(pin) WHERE status <> 'finished';
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_game_sessions_host ON game_sessions(host_id, created_at DESC);`);
+
+    // 11. game_players — аккаунтсыз ойыншылар. token_hash — ойыншының
+    // құпия токенінің SHA-256-сы (токеннің өзі базада сақталмайды).
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS game_players (
+        id SERIAL PRIMARY KEY,
+        session_id INT NOT NULL REFERENCES game_sessions(id) ON DELETE CASCADE,
+        nickname VARCHAR(24) NOT NULL,
+        token_hash CHAR(64) NOT NULL,
+        score INT NOT NULL DEFAULT 0,
+        streak INT NOT NULL DEFAULT 0,
+        total_ms INT NOT NULL DEFAULT 0,
+        kicked BOOLEAN NOT NULL DEFAULT false,
+        joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_game_player_nick ON game_players(session_id, LOWER(nickname));`);
+    await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_game_player_token ON game_players(token_hash);`);
+
+    // 12. game_answers — әр ойыншының әр сұраққа бір ғана жауабы
+    // (UNIQUE) — қос жіберуден қорғайды.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS game_answers (
+        id SERIAL PRIMARY KEY,
+        session_id INT NOT NULL REFERENCES game_sessions(id) ON DELETE CASCADE,
+        player_id INT NOT NULL REFERENCES game_players(id) ON DELETE CASCADE,
+        question_index INT NOT NULL,
+        choice JSONB NOT NULL,
+        correct BOOLEAN NOT NULL,
+        response_ms INT NOT NULL,
+        points INT NOT NULL DEFAULT 0,
+        answered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (player_id, question_index)
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_game_answers_q ON game_answers(session_id, question_index);`);
+
     console.log('✅ Деректер базасы мен пайдаланушылар толық дайын!');
   } catch (err) {
     console.error('❌ Schema error:', err.message);
