@@ -7,6 +7,11 @@ import Dashboard from './pages/Dashboard';
 import CuratorCabinet from './pages/CuratorCabinet';
 import TeacherCabinet from './pages/TeacherCabinet';
 import RecordingReview from './pages/RecordingReview';
+import QuizLibrary from './pages/quiz/QuizLibrary';
+import QuizEditor from './pages/quiz/QuizEditor';
+import HostGame from './pages/quiz/HostGame';
+import PlayGame from './pages/quiz/PlayGame';
+import GameResults from './pages/quiz/GameResults';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 
@@ -37,6 +42,14 @@ export default function App() {
 
         {/* 🎥 СТ жазбасын бағалау: видео + уақыт белгілі ескертулер */}
         <Route path="/review/:recordingId" element={<ProtectedRoute><RecordingReview /></ProtectedRoute>} />
+
+        {/* ⚡ Тірі викторина (Kahoot үлгісі): құру, жүргізу, нәтиже. Ойыншыға
+            аккаунт керек емес — /play PIN арқылы ашық. */}
+        <Route path="/play" element={<PlayGame />} />
+        <Route path="/quizzes" element={<ProtectedRoute><QuizLibrary /></ProtectedRoute>} />
+        <Route path="/quizzes/:id" element={<ProtectedRoute><QuizEditor /></ProtectedRoute>} />
+        <Route path="/host/:id" element={<ProtectedRoute><HostGame /></ProtectedRoute>} />
+        <Route path="/games/:id/results" element={<ProtectedRoute><GameResults /></ProtectedRoute>} />
 
         <Route path="*" element={<HomeRedirect />} />
       </Routes>

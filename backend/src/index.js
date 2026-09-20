@@ -2,8 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const createTables = require('./config/schema');
-const { apiLimiter, loginLimiter, securityHeaders, sanitizeInput } = require('./middleware/security');
+const { apiLimiter, loginLimiter, securityHeaders, sanitizeInput, playFloodLimiter } = require('./middleware/security');
 const { startAutoSyncScheduler } = require('./jobs/driveSync');
+const { startJanitor: startQuizJanitor } = require('./games/service');
 
 const app = express();
 
@@ -51,6 +52,11 @@ app.use('/api/export', require('./routes/exportSheet'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/recordings', require('./routes/recordingReviews'));
 
+// 🎮 Тірі викторина: құрастырушы, хост және аккаунтсыз ойыншылар
+app.use('/api/quizzes', require('./routes/quizzes'));
+app.use('/api/games', require('./routes/games'));
+app.use('/api/play', playFloodLimiter, require('./routes/play'));
+
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 
 const PORT = process.env.PORT || 3001;
@@ -63,6 +69,7 @@ const start = async () => {
   app.listen(PORT, () => console.log(`🚀 JUZNOTIFY backend: http://localhost:${PORT}`));
 
   startAutoSyncScheduler();
+  startQuizJanitor();
 };
 
 start().catch(console.error);

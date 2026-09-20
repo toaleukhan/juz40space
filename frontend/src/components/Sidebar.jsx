@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import useIsMobile from '../hooks/useIsMobile';
 import juz40Logo from '../assets/juz40-logo.png';
-import { IconMenu, IconClose, IconUser, IconCalendar, IconVideo, IconUsers, IconLogout, IconChart } from './icons';
+import { IconMenu, IconClose, IconUser, IconCalendar, IconVideo, IconUsers, IconLogout, IconChart, IconBolt } from './icons';
 import { getCurrentFilter } from './WeekBookingCalendar';
 
 // Панель беттің шетіне жабыспай, айналасында бос орын қалдырып "қалқып"
@@ -92,22 +92,26 @@ function SidebarContent({ collapsed, onNavigate }) {
     { to: '/profile', label: 'Менің профилім', Icon: IconUser },
     { to: stLink, label: 'СТ запись', Icon: IconVideo },
     { to: '/schedule', label: 'Сабақ кестесі', Icon: IconCalendar },
+    { to: '/quizzes', label: 'Викторина', Icon: IconBolt },
   ];
   const coordinatorLinks = [
     { to: '/profile', label: 'Менің профилім', Icon: IconUser },
     { to: stLink, label: 'СТ жазбалар', Icon: IconVideo },
     { to: '/schedule', label: 'Сабақ кестесі', Icon: IconCalendar },
+    { to: '/quizzes', label: 'Викторина', Icon: IconBolt },
   ];
   const adminLinks = [
     { to: '/schedule', label: 'Сабақ кестесі', Icon: IconCalendar },
     { to: '/st-recordings', label: 'СТ жазбалар', Icon: IconVideo },
     { to: '/curators', label: 'Кураторлар базасы', Icon: IconUsers },
     { to: '/dashboard', label: 'Дэшборд', Icon: IconChart },
+    { to: '/quizzes', label: 'Викторина', Icon: IconBolt },
   ];
   // Мұғалім — сабақ беретін адам, СТ жүйесіне қатысы жоқ: оған тек өз
   // апталық кестесі көрінеді.
   const teacherLinks = [
     { to: '/my-schedule', label: 'Менің кестем', Icon: IconCalendar },
+    { to: '/quizzes', label: 'Викторина', Icon: IconBolt },
   ];
   const links = isCurator ? curatorLinks
     : isCoordinator ? coordinatorLinks
