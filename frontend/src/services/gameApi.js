@@ -24,5 +24,14 @@ export const playerSession = {
   },
 };
 
-export const errorText = (err, fallback) => err?.response?.data?.error || fallback;
+// Сервер JSON-қате қайтарса — сол мәтін. Әйтпесе себебін ажыратамыз: жауап
+// мүлде келмесе — байланыс; JSON емес 404 — backend әлі жаңартылмаған
+// (Vercel Railway-ден ерте деплойланғанда осылай болады).
+export const errorText = (err, fallback) => {
+  const fromServer = err?.response?.data?.error;
+  if (fromServer) return fromServer;
+  if (!err?.response) return 'Серверге қосылу мүмкін болмады. Интернетті тексеріп, қайталаңыз.';
+  if (err.response.status === 404) return 'Сервер жаңартылып жатыр (викторина модулі әлі қосылмаған). 1–2 минуттан кейін қайталаңыз.';
+  return fallback;
+};
 export const errorCode = (err) => err?.response?.data?.code || null;
