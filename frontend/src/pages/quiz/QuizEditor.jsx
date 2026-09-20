@@ -5,6 +5,7 @@ import api from '../../services/api';
 import { errorText } from '../../services/gameApi';
 import { ShapeIcon, CheckIcon } from '../../components/quiz/shapes';
 import { ANSWER_META } from '../../components/quiz/answerMeta';
+import ConfirmDialog from '../../components/quiz/ConfirmDialog';
 import '../../styles/quiz.css';
 
 const SUBJECTS = ['ФИЗ', 'МАТ', 'ТІЛ', 'БИО', 'ИНФО', 'ГЕО', 'ТАРИХ', 'РУС', 'ХИМ', 'МС', 'ӘДЕБ', 'АНГЛ', 'ДЖТ'];
@@ -67,6 +68,7 @@ export default function QuizEditor() {
   // Қате-ескертулер бос жаңа сұрақта бірден шықпасын: сақтауға тырысқаннан кейін ғана.
   const [checked, setChecked] = useState(false);
   const loadedId = useRef(isNew ? 'new' : null);
+  const [leaveTo, setLeaveTo] = useState(null); // сақталмай шығудың мақсатты беті
 
   useEffect(() => {
     if (isNew || loadedId.current === id) return;
@@ -88,6 +90,25 @@ export default function QuizEditor() {
     const warn = (e) => { e.preventDefault(); e.returnValue = ''; };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+
+  // Беттің ішіндегі кез келген сілтеме (сайдбар да, «← Викториналар» да)
+  // сақталмаған өзгерісті үнсіз жоғалтпасын: алдымен өз тереземіз сұрайды.
+  // Жаңарту/жабу үшін браузердің beforeunload ескертуі жоғарыда қалады.
+  useEffect(() => {
+    if (!dirty) return undefined;
+    const intercept = (e) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = e.target.closest?.('a[href]');
+      if (!a || (a.target && a.target !== '_self') || a.origin !== window.location.origin) return;
+      const to = a.pathname + a.search + a.hash;
+      if (to === window.location.pathname + window.location.search + window.location.hash) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setLeaveTo(to);
+    };
+    document.addEventListener('click', intercept, true);
+    return () => document.removeEventListener('click', intercept, true);
   }, [dirty]);
 
   const touch = () => { setDirty(true); setError(''); };
@@ -220,8 +241,11 @@ export default function QuizEditor() {
     }
   };
 
-  const goBack = (e) => {
-    if (dirty && !window.confirm('Сақталмаған өзгерістер бар. Шығасыз ба?')) e.preventDefault();
+  const leaveAnyway = () => {
+    const to = leaveTo;
+    setDirty(false);
+    setLeaveTo(null);
+    navigate(to);
   };
 
   if (loading) {
@@ -249,7 +273,7 @@ export default function QuizEditor() {
       <Sidebar />
       <main className="qz">
         <div className="qz-editbar">
-          <Link to="/quizzes" className="qz-btn qz-btn--ghost" onClick={goBack}>← Викториналар</Link>
+          <Link to="/quizzes" className="qz-btn qz-btn--ghost">← Викториналар</Link>
           <div className="qz-editbar__status" role="status">
             {saving ? 'Сақталуда…' : dirty ? 'Сақталмаған өзгерістер' : savedAt ? 'Сақталды' : ''}
           </div>
@@ -415,6 +439,17 @@ export default function QuizEditor() {
             </div>
           </section>
         </div>
+        {leaveTo && (
+          <ConfirmDialog
+            title="Сақталмаған өзгерістер бар"
+            message="Қазір шықсаңыз, жазғандарыңыз жоғалады."
+            confirmLabel="Сақтамай шығу"
+            cancelLabel="Осында қалу"
+            danger
+            onConfirm={leaveAnyway}
+            onCancel={() => setLeaveTo(null)}
+          />
+        )}
       </main>
     </div>
   );
