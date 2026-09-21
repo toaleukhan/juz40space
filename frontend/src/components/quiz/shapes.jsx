@@ -42,3 +42,13 @@ export function ClockIcon({ size = 46 }) {
     </svg>
   );
 }
+
+// Тәж: 1-орынның үстінде. Қарапайым геометрия (3 төбе + табан).
+export function CrownIcon({ size = 30 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+      <path d="M3 18 2 7l6 5 4-8 4 8 6-5-1 11z" />
+      <rect x="3" y="19.5" width="18" height="2.5" rx="1" />
+    </svg>
+  );
+}

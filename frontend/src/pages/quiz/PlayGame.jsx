@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   API_BASE, playApi, playerSession, errorText, errorCode,
 } from '../../services/gameApi';
 import { useGameStream, useServerNow } from '../../hooks/useGameStream';
 import {
-  OptionTile, TimerBar, LeaderboardList, Podium, ConnectionBanner, StreakChip,
+  OptionTile, TimerBar, LeaderboardList, Podium, ConnectionBanner, StreakChip, Movement,
+  Backdrop, Confetti, Countdown, CountUp, Dots, PlayerBadge,
 } from '../../components/quiz/GameParts';
 import { ShapeIcon, CheckIcon, CrossIcon, ClockIcon } from '../../components/quiz/shapes';
 import { ANSWER_META, formatScore } from '../../components/quiz/answerMeta';
 import juz40Logo from '../../assets/juz40-logo.png';
-import mascotThink from '../../assets/subjects/Логика.webp';
-import mascotKaz from '../../assets/subjects/Казахский_Язык.webp';
-import '../../styles/quiz.css';
+import { mascotFor, winnerMascot } from '../../utils/subjectMascot';
+import '../../styles/game.css';
 
 // Ойыншы аккаунтсыз: PIN + лақап ат. Сессиясы (құпия токен) localStorage-та
 // сақталады, сондықтан бет жаңарса не телефон ұйықтап қалса да ойынға қайта
@@ -102,12 +103,13 @@ function JoinFlow({ onJoined, notice }) {
 
   return (
     <div className="qg qg--center qg--join">
+      <Backdrop />
       <div className="qg-join">
         <div className="qg-join__brand">
           <img src={juz40Logo} alt="" />
           <span>JUZ40</span>
         </div>
-        <img className="qg-join__mascot" src={mascotThink} alt="" />
+        <img className="qg-join__mascot qg-mascot" src={mascotFor(game?.subject)} alt="" />
 
         {step === 'pin' ? (
           <form onSubmit={checkPin} className="qg-form" noValidate>
@@ -172,10 +174,12 @@ function Play({ session, onLeave }) {
   // оны бірден өзіміз көрсетеміз (оптимистік), қате болса қайтарамыз.
   const [sent, setSent] = useState(null);       // { index, choice, state, message }
   const [picked, setPicked] = useState({ index: -1, set: [] }); // көп таңдау
+  const reduced = useReducedMotion();
 
   if (!view) {
     return (
       <div className="qg qg--center">
+        <Backdrop />
         {conn === 'closed' ? (
           <div className="qg-msg">
             <h1>Ойын табылмады</h1>
@@ -183,7 +187,7 @@ function Play({ session, onLeave }) {
             <button type="button" className="qg-btn qg-btn--gold" onClick={() => onLeave()}>Басқа ойынға қосылу</button>
           </div>
         ) : (
-          <p className="qg-dim">Қосылуда…</p>
+          <p className="qg-dim">Қосылуда<Dots /></p>
         )}
       </div>
     );
@@ -192,6 +196,7 @@ function Play({ session, onLeave }) {
   if (view.status === 'kicked') {
     return (
       <div className="qg qg--center">
+        <Backdrop />
         <div className="qg-msg">
           <h1>Сіз ойыннан шығарылдыңыз</h1>
           <p>Хост сізді ойыннан шығарды.</p>
@@ -243,23 +248,39 @@ function Play({ session, onLeave }) {
 
   const bar = (
     <header className="qg-ptop">
-      <span className="qg-ptop__nick">{me.nickname}</span>
+      <span className="qg-ptop__nick"><PlayerBadge name={me.nickname} size={28} /><span>{me.nickname}</span></span>
       {view.index >= 0 && view.status !== 'finished' && <span>{view.index + 1} / {view.total}</span>}
       <span className="qg-ptop__score">{formatScore(me.score)}</span>
     </header>
   );
 
+  const mascot = mascotFor(view.subject);
+  const scene = ['lobby', 'countdown', 'leaderboard', 'finished'].includes(view.status);
+  const pop = reduced ? false : { scale: 0.4, opacity: 0, y: 24 };
+  const spring = { type: 'spring', stiffness: 420, damping: 16 };
+
   return (
     <div className="qg qg--player">
+      {scene && <Backdrop />}
       <ConnectionBanner conn={conn} />
 
       {/* ── КҮТУ ────────────────────────────────────────────────── */}
       {view.status === 'lobby' && (
         <div className="qg-pcenter">
-          <img className="qg-pmascot" src={mascotThink} alt="" />
+          <img className="qg-pmascot qg-mascot" src={mascot} alt="" />
           <h1>Сіз ойындасыз!</h1>
-          <p className="qg-nick">{me.nickname}</p>
-          <p className="qg-dim">Хост бастағанша күтіңіз… Қатысушы: {me.playerCount}</p>
+          <motion.div className="qg-nickpill" initial={pop} animate={{ scale: 1, opacity: 1, y: 0 }} transition={{ ...spring, delay: 0.15 }}>
+            <PlayerBadge name={me.nickname} size={44} />
+            <span>{me.nickname}</span>
+          </motion.div>
+          <p className="qg-dim">Хост экранынан өз белгіңізді табыңыз</p>
+          <p className="qg-dim">Хост бастағанша күтіңіз<Dots /></p>
+          <span className="qg-joined">
+            Қатысушы:
+            <motion.b key={me.playerCount} style={{ display: 'inline-block' }} initial={reduced ? false : { scale: 1.5 }} animate={{ scale: 1 }} transition={spring}>
+              {me.playerCount}
+            </motion.b>
+          </span>
         </div>
       )}
 
@@ -267,7 +288,7 @@ function Play({ session, onLeave }) {
       {view.status === 'countdown' && (
         <div className="qg-pcenter">
           <p className="qg-eyebrow">Сұрақ {view.index + 1} / {view.total}</p>
-          <div className="qg-bigcount">{now ? Math.max(Math.ceil((view.startsAt - now) / 1000), 0) : ''}</div>
+          <Countdown secs={now ? Math.max(Math.ceil((view.startsAt - now) / 1000), 1) : 0} />
           <p className="qg-lead">Дайын болыңыз</p>
         </div>
       )}
@@ -291,7 +312,7 @@ function Play({ session, onLeave }) {
                   </li>
                 ))}
               </ul>
-              <p className="qg-dim">Қалғандарды күтіп тұрмыз…</p>
+              <p className="qg-dim">Қалғандарды күтіп тұрмыз<Dots /></p>
             </div>
           ) : (
             <div className="qg-pplay">
@@ -331,14 +352,18 @@ function Play({ session, onLeave }) {
       {view.status === 'reveal' && view.result && q && (() => {
         const r = view.result;
         const tone = !r.answered ? 'none' : r.correct ? 'good' : 'bad';
+        // Бірінші сұрақта «алдыңғы орын» жоқ (бәрі 0-ден бастады).
+        const moved = view.index > 0 && r.prevRank && r.prevRank !== me.rank;
         return (
           <div className={`qg-result qg-result--${tone}`}>
             <div className="qg-result__body">
-              <div className="qg-result__icon" aria-hidden="true">
-                {tone === 'good' ? <CheckIcon size={46} /> : tone === 'bad' ? <CrossIcon size={46} /> : <ClockIcon size={46} />}
-              </div>
-              <h1>{tone === 'good' ? 'Дұрыс!' : tone === 'bad' ? 'Қате' : 'Уақыт бітті'}</h1>
-              {r.points > 0 && <p className="qg-result__pts">+{formatScore(r.points)}</p>}
+              <motion.div className="qg-result__icon" aria-hidden="true" initial={reduced ? false : { scale: 0, rotate: -35 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 420, damping: 13 }}>
+                {tone === 'good' ? <CheckIcon size={50} /> : tone === 'bad' ? <CrossIcon size={50} /> : <ClockIcon size={50} />}
+              </motion.div>
+              <motion.h1 initial={reduced ? false : { y: 22, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.12 }}>
+                {tone === 'good' ? 'Дұрыс!' : tone === 'bad' ? 'Қате' : 'Уақыт бітті'}
+              </motion.h1>
+              {r.points > 0 && <p className="qg-result__pts">+<CountUp to={r.points} ms={900} /></p>}
               <StreakChip streak={r.streak} />
               {tone !== 'good' && (
                 <div className="qg-result__answer">
@@ -354,8 +379,8 @@ function Play({ session, onLeave }) {
               )}
             </div>
             <footer className="qg-result__foot">
-              <span>Орныңыз: <b>№{me.rank}</b></span>
-              <span>{formatScore(me.score)} ұпай</span>
+              <span>Орныңыз: <b>№{me.rank}</b>{moved && <Movement prev={r.prevRank} cur={me.rank} />}</span>
+              <span><CountUp from={Math.max(me.score - r.points, 0)} to={me.score} ms={900} /> ұпай</span>
             </footer>
           </div>
         );
@@ -380,18 +405,18 @@ function Play({ session, onLeave }) {
       {/* ── ФИНАЛ ───────────────────────────────────────────────── */}
       {view.status === 'finished' && (
         <div className="qg-pcenter">
-          {me.rank <= 3 && <img className="qg-pmascot" src={mascotKaz} alt="" />}
+          {me.rank <= 3 && me.score > 0 && <Confetti />}
+          {me.rank <= 3 && <img className="qg-pmascot qg-mascot" src={winnerMascot} alt="" />}
           <p className="qg-eyebrow">Ойын аяқталды</p>
           <h1>{me.rank <= 3 ? 'Құттықтаймыз!' : me.score > 0 ? 'Жарайсың!' : 'Қатысқаныңыз үшін рахмет!'}</h1>
-          <p className="qg-final-rank">№{me.rank}</p>
-          <p className="qg-dim">{formatScore(me.score)} ұпай · {me.playerCount} ойыншының ішінде</p>
+          <motion.p className="qg-final-rank" initial={reduced ? false : { scale: 0.3, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 14, delay: 0.1 }}>
+            №{me.rank}
+          </motion.p>
+          <p className="qg-dim"><CountUp to={me.score} ms={1100} /> ұпай · {me.playerCount} ойыншының ішінде</p>
           {view.top && <Podium players={view.top.slice(0, 3)} />}
           <button type="button" className="qg-btn qg-btn--gold" onClick={() => onLeave()}>Жаңа ойынға қосылу</button>
         </div>
       )}
-
-      {/* Сұрақ жүріп жатқанда логотип көрінбесін — экран орны құнды. */}
-      {view.status === 'lobby' && <img className="qg-corner" src={juz40Logo} alt="" />}
     </div>
   );
 }

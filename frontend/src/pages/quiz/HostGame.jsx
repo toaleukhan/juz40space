@@ -6,13 +6,14 @@ import { API_BASE, errorText } from '../../services/gameApi';
 import { useGameStream, useServerNow } from '../../hooks/useGameStream';
 import {
   OptionTile, TimerBar, LeaderboardList, Podium, ConnectionBanner, StreakChip,
+  Backdrop, Confetti, Countdown, Dots, PlayerBadge,
 } from '../../components/quiz/GameParts';
+import { badgeFor } from '../../components/quiz/gameFx';
 import { formatScore } from '../../components/quiz/answerMeta';
 import { exportResultsXlsx } from '../../utils/quizExport';
+import { mascotFor, winnerMascot } from '../../utils/subjectMascot';
 import juz40Logo from '../../assets/juz40-logo.png';
-import mascotThink from '../../assets/subjects/Логика.webp';
-import mascotKaz from '../../assets/subjects/Казахский_Язык.webp';
-import '../../styles/quiz.css';
+import '../../styles/game.css';
 
 // Хостың экраны: Meet-те бөлісіледі. Сондықтан бұл жерде «дұрыс жауап»
 // сұрақ жүріп жатқанда мүлде жоқ — сервер оны reveal-ге дейін жібермейді.
@@ -93,14 +94,15 @@ export default function HostGame() {
   if (!view) {
     return (
       <div className="qg qg--center">
+        <Backdrop />
         {conn === 'closed' ? (
           <div className="qg-msg">
             <h1>Ойын табылмады</h1>
             <p>Ол жойылған немесе сізге тиесілі емес.</p>
-            <Link className="qg-btn qg-btn--ghost" to="/quizzes">Викториналарға оралу</Link>
+            <Link className="qg-btn qg-btn--gold" to="/quizzes">Викториналарға оралу</Link>
           </div>
         ) : (
-          <p className="qg-dim">Ойын жүктелуде…</p>
+          <p className="qg-dim">Ойын жүктелуде<Dots /></p>
         )}
       </div>
     );
@@ -108,8 +110,11 @@ export default function HostGame() {
 
   const q = view.question;
   const last = view.index + 1 >= view.total;
-  const countdownSecs = now ? Math.max(Math.ceil((view.startsAt - now) / 1000), 0) : null;
+  const countdownSecs = now ? Math.max(Math.ceil((view.startsAt - now) / 1000), 1) : 0;
   const joinHost = window.location.host;
+  const mascot = mascotFor(view.subject);
+  const scene = ['lobby', 'countdown', 'leaderboard', 'finished'].includes(view.status);
+  const bump = reduced ? false : { scale: 1.45, y: -6 };
 
   const nextLabel = view.status === 'question' ? 'Сұрақты аяқтау'
     : view.status === 'reveal' ? 'Рейтинг'
@@ -117,6 +122,7 @@ export default function HostGame() {
 
   return (
     <div className="qg">
+      {scene && <Backdrop />}
       <ConnectionBanner conn={conn} />
 
       <header className="qg-top">
@@ -147,18 +153,34 @@ export default function HostGame() {
         {/* ── КҮТУ ЗАЛЫ ─────────────────────────────────────────── */}
         {view.status === 'lobby' && (
           <div className="qg-lobby">
-            <section className="qg-lobby__join" aria-label="Қосылу">
-              <p className="qg-eyebrow">Ойынға қосылу</p>
-              <p className="qg-lobby__url">{joinHost}/play</p>
-              <p className="qg-lobby__label">PIN-код</p>
-              <div className="qg-pin" aria-label={`PIN ${view.pin.split('').join(' ')}`}>{view.pin}</div>
-              <div className="qg-lobby__actions">
-                <button type="button" className="qg-btn qg-btn--ghost qg-btn--sm" onClick={copyLink}>
+            <section className="qg-joincard" aria-label="Қосылу">
+              <span className={`qg-joincard__live ${view.locked ? 'is-locked' : ''}`}>
+                <span className="qg-live" />
+                {view.locked ? 'Кіру жабық' : 'Ойын ашық: қосылуға болады'}
+              </span>
+              <p className="qg-step"><span className="qg-step__n">1</span>Телефоннан ашыңыз</p>
+              <p className="qg-joincard__url">{joinHost}/play</p>
+              <p className="qg-step"><span className="qg-step__n">2</span>PIN-кодты енгізіңіз</p>
+              <div className="qg-pin" aria-label={`PIN ${view.pin.split('').join(' ')}`}>
+                {view.pin.split('').map((d, i) => (
+                  <motion.span
+                    key={i}
+                    className="qg-pin__d"
+                    initial={reduced ? false : { y: 30, opacity: 0, scale: 0.6 }}
+                    animate={{ y: 0, opacity: 1, scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 18, delay: 0.1 + i * 0.07 }}
+                  >
+                    {d}
+                  </motion.span>
+                ))}
+              </div>
+              <div className="qg-joincard__actions">
+                <button type="button" className="qg-btn qg-btn--soft qg-btn--sm" onClick={copyLink}>
                   {copied ? 'Көшірілді' : 'Сілтемені көшіру'}
                 </button>
                 <button
                   type="button"
-                  className="qg-btn qg-btn--ghost qg-btn--sm"
+                  className="qg-btn qg-btn--soft qg-btn--sm"
                   aria-pressed={view.locked}
                   onClick={() => act('lock', { locked: !view.locked })}
                 >
@@ -167,12 +189,17 @@ export default function HostGame() {
               </div>
             </section>
 
-            <section className="qg-lobby__players" aria-label="Ойыншылар">
-              <header className="qg-lobby__head">
-                <h2>{view.playerCount} ойыншы</h2>
+            <section className="qg-crowd" aria-label="Ойыншылар">
+              <header className="qg-crowd__head">
+                <h2>
+                  <motion.span key={view.playerCount} className="qg-crowd__n" initial={bump} animate={{ scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 600, damping: 16 }}>
+                    {view.playerCount}
+                  </motion.span>
+                  <span>ойыншы</span>
+                </h2>
                 <button
                   type="button"
-                  className="qg-btn qg-btn--gold"
+                  className={`qg-btn qg-btn--gold qg-btn--go ${view.playerCount > 0 && !busy ? 'is-ready' : ''}`}
                   disabled={view.playerCount < 1 || busy}
                   onClick={() => act('start')}
                 >
@@ -182,9 +209,8 @@ export default function HostGame() {
 
               {view.playerCount === 0 ? (
                 <div className="qg-empty">
-                  <img src={mascotThink} alt="" />
-                  <p>Ойыншыларды күтудеміз…</p>
-                  <span className="qg-dim">PIN-ді жазып беріңіз немесе сілтемені жіберіңіз</span>
+                  <p>Ойыншыларды күтудеміз<Dots /></p>
+                  <span className="qg-dim">Экрандағы PIN-ді жазып беріңіз немесе сілтемені жіберіңіз</span>
                 </div>
               ) : (
                 <ul className="qg-chips">
@@ -192,13 +218,14 @@ export default function HostGame() {
                     {view.players.map((p) => (
                       <motion.li
                         key={p.id}
-                        className="qg-chip"
+                        className={`qg-chip qg-chip--${badgeFor(p.nickname).key}`}
                         layout={!reduced}
-                        initial={reduced ? false : { opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.8 }}
-                        transition={{ duration: 0.18 }}
+                        initial={reduced ? false : { opacity: 0, scale: 0.4, y: 18, rotate: -8 }}
+                        animate={{ opacity: 1, scale: 1, y: 0, rotate: 0 }}
+                        exit={{ opacity: 0, scale: 0.5 }}
+                        transition={{ type: 'spring', stiffness: 520, damping: 22 }}
                       >
+                        <PlayerBadge name={p.nickname} size={32} />
                         <span>{p.nickname}</span>
                         <button
                           type="button"
@@ -213,6 +240,7 @@ export default function HostGame() {
                   </AnimatePresence>
                 </ul>
               )}
+              <img className="qg-crowd__mascot qg-mascot" src={mascot} alt="" />
             </section>
           </div>
         )}
@@ -221,59 +249,62 @@ export default function HostGame() {
         {view.status === 'countdown' && (
           <div className="qg-stage qg-stage--center">
             <p className="qg-eyebrow">Сұрақ {view.index + 1} / {view.total}</p>
-            <div className="qg-bigcount" aria-live="off">{countdownSecs ?? ''}</div>
+            <Countdown secs={countdownSecs} />
             <p className="qg-lead">Дайын болыңыз</p>
           </div>
         )}
 
-        {/* ── СҰРАҚ ────────────────────────────────────────────── */}
-        {view.status === 'question' && q && (
-          <div className="qg-stage">
-            <div className="qg-stage__meta">
-              <span className="qg-pill" role="status">{view.answeredCount} / {view.playerCount} жауап берді</span>
-              {q.multi && <span className="qg-pill qg-pill--gold">Бірнеше дұрыс жауап</span>}
-              {q.pointsMode === 'double' && <span className="qg-pill qg-pill--gold">Екі есе ұпай</span>}
-              {q.pointsMode === 'none' && <span className="qg-pill">Ұпайсыз</span>}
-            </div>
-            <h1 className="qg-prompt">{q.prompt}</h1>
-            <TimerBar startsAt={view.startsAt} endsAt={view.endsAt} now={now} />
-            <div className={`qg-tiles ${q.options.length === 2 ? 'is-two' : ''}`}>
-              {q.options.map((text, i) => <OptionTile key={i} index={i} text={text} />)}
-            </div>
-            <div className="qg-actions">
-              <button type="button" className="qg-btn qg-btn--ghost" disabled={busy} onClick={next}>{nextLabel}</button>
-            </div>
-          </div>
-        )}
-
-        {/* ── НӘТИЖЕ (reveal) ──────────────────────────────────── */}
-        {view.status === 'reveal' && q && view.distribution && (
-          <div className="qg-stage">
-            <div className="qg-stage__meta">
-              <span className="qg-pill">Дұрыс жауап берген: {view.distribution.correctCount} / {view.distribution.total}</span>
-              {view.distribution.noAnswer > 0 && <span className="qg-pill">Жауап бермеген: {view.distribution.noAnswer}</span>}
-            </div>
-            <h1 className="qg-prompt">{q.prompt}</h1>
-            <div className={`qg-tiles ${q.options.length === 2 ? 'is-two' : ''}`}>
-              {q.options.map((text, i) => {
-                const max = Math.max(...view.distribution.counts, 1);
-                return (
+        {/* ── СҰРАҚ → НӘТИЖЕ ───────────────────────────────────────
+            Бір блок: плиткалар орнында қалады, нәтиже кезінде күйі жайлап
+            ауысады (дұрысы үлкейіп жарқырайды, қалғаны сөнеді). */}
+        {(view.status === 'question' || (view.status === 'reveal' && view.distribution)) && q && (() => {
+          const revealed = view.status === 'reveal';
+          const dist = view.distribution;
+          const max = revealed ? Math.max(...dist.counts, 1) : 1;
+          return (
+            <div className="qg-stage">
+              <div className="qg-stage__meta">
+                {revealed ? (
+                  <>
+                    <span className="qg-pill">Дұрыс жауап берген: {dist.correctCount} / {dist.total}</span>
+                    {dist.noAnswer > 0 && <span className="qg-pill">Жауап бермеген: {dist.noAnswer}</span>}
+                  </>
+                ) : (
+                  <>
+                    <span className="qg-pill" role="status">
+                      <motion.b key={view.answeredCount} style={{ display: 'inline-block' }} initial={bump} animate={{ scale: 1, y: 0 }} transition={{ type: 'spring', stiffness: 600, damping: 16 }}>
+                        {view.answeredCount}
+                      </motion.b>
+                      {' '}/ {view.playerCount} жауап берді
+                    </span>
+                    {q.multi && <span className="qg-pill qg-pill--gold">Бірнеше дұрыс жауап</span>}
+                    {q.pointsMode === 'double' && <span className="qg-pill qg-pill--gold">Екі есе ұпай</span>}
+                    {q.pointsMode === 'none' && <span className="qg-pill">Ұпайсыз</span>}
+                  </>
+                )}
+              </div>
+              <h1 className="qg-prompt">{q.prompt}</h1>
+              {!revealed && <TimerBar startsAt={view.startsAt} endsAt={view.endsAt} now={now} />}
+              <div className={`qg-tiles ${q.options.length === 2 ? 'is-two' : ''}`}>
+                {q.options.map((text, i) => (
                   <OptionTile
                     key={i}
                     index={i}
                     text={text}
-                    state={q.correct.includes(i) ? 'correct' : 'dim'}
-                    count={view.distribution.counts[i]}
-                    share={view.distribution.counts[i] / max}
+                    {...(revealed ? {
+                      state: q.correct.includes(i) ? 'correct' : 'dim',
+                      count: dist.counts[i],
+                      share: dist.counts[i] / max,
+                    } : {})}
                   />
-                );
-              })}
+                ))}
+              </div>
+              <div className="qg-actions">
+                <button type="button" className={`qg-btn ${revealed ? 'qg-btn--gold' : 'qg-btn--ghost'}`} disabled={busy} onClick={next}>{nextLabel}</button>
+              </div>
             </div>
-            <div className="qg-actions">
-              <button type="button" className="qg-btn qg-btn--gold" disabled={busy} onClick={next}>{nextLabel}</button>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── РЕЙТИНГ ──────────────────────────────────────────── */}
         {view.status === 'leaderboard' && view.leaderboard && (
@@ -290,8 +321,9 @@ export default function HostGame() {
         {/* ── ФИНАЛ ────────────────────────────────────────────── */}
         {view.status === 'finished' && (
           <div className="qg-final">
+            {view.players.length > 0 && <Confetti />}
             <div className="qg-final__stage">
-              <img className="qg-final__mascot" src={mascotKaz} alt="" />
+              <img className="qg-final__mascot qg-mascot" src={winnerMascot} alt="" />
               <div className="qg-final__podium">
                 <p className="qg-eyebrow">Ойын аяқталды</p>
                 <h1 className="qg-title">{view.players.length ? 'Жеңімпаздар' : 'Ойыншы болмады'}</h1>
@@ -304,6 +336,7 @@ export default function HostGame() {
                 {view.players.slice(3).map((p) => (
                   <li key={p.id} className="qg-table__row">
                     <span className="qg-board__rank">{p.rank}</span>
+                    <PlayerBadge name={p.nickname} size={30} />
                     <span className="qg-board__name">{p.nickname}</span>
                     <StreakChip streak={p.streak} />
                     <span className="qg-board__score">{formatScore(p.score)}</span>

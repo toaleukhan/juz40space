@@ -235,14 +235,18 @@ describe.skipIf(!isLocal)('тірі викторина — толық ойын',
     });
 
     it('validates the PIN and rejects unknown ones without leaking anything', async () => {
-      expect((await api('GET', `/api/play/pin/${st.game.pin}`)).body.title).toBe('Оптика');
+      const pinInfo = (await api('GET', `/api/play/pin/${st.game.pin}`)).body;
+      expect(pinInfo.title).toBe('Оптика');
+      expect(pinInfo.subject).toBe('ФИЗ');
       expect((await api('GET', '/api/play/pin/000000')).status).toBe(404);
       expect((await api('GET', '/api/play/pin/abc')).status).toBe(404);
     });
 
     it('joins players, blocks duplicate and invalid nicknames', async () => {
       st.hostStream = openStream(`/api/games/${st.game.id}/stream?token=${host.token}`);
-      await st.hostStream.waitFor((v) => v.status === 'lobby');
+      const lobby = await st.hostStream.waitFor((v) => v.status === 'lobby');
+      // Викторина пәні ойынға көшеді (экранда сол пәннің маскоты үшін).
+      expect(lobby.subject).toBe('ФИЗ');
 
       const a = await join(st.game.pin, 'Аян');
       const b = await join(st.game.pin, 'Бек');
@@ -273,7 +277,8 @@ describe.skipIf(!isLocal)('тірі викторина — толық ойын',
       st.pA = openStream(`/api/play/stream?p=${st.A}`);
       st.pB = openStream(`/api/play/stream?p=${st.B}`);
       st.pC = openStream(`/api/play/stream?p=${st.C}`);
-      await st.pA.waitFor((v) => v.status === 'lobby');
+      const pLobby = await st.pA.waitFor((v) => v.status === 'lobby');
+      expect(pLobby.subject).toBe('ФИЗ');
 
       expect((await api('POST', `/api/games/${st.game.id}/start`, { token: host.token })).status).toBe(200);
 
