@@ -25,12 +25,17 @@ export default function QuizLibrary() {
   const [quizzes, setQuizzes] = useState(null);
   const [games, setGames] = useState(null);
   const [error, setError] = useState('');
+  const [loadFailed, setLoadFailed] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
 
+  // Тізім келмесе де бет «Жүктелуде…» деп қатып қалмайды және қызыл дабыл
+  // қоспайды: викторина жоқ сияқты таза күй көрінеді, астында сұр ескерту
+  // мен «Қайталау». (Сервер тізімді нақты бермеген болса, «викториналарыңыз
+  // жоғалды» деп қателеспеу үшін ескерту қалады.)
   const load = () => Promise.all([api.get('/quizzes'), api.get('/games')])
-    .then(([q, g]) => { setQuizzes(q.data); setGames(g.data); })
-    .catch((err) => setError(errorText(err, 'Деректерді жүктеу мүмкін болмады')));
+    .then(([q, g]) => { setQuizzes(q.data); setGames(g.data); setLoadFailed(false); })
+    .catch(() => { setQuizzes([]); setGames([]); setLoadFailed(true); });
 
   useEffect(() => { load(); }, []);
 
@@ -94,6 +99,12 @@ export default function QuizLibrary() {
               <h2>Алғашқы викторинаңызды жасаңыз</h2>
               <p>Сұрақтарды жазасыз, оқушылар PIN арқылы өз телефонынан қосылып, жарысады.</p>
               <Link to="/quizzes/new" className="qz-btn qz-btn--primary">Жаңа викторина</Link>
+              {loadFailed && (
+                <p className="qz-note">
+                  Тізімді қазір жүктей алмадық.{' '}
+                  <button type="button" className="qz-linkbtn" onClick={() => { load(); }}>Қайталау</button>
+                </p>
+              )}
             </div>
           ) : (
             <ul className="qz-list">

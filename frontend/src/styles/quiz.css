@@ -526,6 +526,25 @@ button.qg-tile:disabled { cursor: default; opacity: .55; }
   .qz-modal .qz-btn { width: 100%; padding: 12px 16px; }
 }
 
+/* ── мәтіннен импорт ── */
+.qz-modal__card { max-height: calc(100vh - 32px); overflow-y: auto; }
+.qz-modal__card--wide { max-width: 640px; }
+.qz-import__text { display: block; margin-top: 14px; min-height: 220px; font-size: 13.5px; font-weight: 500; line-height: 1.55; resize: vertical; }
+.qz-import__text::placeholder { color: var(--qz-faint); }
+.qz-import__status { margin-top: 10px; min-height: 22px; font-size: 12.5px; line-height: 1.5; }
+.qz-import__hint { color: var(--qz-soft); }
+.qz-import__ok { color: var(--qz-live); font-weight: 700; }
+.qz-import__none { color: var(--qz-soft); font-weight: 600; }
+.qz-import__problems { margin-top: 8px; padding: 9px 12px; border-radius: 9px; background: var(--qz-bad-bg); color: var(--qz-bad); }
+.qz-import__problems p { font-weight: 700; }
+.qz-import__problems ul { margin-top: 4px; max-height: 96px; overflow-y: auto; }
+.qz-import__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.qz-import__time { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--qz-soft); font-weight: 600; }
+.qz-import__actions { margin-top: 0; }
+.qz-note { margin-top: 4px; font-size: 12.5px; color: var(--qz-faint); }
+.qz-linkbtn { padding: 0; border: 0; background: none; cursor: pointer; font: inherit; font-weight: 650; color: var(--qz-ink); text-decoration: underline; text-underline-offset: 3px; }
+.qz-linkbtn:focus-visible { outline: 2px solid var(--qz-ink); outline-offset: 2px; border-radius: 3px; }
+
 /* Тар экранда кесте — карточкаға айналады: «Нәтиже» сілтемесі көрініп тұрсын. */
 @media (max-width: 640px) {
   .qz-table--stack { min-width: 0; display: block; }

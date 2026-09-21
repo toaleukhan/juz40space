@@ -6,6 +6,7 @@ import { errorText } from '../../services/gameApi';
 import { ShapeIcon, CheckIcon } from '../../components/quiz/shapes';
 import { ANSWER_META } from '../../components/quiz/answerMeta';
 import ConfirmDialog from '../../components/quiz/ConfirmDialog';
+import ImportDialog from '../../components/quiz/ImportDialog';
 import '../../styles/quiz.css';
 
 const SUBJECTS = ['ФИЗ', 'МАТ', 'ТІЛ', 'БИО', 'ИНФО', 'ГЕО', 'ТАРИХ', 'РУС', 'ХИМ', 'МС', 'ӘДЕБ', 'АНГЛ', 'ДЖТ'];
@@ -69,6 +70,7 @@ export default function QuizEditor() {
   const [checked, setChecked] = useState(false);
   const loadedId = useRef(isNew ? 'new' : null);
   const [leaveTo, setLeaveTo] = useState(null); // сақталмай шығудың мақсатты беті
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     if (isNew || loadedId.current === id) return;
@@ -157,6 +159,19 @@ export default function QuizEditor() {
   const addQuestion = (kind) => {
     setQuestions((list) => [...list, blankQuestion(kind)]);
     setSelected(questions.length);
+    touch();
+  };
+
+  // Мәтіннен қосылған сұрақтар. Жаңа викторинаның бос бірінші сұрағы
+  // қалып қоймасын: ол болса, оны ауыстырамыз.
+  const onlyBlank = questions.length === 1 && !questions[0].prompt.trim() && questions[0].options.every((o) => !o.trim());
+  const room = 80 - (onlyBlank ? 0 : questions.length);
+
+  const importQuestions = (list, timeLimit) => {
+    const fresh = list.map((it) => ({ ...it, _key: nextKey(), timeLimit, pointsMode: 'standard' }));
+    setSelected(onlyBlank ? 0 : questions.length);
+    setQuestions(onlyBlank ? fresh : [...questions, ...fresh]);
+    setImporting(false);
     touch();
   };
 
@@ -337,6 +352,7 @@ export default function QuizEditor() {
             <div className="qz-side__add">
               <button type="button" className="qz-btn qz-btn--block" onClick={() => addQuestion('choice')} disabled={questions.length >= 80}>+ Сұрақ</button>
               <button type="button" className="qz-btn qz-btn--ghost qz-btn--block" onClick={() => addQuestion('truefalse')} disabled={questions.length >= 80}>+ Дұрыс / Бұрыс</button>
+              <button type="button" className="qz-btn qz-btn--ghost qz-btn--block" onClick={() => setImporting(true)} disabled={room <= 0}>Мәтіннен қосу</button>
             </div>
           </aside>
 
@@ -439,6 +455,7 @@ export default function QuizEditor() {
             </div>
           </section>
         </div>
+        {importing && <ImportDialog room={room} onImport={importQuestions} onClose={() => setImporting(false)} />}
         {leaveTo && (
           <ConfirmDialog
             title="Сақталмаған өзгерістер бар"
