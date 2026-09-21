@@ -128,7 +128,7 @@ async function hostSnapshot(sessionId, user) {
 
 // ── ойынды құру ─────────────────────────────────────────────────────
 async function createGame({ hostId, quizId, settings }) {
-  const { rows: qz } = await pool.query('SELECT id, title FROM quizzes WHERE id = $1', [quizId]);
+  const { rows: qz } = await pool.query('SELECT id, title, subject FROM quizzes WHERE id = $1', [quizId]);
   if (!qz.length) throw new GameError(404, 'Викторина табылмады');
 
   const { rows } = await pool.query(
@@ -148,7 +148,8 @@ async function createGame({ hostId, quizId, settings }) {
     pointsMode: r.points_mode,
   }));
 
-  const clean = { streakBonus: settings?.streakBonus !== false };
+  // Пән экранда сол пәннің маскотын көрсету үшін ғана керек (ойын логикасына әсері жоқ).
+  const clean = { streakBonus: settings?.streakBonus !== false, subject: qz[0].subject || null };
 
   for (let attempt = 0; attempt < 25; attempt++) {
     const pin = String(crypto.randomInt(100000, 1000000));
@@ -171,14 +172,14 @@ async function createGame({ hostId, quizId, settings }) {
 async function checkPin(pin) {
   if (!/^\d{6}$/.test(String(pin || ''))) throw new GameError(404, 'Мұндай PIN-мен белсенді ойын жоқ');
   const { rows } = await pool.query(
-    `SELECT s.id, s.title, s.locked,
+    `SELECT s.id, s.title, s.locked, s.settings->>'subject' AS subject,
             (SELECT COUNT(*)::int FROM game_players p WHERE p.session_id = s.id AND NOT p.kicked) AS players
      FROM game_sessions s WHERE s.pin = $1 AND s.status <> 'finished'`,
     [String(pin)]
   );
   if (!rows.length) throw new GameError(404, 'Мұндай PIN-мен белсенді ойын жоқ');
   if (rows[0].locked) throw new GameError(403, 'Бұл ойынға кіру жабылған');
-  return { title: rows[0].title, players: rows[0].players };
+  return { title: rows[0].title, players: rows[0].players, subject: rows[0].subject || null };
 }
 
 async function joinGame({ pin, nickname }) {
