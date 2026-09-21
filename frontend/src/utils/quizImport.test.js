@@ -236,18 +236,92 @@ describe('parseQuizText — пішім нұсқалары', () => {
   });
 });
 
-describe('parseQuizText — қателер (дұрыс сұрақтар өтеді, қате нөмірмен айтылады)', () => {
-  it('дұрыс жауап белгіленбесе — сол сұрақ өткізіледі, №-мен айтылады', () => {
-    const { questions, problems } = parseQuizText('1. Бірінші?\nA) а ✓\nB) б\n\n2. Екінші?\nA) а\nB) б\n\n3. Үшінші?\nA) а\nB) б ✓');
-    expect(questions.map((q) => q.prompt)).toEqual(['Бірінші?', 'Үшінші?']);
-    expect(problems).toHaveLength(1);
-    expect(problems[0].number).toBe(2);
-    expect(problems[0].message).toMatch(/дұрыс жауап/);
+describe('parseQuizText — дұрыс жауапты белгілеу жолдары (✓ жоқ пернетақтада да)', () => {
+  const one = (text) => parseQuizText(text).questions[0];
+
+  it('iPhone эмодзиі: ✔️ мен ☑️ (артында көрінбейтін U+FE0F бар) танылады', () => {
+    expect(one('1. С?\nA) а\nB) б ✔\uFE0F').correct).toEqual([1]);
+    expect(one('1. С?\nA) а ☑\uFE0F\nB) б').correct).toEqual([0]);
+    expect(one('1. С?\nA) а\nB) б ✅').correct).toEqual([1]);
   });
 
+  it('пернетақтада жазуға оңай белгілер: * және « +» және (+) және [x]', () => {
+    expect(one('1. С?\nA) а\nB) б *').correct).toEqual([1]);
+    expect(one('1. С?\nA) а\nB) б*').correct).toEqual([1]);
+    expect(one('1. С?\nA) а\nB) б +').correct).toEqual([1]);
+    expect(one('1. С?\nA) а\nB) б (+)').correct).toEqual([1]);
+    expect(one('1. С?\nA) а [x]\nB) б').correct).toEqual([0]);
+  });
+
+  it('нұсқаның алдындағы белгі: «*B) …», «+B) …», «✓ B) …»', () => {
+    expect(one('1. С?\nA) а\n*B) б').correct).toEqual([1]);
+    expect(one('1. С?\n+A) а\nB) б').correct).toEqual([0]);
+    expect(one('1. С?\nA) а\n✓ B) б').correct).toEqual([1]);
+    expect(one('1. С?\nA) а\n*B) б').options).toEqual(['а', 'б']);
+  });
+
+  it('«C++», «a+b», «5*3» сияқты мәтін белгі болып кетпейді', () => {
+    const q = one('1. Қай тіл?\nA) C++\nB) Python ✓\nC) a+b\nD) 2 + 2');
+    expect(q.options).toEqual(['C++', 'Python', 'a+b', '2 + 2']);
+    expect(q.correct).toEqual([1]);
+  });
+
+  it('мәтін соңындағы кілт: «Жауаптар: 1-B, 2-A»', () => {
+    const t = '1. Бірінші?\nA) а\nB) б\n\n2. Екінші?\nA) а\nB) б\nC) в\n\nЖауаптар: 1-B, 2-C';
+    const { questions } = parseQuizText(t);
+    expect(questions.map((q) => q.correct)).toEqual([[1], [2]]);
+    expect(questions.every((q) => !q.needsAnswer)).toBe(true);
+  });
+
+  it('кілттің басқа жазылуы: «1B 2A», «1) B», әр жолға бір-бірден, «Кілт:», «Ответы:»', () => {
+    const base = '1. А?\nA) а\nB) б\n\n2. Б?\nA) а\nB) б\n\n';
+    expect(parseQuizText(`${base}Жауап кілті: 1B 2A`).questions.map((q) => q.correct)).toEqual([[1], [0]]);
+    expect(parseQuizText(`${base}Кілт: 1) B, 2) A`).questions.map((q) => q.correct)).toEqual([[1], [0]]);
+    expect(parseQuizText(`${base}Ответы:\n1. B\n2. A`).questions.map((q) => q.correct)).toEqual([[1], [0]]);
+    expect(parseQuizText(`${base}Жауаптар\n1-B\n2-A`).questions.map((q) => q.correct)).toEqual([[1], [0]]);
+  });
+
+  it('кілттегі «1. B» жолдары жаңа сұрақ болып кетпейді', () => {
+    const { found, questions } = parseQuizText('1. А?\nA) а\nB) б\nЖауаптар:\n1. B');
+    expect(found).toBe(1);
+    expect(questions[0].correct).toEqual([1]);
+  });
+
+  it('сұрақтың өз ✓ белгісі кілттен басым; бірнеше дұрыс жауап кілтте «1-A,C»', () => {
+    const t = '1. А?\nA) а\nB) б ✓\n\n2. Б?\nA) а\nB) б\nC) в\nD) г\n\nЖауаптар: 1-A, 2-A,C';
+    const { questions } = parseQuizText(t);
+    expect(questions[0].correct).toEqual([1]);
+    expect(questions[1].correct).toEqual([0, 2]);
+    expect(questions[1].multi).toBe(true);
+  });
+
+  it('«Кілт сөзді табыңыз?» сияқты сұрақ мәтіні кілт тақырыбы болып кетпейді', () => {
+    const { questions } = parseQuizText('1. Дұрыс кілт\nСөзді табыңыз?\nA) а ✓\nB) б');
+    expect(questions[0].prompt).toBe('Дұрыс кілт Сөзді табыңыз?');
+    const q2 = parseQuizText('1. Сұрақ?\nA) а ✓\nB) б\nКілт сөзді табыңыз\n');
+    expect(q2.questions[0].options[1]).toBe('б Кілт сөзді табыңыз');
+  });
+
+  it('ештеңе белгіленбесе — сұрақ өткізілмейді, «жауапсыз» болып келеді (өзі таңдайды)', () => {
+    const { questions, problems } = parseQuizText('1. Белгісіз?\nA) а\nB) б\nC) в');
+    expect(problems).toEqual([]);
+    expect(questions).toHaveLength(1);
+    expect(questions[0].correct).toEqual([]);
+    expect(questions[0].needsAnswer).toBe(true);
+  });
+
+  it('белгілі мен белгісіз сұрақ араласса — әрқайсысы өз күйінде', () => {
+    const { questions } = parseQuizText('1. А?\nA) а ✓\nB) б\n\n2. Б?\nA) а\nB) б\n\n3. В?\nA) а\nB) б *');
+    expect(questions.map((q) => q.needsAnswer)).toEqual([false, true, false]);
+    expect(questions.map((q) => q.number)).toEqual([1, 2, 3]);
+  });
+});
+
+describe('parseQuizText — қателер (жарамсыз сұрақ өткізіледі, №-мен айтылады)', () => {
   it('нұсқа саны 2–4 емес', () => {
     const one = parseQuizText('1. Бір нұсқа?\nA) а ✓');
     expect(one.questions).toHaveLength(0);
+    expect(one.problems[0].number).toBe(1);
     expect(one.problems[0].message).toMatch(/2–4/);
     const five = parseQuizText('1. Бес?\nA) а ✓\nB) б\nC) в\nD) г\nE) д');
     // E — нұсқа әрпі емес: соңғы жолға «жалғасы» болып қосылады, нұсқа саны 4
@@ -260,6 +334,11 @@ describe('parseQuizText — қателер (дұрыс сұрақтар өтед
     expect(problems[0].message).toMatch(/барлық нұсқа/);
   });
 
+  it('кілтте болмаған нұсқаны көрсетсе — қате', () => {
+    const { problems } = parseQuizText('1. Сұрақ?\nA) а\nB) б\nЖауаптар: 1-D');
+    expect(problems[0].message).toMatch(/нұсқа жоқ/);
+  });
+
   it('тым ұзын сұрақ пен нұсқа — қате (сервер де қабылдамайды)', () => {
     const long = 'ж'.repeat(501);
     expect(parseQuizText(`1. ${long}\nA) а ✓\nB) б`).problems[0].message).toMatch(/500/);
@@ -267,8 +346,8 @@ describe('parseQuizText — қателер (дұрыс сұрақтар өтед
     expect(parseQuizText(`1. С?\nA) ${longOpt} ✓\nB) б`).problems[0].message).toMatch(/150/);
   });
 
-  it('«Жауап: F» сияқты жоқ әріп — дұрыс жауап табылмады', () => {
-    const { problems } = parseQuizText('1. Сұрақ?\nA) а\nB) б\nЖауап: F');
-    expect(problems[0].message).toMatch(/дұрыс жауап/);
+  it('сұрақ мәтіні жоқ жол — қате', () => {
+    const { problems } = parseQuizText('1.\nA) а ✓\nB) б');
+    expect(problems[0].message).toMatch(/сұрақ мәтіні/);
   });
 });
