@@ -274,6 +274,43 @@ const createTables = async () => {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_game_answers_q ON game_answers(session_id, question_index);`);
 
+    // ── CUSTDEV: ай сайынғы сапа сұхбаттары ────────────────────────────
+    // 13. custdev_rounds — бір айлық сұхбат топтамасы (олардың доксындағы
+    // «0.1» сияқты нөмір). owner_id — сапа менеджер, тек сол/admin көреді.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS custdev_rounds (
+        id SERIAL PRIMARY KEY,
+        owner_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(120) NOT NULL,
+        note VARCHAR(500),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // 14. custdev_sessions — бір адаммен сұхбат: транскрипт кіреді,
+    // протокол (JSONB [{question, answer}]) шығады. transcript пен
+    // protocol үлкен болуы мүмкін (30 мин жазба) — TEXT/JSONB шегі жоқ.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS custdev_sessions (
+        id SERIAL PRIMARY KEY,
+        round_id INT NOT NULL REFERENCES custdev_rounds(id) ON DELETE CASCADE,
+        role VARCHAR(20) NOT NULL,
+        respondent_name VARCHAR(150) NOT NULL,
+        group_code VARCHAR(50),
+        curator_name VARCHAR(150),
+        meet_time_label VARCHAR(100),
+        recording_ref VARCHAR(300),
+        transcript TEXT NOT NULL DEFAULT '',
+        protocol JSONB,
+        status VARCHAR(20) NOT NULL DEFAULT 'draft',
+        error_message VARCHAR(500),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_custdev_sessions_round ON custdev_sessions(round_id);`);
+
     console.log('✅ Деректер базасы мен пайдаланушылар толық дайын!');
   } catch (err) {
     console.error('❌ Schema error:', err.message);

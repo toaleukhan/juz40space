@@ -12,6 +12,9 @@ import QuizEditor from './pages/quiz/QuizEditor';
 import HostGame from './pages/quiz/HostGame';
 import PlayGame from './pages/quiz/PlayGame';
 import GameResults from './pages/quiz/GameResults';
+import CustDevRounds from './pages/custdev/CustDevRounds';
+import CustDevRound from './pages/custdev/CustDevRound';
+import CustDevSession from './pages/custdev/CustDevSession';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 
@@ -50,6 +53,11 @@ export default function App() {
         <Route path="/quizzes/:id" element={<ProtectedRoute><QuizEditor /></ProtectedRoute>} />
         <Route path="/host/:id" element={<ProtectedRoute><HostGame /></ProtectedRoute>} />
         <Route path="/games/:id/results" element={<ProtectedRoute><GameResults /></ProtectedRoute>} />
+
+        {/* 🎙️ CustDev: сұхбат транскриптін протоколға айналдыру (тек admin) */}
+        <Route path="/custdev" element={<ProtectedRoute><CustDevRounds /></ProtectedRoute>} />
+        <Route path="/custdev/:id" element={<ProtectedRoute><CustDevRound /></ProtectedRoute>} />
+        <Route path="/custdev/sessions/:id" element={<ProtectedRoute><CustDevSession /></ProtectedRoute>} />
 
         <Route path="*" element={<HomeRedirect />} />
       </Routes>

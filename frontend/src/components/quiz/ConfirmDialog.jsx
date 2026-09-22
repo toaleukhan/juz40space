@@ -1,4 +1,4 @@
-import Modal from './Modal';
+import Modal from '../common/Modal';
 
 // Сайттың өз растау терезесі. Қауіпсіз әрекет («қалу») бірден фокуста тұрады.
 export default function ConfirmDialog({
