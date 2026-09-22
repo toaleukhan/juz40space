@@ -8,6 +8,7 @@ import {
   OptionTile, TimerBar, LeaderboardList, Podium, ConnectionBanner, StreakChip,
   Backdrop, Confetti, Countdown, Dots, PlayerBadge,
 } from '../../components/quiz/GameParts';
+import QrCode from '../../components/quiz/QrCode';
 import { badgeFor } from '../../components/quiz/gameFx';
 import { formatScore } from '../../components/quiz/answerMeta';
 import { exportResultsXlsx } from '../../utils/quizExport';
@@ -71,9 +72,10 @@ export default function HostGame() {
     return () => clearTimeout(t);
   }, [confirmEnd]);
 
+  const joinLink = view ? `${window.location.origin}/play?pin=${view.pin}` : '';
+
   const copyLink = async () => {
-    const link = `${window.location.origin}/play?pin=${view.pin}`;
-    try { await navigator.clipboard.writeText(link); } catch { /* қолжетімсіз — төменде сілтеме көрінеді */ }
+    try { await navigator.clipboard.writeText(joinLink); } catch { /* қолжетімсіз — төменде сілтеме көрінеді */ }
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
   };
@@ -158,6 +160,13 @@ export default function HostGame() {
                 <span className="qg-live" />
                 {view.locked ? 'Кіру жабық' : 'Ойын ашық: қосылуға болады'}
               </span>
+
+              <div className="qg-qrblock">
+                <QrCode value={joinLink} size={148} />
+                <p className="qg-qrblock__label">Камерамен сканерлеңіз</p>
+              </div>
+              <p className="qg-or"><span>немесе</span></p>
+
               <p className="qg-step"><span className="qg-step__n">1</span>Телефоннан ашыңыз</p>
               <p className="qg-joincard__url">{joinHost}/play</p>
               <p className="qg-step"><span className="qg-step__n">2</span>PIN-кодты енгізіңіз</p>

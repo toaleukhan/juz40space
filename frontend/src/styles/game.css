@@ -163,6 +163,13 @@
 .qg-joincard__live.is-locked { background: #f3ecec; color: #a33020; }
 .qg-live { width: 9px; height: 9px; border-radius: 50%; background: currentColor; animation: qg-live 1.6s ease-out infinite; }
 @keyframes qg-live { 0% { box-shadow: 0 0 0 0 currentColor; } 70%, 100% { box-shadow: 0 0 0 9px transparent; } }
+/* QR: камерамен сканерлеп, PIN-ды жазбай-ақ қосылу */
+.qg-qrblock { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 4px; padding: 16px; border-radius: 20px; background: #f0f7f9; }
+.qg-qr { display: block; border-radius: 14px; box-shadow: 0 3px 0 #c6dfe6; }
+.qg-qrblock__label { font-size: 13px; font-weight: 800; color: var(--qg-card-soft); }
+.qg-or { display: flex; align-items: center; gap: 10px; margin: 10px 0 2px; color: var(--qg-card-soft); font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.qg-or::before, .qg-or::after { content: ''; flex: 1; height: 1px; background: #e1edf1; }
+
 .qg-step { display: flex; align-items: center; gap: 10px; margin-top: 6px; color: var(--qg-card-soft); font-size: 15px; font-weight: 700; }
 .qg-step__n { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--qg-ink); color: #fff; font-size: 13px; font-weight: 900; }
 .qg-joincard__url { font-size: clamp(22px, 8.5cqw, 42px); font-weight: 900; letter-spacing: -.025em; color: var(--qg-ink); overflow-wrap: anywhere; }
