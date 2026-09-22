@@ -217,4 +217,37 @@ describe.skipIf(!isLocal)('CustDev — раунд, сұхбат, протоко�
     expect(after.body.status).toBe('error');
     expect(after.body.errorMessage).toBeTruthy();
   });
+
+  describe('/fetch-transcript — раундқа/сұхбатқа тәуелсіз', () => {
+    it('жазба сілтемесі бос болса — 400', async () => {
+      const r = await api('POST', '/api/custdev/fetch-transcript', { token: admin.token, body: {} });
+      expect(r.status).toBe(400);
+    });
+
+    it('Drive сілтемесі емес мәтінге (мыс. ескі meet-код) — 400', async () => {
+      const r = await api('POST', '/api/custdev/fetch-transcript', {
+        token: admin.token, body: { recordingRef: 'abc-defg-hij (2026-08-28 17:57 GMT+5)' },
+      });
+      expect(r.status).toBe(400);
+      expect(r.body.error).toMatch(/Drive/);
+    });
+
+    it('GOOGLE_SERVICE_ACCOUNT_JSON_CUSTDEV орнатылмаса — 503, Drive-қа шықпайды', async () => {
+      delete process.env.GOOGLE_SERVICE_ACCOUNT_JSON_CUSTDEV;
+      let called = false;
+      global.fetch = async () => { called = true; throw new Error('шақырылмауы керек'); };
+      const r = await api('POST', '/api/custdev/fetch-transcript', {
+        token: admin.token, body: { recordingRef: 'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz01234/view' },
+      });
+      expect(r.status).toBe(503);
+      expect(called).toBe(false);
+    });
+
+    it('куратор (admin емес) — 403', async () => {
+      const r = await api('POST', '/api/custdev/fetch-transcript', {
+        token: curator.token, body: { recordingRef: 'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz01234/view' },
+      });
+      expect(r.status).toBe(403);
+    });
+  });
 });

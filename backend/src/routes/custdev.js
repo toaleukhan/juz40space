@@ -5,10 +5,13 @@ const pool = require('../config/db');
 const { ROLES, ROLE_LABEL, questionsFor } = require('../custdev/questions');
 const { generateProtocol, GeminiError } = require('../custdev/gemini');
 const { exportRoundText } = require('../custdev/export');
+const { extractDriveFileId, getDriveAuth, fetchDriveMeta, downloadDriveFile } = require('../custdev/drive');
+const { transcribeRecording } = require('../custdev/transcribe');
 
 const MAX_TRANSCRIPT = 60000;
 const TITLE_MAX = 120;
 const NAME_MAX = 150;
+const MAX_RECORDING_BYTES = 300 * 1024 * 1024; // 300 МБ — Node процесінің жадысын сақтау үшін шек
 
 // Тек admin көреді — CustDev сапа менеджерінің ішкі құралы. (owner_id
 // арқылы сол ішінде де тек өз раундыңды көресің, admin — бәрін.)
@@ -87,6 +90,39 @@ function validateSessionInput(body) {
 router.get('/roles', auth, requireAdmin, (req, res) => {
   res.json(ROLES.map((id) => ({ id, label: ROLE_LABEL[id], questions: questionsFor(id) })));
 });
+
+// ── жазбадан транскрипт алу ───────────────────────────────────────
+// Раундқа/сұхбатқа тәуелсіз: аты-жөнін толтырмас бұрын да, дайын
+// сұхбатты кейін де сынап көруге болады — сессия жасаудың қажеті жоқ.
+// Уақыты (recordedAt) Drive-тың файл метадеректерінен өзі анықталады,
+// сапа менеджер қолмен жазбайды.
+router.post('/fetch-transcript', auth, requireAdmin, asyncRoute(async (req, res) => {
+  const ref = String(req.body?.recordingRef || '').trim();
+  if (!ref) return res.status(400).json({ error: 'Жазба сілтемесін қойыңыз' });
+
+  const fileId = extractDriveFileId(ref);
+  if (!fileId) {
+    return res.status(400).json({ error: 'Бұл жерден Drive файл сілтемесін таба алмадым. Файлдың Drive сілтемесін қойыңыз (drive.google.com/file/d/... түрінде)' });
+  }
+
+  const authClient = getDriveAuth();
+  if (!authClient) return res.status(503).json({ error: 'GOOGLE_SERVICE_ACCOUNT_JSON_CUSTDEV орнатылмаған' });
+
+  try {
+    const meta = await fetchDriveMeta(fileId, authClient);
+    const size = Number(meta.size || 0);
+    if (size > MAX_RECORDING_BYTES) {
+      return res.status(413).json({ error: `Файл тым үлкен (${Math.round(size / 1e6)} МБ, шегі — ${MAX_RECORDING_BYTES / 1e6} МБ)` });
+    }
+    const buffer = await downloadDriveFile(fileId, authClient);
+    const transcript = await transcribeRecording({ buffer, mimeType: meta.mimeType, displayName: meta.name || 'жазба' });
+    res.json({ transcript, recordedAt: meta.createdTime || null, fileName: meta.name || null });
+  } catch (err) {
+    const message = err instanceof GeminiError ? err.message : 'Транскрипт алу сәтсіз аяқталды: ' + err.message;
+    const status = err instanceof GeminiError && err.code === 'no_key' ? 503 : 502;
+    res.status(status).json({ error: message });
+  }
+}));
 
 // ── раундтар ───────────────────────────────────────────────────────
 router.get('/rounds', auth, requireAdmin, asyncRoute(async (req, res) => {
