@@ -5,7 +5,10 @@
 
 const { questionsFor, ROLE_LABEL } = require('./questions');
 
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+// 2026-09: gemini-2.5-flash жаңа пайдаланушыларға жабылған (Google API-дің
+// өзі gemini-3.6-flash-ты айтады). Модель тағы ауысса, Railway-де
+// GEMINI_MODEL айнымалысын қою жеткілікті — кодты өзгерту керек емес.
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 class GeminiError extends Error {
