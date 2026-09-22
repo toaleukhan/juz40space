@@ -193,6 +193,29 @@ function AddSessionDialog({ roundId, onClose, onDone }) {
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState('');
   const [stage, setStage] = useState('form'); // form | saving | generating
+  const [fetching, setFetching] = useState(false);
+  const [fetchNotice, setFetchNotice] = useState('');
+
+  // Жазбаның Drive сілтемесінен транскрипт пен күнін өзі тартып алады —
+  // уақытты қолмен жазудың қажеті жоқ, Drive-тың өз метадеректері жеткілікті.
+  const fetchTranscript = async () => {
+    if (!recordingRef.trim()) return;
+    setFetching(true);
+    setError('');
+    setFetchNotice('');
+    try {
+      const { transcript: text, recordedAt } = await custdev.fetchTranscript(recordingRef.trim());
+      setTranscript(text);
+      if (recordedAt) {
+        setMeetTimeLabel(new Date(recordedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }));
+      }
+      setFetchNotice('Транскрипт алынды. Оқып шығып, керек болса түзетіңіз.');
+    } catch (err) {
+      setError(errorText(err, 'Транскрипт алу мүмкін болмады'));
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -222,7 +245,7 @@ function AddSessionDialog({ roundId, onClose, onDone }) {
     }
   };
 
-  const busy = stage !== 'form';
+  const busy = stage !== 'form' || fetching;
 
   return (
     <Modal wide closeOnBackdrop={!busy} title="Сұхбат қосу" description="Метадеректерді толтырып, транскриптті қойыңыз — протоколды сайт өзі жазады." onClose={busy ? () => {} : onClose}>
@@ -252,18 +275,26 @@ function AddSessionDialog({ roundId, onClose, onDone }) {
             </label>
           )}
           <label className="qz-field">
-            <span className="qz-label">Уақыты <em>(міндетті емес)</em></span>
-            <input className="qz-select" style={{ width: 140 }} value={meetTimeLabel} onChange={(e) => setMeetTimeLabel(e.target.value)} maxLength={100} disabled={busy} placeholder="16:00-16:20" />
-          </label>
-          <label className="qz-field">
-            <span className="qz-label">Жазба сілтемесі <em>(міндетті емес)</em></span>
-            <input className="qz-select" style={{ width: 220 }} value={recordingRef} onChange={(e) => setRecordingRef(e.target.value)} maxLength={300} disabled={busy} placeholder="abc-defg-hij немесе «Ата-ана»" />
+            <span className="qz-label">Уақыты <em>(жазбадан өзі анықталады)</em></span>
+            <input className="qz-select" style={{ width: 190 }} value={meetTimeLabel} onChange={(e) => setMeetTimeLabel(e.target.value)} maxLength={100} disabled={busy} placeholder="Транскрипт алынған соң өзі толады" />
           </label>
         </div>
 
         <label className="qz-field" style={{ marginTop: 14 }}>
-          <span className="qz-label">Транскрипт <em>(Gemini-ден алған мәтінді осында қойыңыз)</em></span>
-          <textarea className="qz-textarea" style={{ minHeight: 220, fontSize: 13.5 }} value={transcript} onChange={(e) => setTranscript(e.target.value)} disabled={busy} placeholder="Транскриптті осында қойыңыз…" />
+          <span className="qz-label">Жазбаның Drive сілтемесі <em>(міндетті емес)</em></span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input className="qz-select" style={{ flex: 1 }} value={recordingRef} onChange={(e) => setRecordingRef(e.target.value)} maxLength={300} disabled={busy} placeholder="https://drive.google.com/file/d/… не «Ата-ана»" />
+            <button type="button" className="qz-btn" disabled={busy || !recordingRef.trim()} onClick={fetchTranscript}>
+              {fetching ? 'Оқылуда…' : 'Транскрипт алу'}
+            </button>
+          </div>
+        </label>
+
+        {fetchNotice && <p className="qz-insight" role="status" style={{ marginTop: 10 }}>{fetchNotice}</p>}
+
+        <label className="qz-field" style={{ marginTop: 14 }}>
+          <span className="qz-label">Транскрипт <em>(жоғарыдағы батырмамен өзі толады, не қолмен қоюға болады)</em></span>
+          <textarea className="qz-textarea" style={{ minHeight: 220, fontSize: 13.5 }} value={transcript} onChange={(e) => setTranscript(e.target.value)} disabled={busy} placeholder="Транскриптті осында қойыңыз, немесе жоғарыда Drive сілтемесінен алыңыз…" />
         </label>
 
         {error && <p className="qz-alert" role="alert" style={{ marginTop: 10 }}>{error}</p>}

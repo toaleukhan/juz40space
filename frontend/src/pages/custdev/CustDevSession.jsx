@@ -20,6 +20,8 @@ export default function CustDevSession() {
   const [meta, setMeta] = useState(null);
   const [answers, setAnswers] = useState(null);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [fetchNotice, setFetchNotice] = useState('');
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [confirmRegen, setConfirmRegen] = useState(false);
@@ -52,6 +54,32 @@ export default function CustDevSession() {
       setError(errorText(err, 'Сақтау мүмкін болмады'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Жазбаның Drive сілтемесінен транскрипт пен күнін өзі тартып алады.
+  // Тек жергілікті meta күйіне жазады — сақтау үшін "Сақтау" басу керек,
+  // сол арқылы алдымен көріп-тексеріп алуға мүмкіндік қалады.
+  const fetchTranscript = async () => {
+    if (!meta.recordingRef.trim()) return;
+    setFetching(true);
+    setError('');
+    setFetchNotice('');
+    try {
+      const { transcript: text, recordedAt } = await custdev.fetchTranscript(meta.recordingRef.trim());
+      setMeta((m) => ({
+        ...m,
+        transcript: text,
+        meetTimeLabel: recordedAt
+          ? new Date(recordedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+          : m.meetTimeLabel,
+      }));
+      setShowTranscript(true);
+      setFetchNotice('Транскрипт алынды. Оқып шығып, «Сақтау» басыңыз.');
+    } catch (err) {
+      setError(errorText(err, 'Транскрипт алу мүмкін болмады'));
+    } finally {
+      setFetching(false);
     }
   };
 
@@ -94,7 +122,7 @@ export default function CustDevSession() {
   }
   if (!s || !meta) return <div className="app-shell"><Sidebar /><main className="qz"><div className="qz-empty">Жүктелуде…</div></main></div>;
 
-  const busy = saving || generating;
+  const busy = saving || generating || fetching;
 
   return (
     <div className="app-shell">
@@ -143,11 +171,18 @@ export default function CustDevSession() {
               <input className="qz-select" style={{ width: 130 }} value={meta.meetTimeLabel} onChange={(e) => setMeta((m) => ({ ...m, meetTimeLabel: e.target.value }))} maxLength={100} />
             </label>
             <label className="qz-field">
-              <span className="qz-label">Жазба сілтемесі</span>
-              <input className="qz-select" style={{ width: 220 }} value={meta.recordingRef} onChange={(e) => setMeta((m) => ({ ...m, recordingRef: e.target.value }))} maxLength={300} />
+              <span className="qz-label">Жазбаның Drive сілтемесі</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input className="qz-select" style={{ width: 220 }} value={meta.recordingRef} onChange={(e) => setMeta((m) => ({ ...m, recordingRef: e.target.value }))} maxLength={300} />
+                <button type="button" className="qz-btn" disabled={busy || !meta.recordingRef.trim()} onClick={fetchTranscript}>
+                  {fetching ? 'Оқылуда…' : 'Транскрипт алу'}
+                </button>
+              </div>
             </label>
           </div>
         </section>
+
+        {fetchNotice && <div className="qz-insight" role="status">{fetchNotice}</div>}
 
         <section className="qz-card qz-card--spaced">
           <div className="qz-card__head">

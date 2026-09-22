@@ -16,6 +16,11 @@ export const custdev = {
   updateSession: (id, body) => api.put(`/custdev/sessions/${id}`, body).then((r) => r.data),
   deleteSession: (id) => api.delete(`/custdev/sessions/${id}`).then((r) => r.data),
   generate: (id) => api.post(`/custdev/sessions/${id}/generate`).then((r) => r.data),
+
+  // Раундқа/сұхбатқа тәуелсіз: Drive сілтемесінен транскрипт + жазба
+  // күнін алады. Ұзақ жүруі мүмкін (видео Gemini-де өңделеді), сондықтан
+  // әдепкі axios таймаутынан асып кетпесін деп өзгеше сұраныс жасаймыз.
+  fetchTranscript: (recordingRef) => api.post('/custdev/fetch-transcript', { recordingRef }, { timeout: 180000 }).then((r) => r.data),
 };
 
 export const errorText = (err, fallback) => err?.response?.data?.error || fallback;
