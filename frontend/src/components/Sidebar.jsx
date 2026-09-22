@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import useIsMobile from '../hooks/useIsMobile';
 import juz40Logo from '../assets/juz40-logo.png';
-import { IconMenu, IconClose, IconUser, IconCalendar, IconVideo, IconUsers, IconLogout, IconChart, IconBolt } from './icons';
+import { IconMenu, IconClose, IconUser, IconCalendar, IconVideo, IconUsers, IconLogout, IconChart, IconBolt, IconMic } from './icons';
 import { getCurrentFilter } from './WeekBookingCalendar';
 
 // Панель беттің шетіне жабыспай, айналасында бос орын қалдырып "қалқып"
@@ -106,6 +106,7 @@ function SidebarContent({ collapsed, onNavigate }) {
     { to: '/curators', label: 'Кураторлар базасы', Icon: IconUsers },
     { to: '/dashboard', label: 'Дэшборд', Icon: IconChart },
     { to: '/quizzes', label: 'Викторина', Icon: IconBolt },
+    { to: '/custdev', label: 'CustDev', Icon: IconMic },
   ];
   // Мұғалім — сабақ беретін адам, СТ жүйесіне қатысы жоқ: оған тек өз
   // апталық кестесі көрінеді.

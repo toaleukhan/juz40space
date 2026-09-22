@@ -1,5 +1,5 @@
 import { useId, useMemo, useState } from 'react';
-import Modal from './Modal';
+import Modal from '../common/Modal';
 import { CheckIcon } from './shapes';
 import { parseQuizText } from '../../utils/quizImport';
 

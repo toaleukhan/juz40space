@@ -99,6 +99,9 @@ export const IconWrench = (p) => (
 export const IconFile = (p) => (
   <svg {...base} {...p}><path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z" /><path d="M14 3.5V8h4" /></svg>
 );
+export const IconMic = (p) => (
+  <svg {...base} {...p}><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0" /><path d="M12 17.5V21M9 21h6" /></svg>
+);
 export const IconBuilding = (p) => (
   <svg {...base} {...p}><rect x="4" y="3.5" width="10" height="17" rx="1" /><path d="M14 9h6v11.5h-6" /><line x1="7" y1="7" x2="7" y2="7.01" /><line x1="11" y1="7" x2="11" y2="7.01" /><line x1="7" y1="11" x2="7" y2="11.01" /><line x1="11" y1="11" x2="11" y2="11.01" /><line x1="7" y1="15" x2="7" y2="15.01" /><line x1="11" y1="15" x2="11" y2="15.01" /></svg>
 );
