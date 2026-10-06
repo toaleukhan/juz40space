@@ -122,3 +122,8 @@ export const IconDot = ({ color = 'currentColor', style, ...p }) => (
 export const IconTikTok = (p) => (
   <svg {...base} {...p}><path d="M14 4v10.5a3.5 3.5 0 1 1-3.5-3.5" /><path d="M14 4c.4 2.4 2 4 4.5 4.3" /></svg>
 );
+
+// Сурет (жүктеу үшін)
+export const IconImage = (p) => (
+  <svg {...base} {...p}><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" /><circle cx="9" cy="9.5" r="1.6" /><path d="M20.5 15.5l-4.5-4.5-8.5 8.5" /></svg>
+);
