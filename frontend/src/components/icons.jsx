@@ -117,3 +117,8 @@ export const IconDot = ({ color = 'currentColor', style, ...p }) => (
     <circle cx="12" cy="12" r="9" fill={color} />
   </svg>
 );
+
+// TikTok ноталық белгісі (сызықпен)
+export const IconTikTok = (p) => (
+  <svg {...base} {...p}><path d="M14 4v10.5a3.5 3.5 0 1 1-3.5-3.5" /><path d="M14 4c.4 2.4 2 4 4.5 4.3" /></svg>
+);

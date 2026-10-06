@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import useIsMobile from '../hooks/useIsMobile';
 import juz40Logo from '../assets/juz40-logo.png';
-import { IconMenu, IconClose, IconUser, IconCalendar, IconVideo, IconUsers, IconLogout, IconChart, IconBolt, IconMic } from './icons';
+import { IconMenu, IconClose, IconUser, IconCalendar, IconVideo, IconUsers, IconLogout, IconChart, IconBolt, IconMic, IconTikTok } from './icons';
 import { getCurrentFilter } from './WeekBookingCalendar';
 
 // Панель беттің шетіне жабыспай, айналасында бос орын қалдырып "қалқып"
@@ -75,6 +75,7 @@ function SidebarContent({ collapsed, onNavigate }) {
   const isCurator = user.role === 'curator';
   const isCoordinator = user.role === 'coordinator';
   const isTeacher = user.role === 'teacher';
+  const isMedia = user.role === 'media';
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -114,12 +115,18 @@ function SidebarContent({ collapsed, onNavigate }) {
     { to: '/my-schedule', label: 'Менің кестем', Icon: IconCalendar },
     { to: '/quizzes', label: 'Викторина', Icon: IconBolt },
   ];
-  const links = isCurator ? curatorLinks
+  // Media team тимлиді — тек TikTok жарысы (басқа беттер оған жабық).
+  const mediaLinks = [
+    { to: '/tiktok', label: 'TikTok жарысы', Icon: IconTikTok },
+  ];
+  const links = isMedia ? mediaLinks
+    : isCurator ? curatorLinks
     : isCoordinator ? coordinatorLinks
     : isTeacher ? teacherLinks
     : adminLinks;
 
-  const roleLine = isTeacher ? 'Мұғалім'
+  const roleLine = isMedia ? 'Media team тимлиді'
+    : isTeacher ? 'Мұғалім'
     : isCurator ? 'Куратор'
     : isCoordinator ? 'Координатор'
     : 'Басқарушы';

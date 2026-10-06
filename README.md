@@ -13,6 +13,8 @@
 - `/dashboard` — аналитика: KPI, тренд, куратор рейтингі
 - `/profile` — куратордың жеке кабинеті (профиль + өз СТ-жазба тарихы)
 
+- `/tiktok` — 🎬 бөлімдер арасындағы TikTok жарысы (тек Media team тимлиді, `role = media`)
+
 ## Архитектура
 
 ```
@@ -149,3 +151,16 @@ VITE_API_URL=https://сенің-backend.up.railway.app/api
 
 ### Stats
 - `GET /api/stats` — метрикалар
+
+### 🎬 TikTok жарысы (`/api/tiktok`, тек `role = media`)
+- `GET /api/tiktok/overview?month=YYYY-MM` — рейтинг, күнтізбе деректері, видеолар, «не өтеді» анализі
+- `GET|POST|PUT|DELETE /api/tiktok/departments` — бөлімдердің TikTok аккаунттары (+ Juz40_team)
+- `POST /api/tiktok/sync` → `GET /api/tiktok/sync/:id` — Apify арқылы айдың видеоларын тартып, базаға сақтау
+- `PUT /api/tiktok/scores/:month/:deptId` — жюри ұпайлары
+- `POST /api/tiktok/analysis` — Gemini айлық анализі
+
+Railway айнымалылары: `APIFY_TOKEN` (console.apify.com → Settings → API & Integrations), `GEMINI_API_KEY` (бұрыннан бар),
+қаласаңыз `TIKTOK_MAX_PER_PROFILE` (әдепкі 150 — бір профильден айына ең көп видео, шығынды шектейді).
+
+Media team тимлиді аккаунты: `cd backend && node scripts/create-media-lead.js "Аты-жөні" "логин" --apply`
+(аргументсіз: «Media team тимлиді» / `mediateam`). Бұл рөл сайттың басқа бөлімдерін көрмейді — шектеу `middleware/auth.js`-те.

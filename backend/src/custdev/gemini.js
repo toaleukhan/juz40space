@@ -99,19 +99,26 @@ function assembleProtocol(role, answers) {
   return questions.map((q, i) => ({ question: q, answer: answers[i] ?? '-' }));
 }
 
-async function callGemini({ systemInstruction, userText }, { apiKey, model = DEFAULT_MODEL, timeoutMs = 55000 } = {}) {
+const ANSWERS_SCHEMA = {
+  type: 'OBJECT',
+  properties: { answers: { type: 'ARRAY', items: { type: 'STRING' } } },
+  required: ['answers'],
+};
+
+// responseSchema/temperature әдепкі мәні — CustDev протоколы; басқа
+// модульдер (мыс. TikTok анализі) өз схемасын береді.
+async function callGemini(
+  { systemInstruction, userText },
+  { apiKey, model = DEFAULT_MODEL, timeoutMs = 55000, responseSchema = ANSWERS_SCHEMA, temperature = 0.2 } = {}
+) {
   const url = `${API_BASE}/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const body = {
     contents: [{ role: 'user', parts: [{ text: userText }] }],
     systemInstruction: { parts: [{ text: systemInstruction }] },
     generationConfig: {
-      temperature: 0.2,
+      temperature,
       responseMimeType: 'application/json',
-      responseSchema: {
-        type: 'OBJECT',
-        properties: { answers: { type: 'ARRAY', items: { type: 'STRING' } } },
-        required: ['answers'],
-      },
+      responseSchema,
     },
   };
 
@@ -156,5 +163,5 @@ async function generateProtocol({ role, transcript }, deps = {}) {
 }
 
 module.exports = {
-  GeminiError, buildPrompt, extractAnswers, repairAnswers, assembleProtocol, callGemini, generateProtocol,
+  GeminiError, DEFAULT_MODEL, buildPrompt, extractAnswers, repairAnswers, assembleProtocol, callGemini, generateProtocol,
 };

@@ -15,6 +15,7 @@ import GameResults from './pages/quiz/GameResults';
 import CustDevRounds from './pages/custdev/CustDevRounds';
 import CustDevRound from './pages/custdev/CustDevRound';
 import CustDevSession from './pages/custdev/CustDevSession';
+import TikTokCompetition from './pages/tiktok/TikTokCompetition';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 
@@ -22,7 +23,8 @@ import { AuthProvider } from './context/AuthContext';
 // бірден өз апталық кестесі ашылады.
 function HomeRedirect() {
   const role = JSON.parse(localStorage.getItem('user') || '{}').role;
-  return <Navigate to={role === 'teacher' ? '/my-schedule' : '/schedule'} replace />;
+  const home = role === 'teacher' ? '/my-schedule' : role === 'media' ? '/tiktok' : '/schedule';
+  return <Navigate to={home} replace />;
 }
 
 export default function App() {
@@ -58,6 +60,9 @@ export default function App() {
         <Route path="/custdev" element={<ProtectedRoute><CustDevRounds /></ProtectedRoute>} />
         <Route path="/custdev/:id" element={<ProtectedRoute><CustDevRound /></ProtectedRoute>} />
         <Route path="/custdev/sessions/:id" element={<ProtectedRoute><CustDevSession /></ProtectedRoute>} />
+
+        {/* 🎬 TikTok жарысы: бөлімдер рейтингі, жюри, анализ (тек media) */}
+        <Route path="/tiktok" element={<ProtectedRoute><TikTokCompetition /></ProtectedRoute>} />
 
         <Route path="*" element={<HomeRedirect />} />
       </Routes>
