@@ -183,3 +183,13 @@ describe('media рөлі', () => {
     expect(validateDept({ isTeamAccount: true, username: 'juz40_team' }).value.name).toBe('Juz40_team');
   });
 });
+
+describe('бастапқы бөлімдер тізімі', () => {
+  const { DEFAULT_DEPARTMENTS, TEAM_ACCOUNT } = require('./defaultDepartments');
+  it('барлық username валидациядан өтеді, қайталанбайды', () => {
+    const all = [...DEFAULT_DEPARTMENTS, TEAM_ACCOUNT];
+    all.forEach((d) => expect(validateDept({ ...d, isTeamAccount: d === TEAM_ACCOUNT }).errors).toEqual([]));
+    expect(new Set(all.map((d) => d.username)).size).toBe(all.length);
+    expect(DEFAULT_DEPARTMENTS).toHaveLength(13);
+  });
+});

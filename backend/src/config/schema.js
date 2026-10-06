@@ -386,6 +386,10 @@ const createTables = async () => {
       );
     `);
 
+    // Бөлімдердің TikTok аккаунттары — бір реттік бастапқы тізім
+    const added = await require('../tiktok/defaultDepartments').seedDefaultDepartments(pool);
+    if (added) console.log(`🎬 TikTok: ${added} бөлім аккаунты қосылды`);
+
     console.log('✅ Деректер базасы мен пайдаланушылар толық дайын!');
   } catch (err) {
     console.error('❌ Schema error:', err.message);
