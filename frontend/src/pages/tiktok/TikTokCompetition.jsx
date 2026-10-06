@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Sidebar from '../../components/Sidebar';
+import { IconImage } from '../../components/icons';
 import { tiktok, errorText } from '../../services/tiktokApi';
 import { monthLabel, shiftMonth, currentMonth, fmtDateTime } from '../../utils/tiktok';
 import Leaderboard from './Leaderboard';
@@ -8,6 +9,7 @@ import PostingCalendar from './PostingCalendar';
 import Insights from './Insights';
 import VideosTable from './VideosTable';
 import DepartmentsDialog from './DepartmentsDialog';
+import ShareImageDialog from './ShareImageDialog';
 import '../../styles/quiz.css';
 import '../../styles/tiktok.css';
 
@@ -45,6 +47,7 @@ function MonthView({ month, thisMonth, tab, setParam }) {
   const [sync, setSync] = useState(null);
   const [syncId, setSyncId] = useState(null);
   const [deptsOpen, setDeptsOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const reload = useCallback(() => tiktok.overview(month)
     .then((d) => { setData(d); setError(''); return d; })
@@ -116,6 +119,10 @@ function MonthView({ month, thisMonth, tab, setParam }) {
               <span>{monthLabel(month)}</span>
               <button type="button" onClick={() => setParam('month', shiftMonth(month, 1))} disabled={month >= thisMonth} aria-label="Келесі ай">›</button>
             </div>
+            <button type="button" className="qz-btn" onClick={() => setShareOpen(true)}
+              disabled={!data || !data.leaderboard.length} title="Рейтингті сурет етіп жүктеу">
+              <IconImage width={16} height={16} /> Сурет
+            </button>
             <button type="button" className="qz-btn" onClick={() => setDeptsOpen(true)}>Бөлімдер</button>
             <button type="button" className="qz-btn qz-btn--primary" onClick={startSync} disabled={busy || !data || noDepts}>
               {busy ? 'Жаңартылуда…' : 'Деректерді жаңарту'}
@@ -173,6 +180,8 @@ function MonthView({ month, thisMonth, tab, setParam }) {
             {tab === 'videos' && <VideosTable data={data} />}
           </>
         )}
+
+        {shareOpen && data && <ShareImageDialog data={data} onClose={() => setShareOpen(false)} />}
 
         {deptsOpen && (
           <DepartmentsDialog
