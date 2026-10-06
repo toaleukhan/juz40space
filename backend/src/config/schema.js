@@ -311,6 +311,81 @@ const createTables = async () => {
     `);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_custdev_sessions_round ON custdev_sessions(round_id);`);
 
+    // 15–19. 🎬 TikTok жарысы (тек media рөлі): бөлімдердің парақшалары,
+    // Apify-дан тартылған видеолар (қайта төлемеу үшін базада сақталады),
+    // жюри ұпайлары, синхрон тарихы, айлық ИИ анализі.
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tiktok_departments (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(120) NOT NULL,
+        username VARCHAR(64) NOT NULL UNIQUE,
+        team_tag VARCHAR(64),
+        is_team_account BOOLEAN NOT NULL DEFAULT FALSE,
+        active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tiktok_videos (
+        id VARCHAR(40) PRIMARY KEY,
+        department_id INT REFERENCES tiktok_departments(id) ON DELETE CASCADE,
+        username VARCHAR(64) NOT NULL,
+        posted_at TIMESTAMPTZ NOT NULL,
+        post_day DATE NOT NULL,
+        views BIGINT NOT NULL DEFAULT 0,
+        likes BIGINT NOT NULL DEFAULT 0,
+        comments BIGINT NOT NULL DEFAULT 0,
+        shares BIGINT NOT NULL DEFAULT 0,
+        duration_sec INT,
+        music_original BOOLEAN,
+        music_name VARCHAR(200),
+        caption TEXT NOT NULL DEFAULT '',
+        hashtags TEXT[] NOT NULL DEFAULT '{}',
+        mentions TEXT[] NOT NULL DEFAULT '{}',
+        url TEXT,
+        fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_tiktok_videos_day ON tiktok_videos(post_day);`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tiktok_scores (
+        month CHAR(7) NOT NULL,
+        department_id INT NOT NULL REFERENCES tiktok_departments(id) ON DELETE CASCADE,
+        creativity NUMERIC(4,1),
+        ethics NUMERIC(4,1),
+        cross_dept NUMERIC(4,1),
+        activity NUMERIC(4,1),
+        team_account NUMERIC(4,1),
+        bonus NUMERIC(4,1),
+        note VARCHAR(500),
+        updated_by INT REFERENCES users(id) ON DELETE SET NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (month, department_id)
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tiktok_syncs (
+        id SERIAL PRIMARY KEY,
+        month CHAR(7) NOT NULL,
+        run_id VARCHAR(64),
+        dataset_id VARCHAR(64),
+        status VARCHAR(20) NOT NULL DEFAULT 'running',
+        video_count INT,
+        error_message VARCHAR(500),
+        started_by INT REFERENCES users(id) ON DELETE SET NULL,
+        started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        finished_at TIMESTAMPTZ
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tiktok_analyses (
+        month CHAR(7) PRIMARY KEY,
+        content JSONB NOT NULL,
+        video_count INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
     console.log('✅ Деректер базасы мен пайдаланушылар толық дайын!');
   } catch (err) {
     console.error('❌ Schema error:', err.message);

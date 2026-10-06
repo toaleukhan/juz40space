@@ -60,6 +60,9 @@ app.use('/api/play', playFloodLimiter, require('./routes/play'));
 // 🎙️ CustDev: сұхбат транскриптін протоколға айналдыру (тек admin)
 app.use('/api/custdev', require('./routes/custdev'));
 
+// 🎬 TikTok жарысы: бөлімдердің парақшалары, рейтинг, ИИ анализі (тек media)
+app.use('/api/tiktok', require('./routes/tiktok'));
+
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
 
 const PORT = process.env.PORT || 3001;

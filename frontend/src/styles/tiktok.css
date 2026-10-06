@@ -1,0 +1,152 @@
+/* ═══════════════════════════════════════════════════════════════════
+   JUZ40 · TikTok жарысы (/tiktok) — quiz.css-тің .qz тілінде (ақ бет,
+   сия түсті мәтін, жарық/қараңғы тема). Жалғыз «бренд» екпіні —
+   TikTok-тың қызыл/көгілдір қос түсі, тек белгілерде және жүлдеде.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.qz.tt {
+  --tt-red: #fe2c55; --tt-cyan: #12c7c1;
+  --tt-gold: #c99a14; --tt-silver: #8a9aa3; --tt-bronze: #b0683a;
+  --tt-heat: 14, 143, 98;
+}
+[data-theme='dark'] .qz.tt { --tt-cyan: #25f4ee; --tt-heat: 69, 200, 148; }
+
+.tt-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tt-month { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: 10px; background: var(--qz-surface); border: 1px solid var(--qz-line); }
+.tt-month span { min-width: 118px; text-align: center; font-size: 13px; font-weight: 700; color: var(--qz-ink); }
+.tt-month button { width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: var(--qz-soft); cursor: pointer; font-size: 15px; }
+.tt-month button:hover:not(:disabled) { background: var(--qz-hover); color: var(--qz-ink); }
+.tt-month button:disabled { opacity: .3; cursor: default; }
+
+.tt-status { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -6px 0 16px; font-size: 12.5px; color: var(--qz-soft); }
+.tt-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--qz-faint); flex-shrink: 0; }
+.tt-dot--live { background: var(--qz-live); box-shadow: 0 0 0 3px var(--qz-live-bg); }
+.tt-dot--busy { background: var(--tt-red); animation: tt-pulse 1.2s ease-in-out infinite; }
+@keyframes tt-pulse { 50% { opacity: .35; } }
+
+.tt-tabs { margin-bottom: 16px; }
+
+/* ── KPI ── */
+.tt-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tt-kpi { padding: 14px 16px; background: var(--qz-surface); border: 1px solid var(--qz-line); border-radius: 12px; box-shadow: var(--qz-shadow); }
+.tt-kpi__label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--qz-faint); }
+.tt-kpi__value { margin-top: 6px; font-size: 24px; font-weight: 750; letter-spacing: -.02em; color: var(--qz-ink); }
+.tt-kpi__hint { margin-top: 2px; font-size: 12px; color: var(--qz-soft); }
+
+/* ── Жүлде ── */
+.tt-podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; align-items: end; }
+.tt-step {
+  position: relative; padding: 16px; border-radius: 14px; overflow: hidden;
+  background: var(--qz-surface); border: 1px solid var(--qz-line); box-shadow: var(--qz-shadow);
+}
+.tt-step::before { content: ''; position: absolute; inset: 0 0 auto; height: 3px; background: var(--tt-medal); }
+.tt-step--1 { --tt-medal: var(--tt-gold); order: 2; padding-top: 26px; }
+.tt-step--2 { --tt-medal: var(--tt-silver); order: 1; }
+.tt-step--3 { --tt-medal: var(--tt-bronze); order: 3; }
+.tt-step__place { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--tt-medal); color: #fff; font-weight: 800; font-size: 13px; }
+.tt-step__name { margin-top: 10px; font-size: 16px; font-weight: 750; color: var(--qz-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tt-step__user { font-size: 12px; color: var(--qz-faint); }
+.tt-step__total { margin-top: 10px; display: flex; align-items: baseline; gap: 6px; }
+.tt-step__total b { font-size: 28px; font-weight: 800; letter-spacing: -.03em; color: var(--qz-ink); }
+.tt-step__total span { font-size: 12px; color: var(--qz-soft); }
+.tt-step__meta { margin-top: 6px; display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--qz-soft); }
+
+/* ── Рейтинг кестесі ── */
+.tt-rank { width: 34px; font-weight: 800; color: var(--qz-ink); }
+.tt-dept b { display: block; color: var(--qz-ink); font-weight: 650; }
+.tt-dept small { color: var(--qz-faint); font-size: 11.5px; }
+.tt-num { text-align: right; white-space: nowrap; }
+.qz-table th.tt-num { text-align: right; }
+.tt-total { font-size: 15px; font-weight: 800; color: var(--qz-ink); }
+.tt-bar { position: relative; width: 74px; height: 6px; border-radius: 3px; background: var(--qz-line-soft); display: inline-block; vertical-align: middle; margin-right: 8px; overflow: hidden; }
+.tt-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--qz-ink); }
+.tt-row-btn { cursor: pointer; }
+.tt-row-btn.is-open td { background: var(--qz-surface-2); }
+.tt-pending { color: var(--qz-faint); font-size: 12px; }
+
+.tt-jury { padding: 14px 16px 16px; background: var(--qz-surface-2); border-bottom: 1px solid var(--qz-line-soft); }
+.tt-jury__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.tt-jury label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 650; color: var(--qz-soft); }
+.tt-jury input {
+  width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--qz-line);
+  background: var(--qz-surface); color: var(--qz-ink); font: 600 14px 'Inter', system-ui, sans-serif;
+}
+.tt-jury input:focus { outline: 2px solid var(--qz-ink); outline-offset: -1px; }
+.tt-jury input[aria-invalid='true'] { border-color: var(--qz-bad); }
+.tt-hint { font-size: 11px; font-weight: 500; color: var(--qz-faint); }
+.tt-hint button { border: 0; padding: 0; background: none; color: var(--qz-live); font: inherit; font-weight: 700; cursor: pointer; text-decoration: underline; }
+.tt-jury__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: 12px; color: var(--qz-soft); }
+
+/* ── Тұрақтылық күнтізбесі ── */
+.tt-cal-wrap { overflow-x: auto; }
+.tt-cal { border-collapse: separate; border-spacing: 3px; font-size: 11px; min-width: 100%; }
+.tt-cal th { font-weight: 650; color: var(--qz-faint); padding: 2px 0; text-align: center; min-width: 22px; }
+.tt-cal th.tt-cal__name { text-align: left; padding-right: 10px; min-width: 130px; color: var(--qz-ink); font-size: 12.5px; position: sticky; left: 0; background: var(--qz-surface); z-index: 1; }
+.tt-cal th.is-weekend { color: var(--qz-bad); opacity: .7; }
+.tt-cell { width: 22px; height: 22px; border-radius: 5px; text-align: center; font-weight: 700; color: #fff; background: var(--qz-line-soft); }
+.tt-cell.is-weekend { background: transparent; outline: 1px dashed var(--qz-line); outline-offset: -1px; }
+.tt-cell.is-future { opacity: .35; }
+.tt-cell.is-miss { background: var(--qz-bad-bg); }
+.tt-cal__score { padding-left: 10px; font-size: 12px; font-weight: 750; color: var(--qz-ink); white-space: nowrap; }
+.tt-legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 10px 16px 14px; font-size: 11.5px; color: var(--qz-soft); }
+.tt-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.tt-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+/* ── Не көбірек өтеді ── */
+.tt-insights { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; padding: 16px; }
+.tt-ins { padding: 12px 14px; border: 1px solid var(--qz-line-soft); border-radius: 10px; background: var(--qz-surface-2); }
+.tt-ins h3 { margin: 0 0 8px; font-size: 12.5px; font-weight: 750; color: var(--qz-ink); }
+.tt-ins__row { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; }
+.tt-ins__row.is-best .tt-ins__label { color: var(--qz-ink); font-weight: 700; }
+.tt-ins__label { color: var(--qz-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tt-ins__track { height: 8px; border-radius: 4px; background: var(--qz-line-soft); overflow: hidden; }
+.tt-ins__track i { display: block; height: 100%; border-radius: 4px; background: var(--qz-faint); }
+.tt-ins__row.is-best .tt-ins__track i { background: var(--qz-live); }
+.tt-ins__val { font-weight: 700; color: var(--qz-ink); text-align: right; min-width: 64px; }
+.tt-ins__val small { font-weight: 500; color: var(--qz-faint); }
+.tt-ins__note { margin-top: 6px; font-size: 11.5px; color: var(--qz-live); font-weight: 650; }
+
+/* ── ИИ анализі ── */
+.tt-ai { padding: 16px; display: grid; gap: 16px; }
+.qz .tt-ai__summary { font-size: 14.5px; line-height: 1.55; color: var(--qz-ink); padding: 14px 16px; border-radius: 10px; background: var(--qz-surface-2); border-left: 3px solid var(--tt-cyan); }
+.tt-ai__cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.tt-ai h3 { margin: 0 0 8px; font-size: 12px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--qz-faint); }
+.tt-ai ul { display: grid; gap: 7px; }
+.tt-ai li { position: relative; padding-left: 16px; font-size: 13.5px; line-height: 1.5; color: var(--qz-text); }
+.tt-ai li::before { content: ''; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: var(--qz-faint); }
+.tt-ai__good li::before { background: var(--qz-live); }
+.tt-ai__bad li::before { background: var(--tt-red); }
+.tt-ai__ideas li::before { background: var(--tt-cyan); }
+.tt-ai__dept { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--qz-line-soft); }
+.tt-ai__dept b { display: block; margin-bottom: 6px; font-size: 13.5px; color: var(--qz-ink); }
+.tt-ai__foot { font-size: 11.5px; color: var(--qz-faint); }
+.tt-loading { display: flex; align-items: center; gap: 10px; padding: 26px 16px; color: var(--qz-soft); font-size: 13px; }
+.tt-spin { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--qz-line); border-top-color: var(--qz-ink); animation: tt-rot .8s linear infinite; }
+@keyframes tt-rot { to { transform: rotate(360deg); } }
+
+/* ── Видеолар ── */
+.tt-filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.tt-filters select { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--qz-line); background: var(--qz-surface); color: var(--qz-ink); font: 600 12.5px 'Inter', system-ui, sans-serif; }
+.tt-caption { max-width: 380px; color: var(--qz-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tt-tag { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 5px; font-size: 10.5px; font-weight: 700; background: var(--qz-surface-2); color: var(--qz-soft); border: 1px solid var(--qz-line-soft); }
+.tt-tag--viral { background: rgba(254, 44, 85, .1); color: var(--tt-red); border-color: transparent; }
+.tt-tag--team { background: var(--qz-live-bg); color: var(--qz-live); border-color: transparent; }
+.tt-sort { border: 0; background: none; padding: 0; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
+.tt-sort.is-on { color: var(--qz-ink); }
+
+/* ── Бөлімдер терезесі ── */
+.tt-depts { display: grid; gap: 6px; margin-top: 12px; max-height: 46vh; overflow-y: auto; }
+.tt-deptrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 11px; border: 1px solid var(--qz-line-soft); border-radius: 9px; }
+.tt-deptrow b { color: var(--qz-ink); font-size: 13.5px; }
+.tt-deptrow small { display: block; color: var(--qz-faint); font-size: 12px; }
+.tt-deptform { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; margin-top: 14px; align-items: end; }
+.tt-deptform input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--qz-line); background: var(--qz-surface); color: var(--qz-ink); font: 500 13px 'Inter', system-ui, sans-serif; }
+.tt-deptform label { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; font-weight: 650; color: var(--qz-soft); }
+.tt-check { display: flex !important; flex-direction: row !important; align-items: center; gap: 8px !important; margin-top: 10px; font-size: 12.5px !important; }
+
+@media (max-width: 900px) {
+  .tt-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tt-podium { grid-template-columns: 1fr; }
+  .tt-step--1, .tt-step--2, .tt-step--3 { order: 0; padding-top: 16px; }
+  .tt-deptform { grid-template-columns: 1fr; }
+}
