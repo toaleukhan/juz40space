@@ -377,6 +377,9 @@ const createTables = async () => {
         finished_at TIMESTAMPTZ
       );
     `);
+    // Бекітілген видеоларға арналған қосымша run
+    await pool.query(`ALTER TABLE tiktok_syncs ADD COLUMN IF NOT EXISTS pinned_run_id VARCHAR(64);`);
+    await pool.query(`ALTER TABLE tiktok_syncs ADD COLUMN IF NOT EXISTS pinned_dataset_id VARCHAR(64);`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS tiktok_analyses (
         month CHAR(7) PRIMARY KEY,
