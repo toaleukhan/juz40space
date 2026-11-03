@@ -138,16 +138,35 @@ router.post('/sync', asyncRoute(async (req, res) => {
   const depts = (await listDepartments()).filter((d) => d.active);
   if (!depts.length) return res.status(400).json({ error: 'Алдымен бөлімдердің TikTok аккаунттарын қосыңыз' });
 
-  const run = await apify.startRun(depts.map((d) => d.username), win.start, win.effectiveEnd);
+  const usernames = depts.map((d) => d.username);
+  const run = await apify.startRun(usernames, win.start, win.effectiveEnd);
+  // Бекітілген видеолар бөлек алынады. Бұл run сәтсіз болса да негізгі
+  // синхрон тоқтамайды — тек бекітілгендер келмей қалады.
+  let pinned = null;
+  try {
+    pinned = await apify.startPinnedRun(usernames);
+  } catch (err) {
+    console.warn('TikTok: бекітілген видеолар run-ы басталмады:', err.message);
+  }
   const { rows } = await pool.query(
-    `INSERT INTO tiktok_syncs (month, run_id, dataset_id, started_by) VALUES ($1,$2,$3,$4) RETURNING *`,
-    [month, run.runId, run.datasetId, req.user.id]
+    `INSERT INTO tiktok_syncs (month, run_id, dataset_id, pinned_run_id, pinned_dataset_id, started_by)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+    [month, run.runId, run.datasetId, pinned?.runId || null, pinned?.datasetId || null, req.user.id]
   );
   res.status(201).json(syncOut(rows[0]));
 }));
 
-async function ingest(sync, datasetId) {
-  const items = await apify.fetchItems(datasetId);
+const toArray = (x) => (Array.isArray(x) ? x : []);
+
+async function ingest(sync, datasetId, pinnedDatasetId = null) {
+  const items = [...toArray(await apify.fetchItems(datasetId))];
+  if (pinnedDatasetId) {
+    try {
+      items.push(...toArray(await apify.fetchItems(pinnedDatasetId)));
+    } catch (err) {
+      console.warn('TikTok: бекітілген видеолар алынбады:', err.message);
+    }
+  }
   const { start, end } = S.monthRange(sync.month.trim());
   const depts = await listDepartments();
   const byUser = new Map(depts.map((d) => [d.username, d.id]));
@@ -156,7 +175,7 @@ async function ingest(sync, datasetId) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    for (const raw of Array.isArray(items) ? items : []) {
+    for (const raw of items) {
       const v = apify.normalizeItem(raw);
       if (!v || seen.has(v.id) || !byUser.has(v.username) || v.postDay < start || v.postDay > end) continue;
       seen.add(v.id);
@@ -202,6 +221,19 @@ router.get('/sync/:id', asyncRoute(async (req, res) => {
     return res.json(syncOut(upd[0]));
   }
 
+  // Бекітілген видеолар run-ы әлі жүріп жатса — күтеміз. Сәтсіз болса
+  // немесе тексеру қате берсе, оны елемей негізгі деректерді жазамыз.
+  let pinnedDatasetId = null;
+  if (sync.pinned_run_id) {
+    try {
+      const pinned = await apify.getRun(sync.pinned_run_id);
+      if (['READY', 'RUNNING'].includes(pinned.status)) return res.json(syncOut(sync));
+      if (pinned.status === 'SUCCEEDED') pinnedDatasetId = pinned.datasetId || sync.pinned_dataset_id;
+    } catch (err) {
+      console.warn('TikTok: бекітілген видеолар run-ы тексерілмеді:', err.message);
+    }
+  }
+
   // Бір сұраныс қана жазсын: running → ingesting ауысуын атомды түрде аламыз.
   const { rows: claimed } = await pool.query(
     `UPDATE tiktok_syncs SET status='ingesting' WHERE id=$1 AND status='running' RETURNING *`, [sync.id]
@@ -211,7 +243,7 @@ router.get('/sync/:id', asyncRoute(async (req, res) => {
     return res.json(syncOut(now[0]));
   }
   try {
-    await ingest(claimed[0], run.datasetId || sync.dataset_id);
+    await ingest(claimed[0], run.datasetId || sync.dataset_id, pinnedDatasetId);
   } catch (err) {
     await pool.query(
       `UPDATE tiktok_syncs SET status='failed', error_message=$1, finished_at=NOW() WHERE id=$2`,

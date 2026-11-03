@@ -48,11 +48,36 @@ function buildInput(usernames, start, end) {
     resultsPerPage: MAX_PER_PROFILE,
     oldestPostDateUnified: start,
     newestPostDate: end,
+    // Бекітілген (pinned) ескі видеолар профильдің басында тұрады. Оларды
+    // алып тастамасақ, скрейпер «ескі видео басталды» деп сол жерде тоқтайды
+    // да, бөлімнің осы айдағы видеолары мүлде келмейді (PR, Маркетинг).
+    // Бекітілгендердің өзін buildPinnedInput бөлек run-мен алады.
+    excludePinnedPosts: true,
+  };
+}
+
+// TikTok-та ең көбі 3 видео бекітіледі, олар профильдің ең басында тұрады.
+// Күн сүзгісінсіз алғашқы бірнеше видеоны аламыз — бекітілген видео осы айға
+// тиесілі болса, ingest оны күні бойынша өзі қалдырады, ескісін тастайды.
+const PINNED_PER_PROFILE = 5;
+
+function buildPinnedInput(usernames) {
+  return {
+    profiles: usernames,
+    profileScrapeSections: ['videos'],
+    profileSorting: 'latest',
+    resultsPerPage: PINNED_PER_PROFILE,
+    excludePinnedPosts: false,
   };
 }
 
 async function startRun(usernames, start, end, deps = {}) {
   const data = await call(`/acts/${ACTOR}/runs`, { method: 'POST', body: buildInput(usernames, start, end), ...deps });
+  return { runId: data.data.id, datasetId: data.data.defaultDatasetId, status: data.data.status };
+}
+
+async function startPinnedRun(usernames, deps = {}) {
+  const data = await call(`/acts/${ACTOR}/runs`, { method: 'POST', body: buildPinnedInput(usernames), ...deps });
   return { runId: data.data.id, datasetId: data.data.defaultDatasetId, status: data.data.status };
 }
 
@@ -94,4 +119,4 @@ function normalizeItem(it) {
   };
 }
 
-module.exports = { ApifyError, MAX_PER_PROFILE, buildInput, startRun, getRun, fetchItems, normalizeItem };
+module.exports = { ApifyError, MAX_PER_PROFILE, buildInput, buildPinnedInput, startRun, startPinnedRun, getRun, fetchItems, normalizeItem };

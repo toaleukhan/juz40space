@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 const S = require('./scoring');
-const { normalizeItem, buildInput } = require('./apify');
+const { normalizeItem, buildInput, buildPinnedInput } = require('./apify');
 const { computeInsights, parseAnalysis, generateAnalysis, buildAnalysisPrompt } = require('./insights');
 const { mediaMayAccess } = require('../middleware/auth');
 const { _internal: { cleanUsername, validateDept } } = require('../routes/tiktok');
@@ -120,8 +120,13 @@ describe('Apify жолын келтіру', () => {
 
   it('Apify сұранысы күн аралығымен', () => {
     expect(buildInput(['a'], '2026-10-01', '2026-10-06')).toMatchObject({
-      profiles: ['a'], oldestPostDateUnified: '2026-10-01', newestPostDate: '2026-10-06', profileSorting: 'latest',
+      profiles: ['a'], oldestPostDateUnified: '2026-10-01', newestPostDate: '2026-10-06', profileSorting: 'latest', excludePinnedPosts: true,
     });
+    // Бекітілгендер бөлек: күн сүзгісі жоқ, бекітілгендер алынады
+    const p = buildPinnedInput(['a']);
+    expect(p).toMatchObject({ profiles: ['a'], excludePinnedPosts: false, profileSorting: 'latest' });
+    expect(p.oldestPostDateUnified).toBeUndefined();
+    expect(p.resultsPerPage).toBeLessThanOrEqual(5);
   });
 });
 

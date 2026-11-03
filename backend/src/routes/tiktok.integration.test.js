@@ -73,12 +73,20 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
     expect((await api('POST', '/api/tiktok/departments', { token: media, body: { name: 'X', username: 'juz40_mat' } })).status).toBe(400);
 
     vi.spyOn(apify, 'startRun').mockResolvedValue({ runId: 'run1', datasetId: 'ds1', status: 'READY' });
+    vi.spyOn(apify, 'startPinnedRun').mockResolvedValue({ runId: 'run2', datasetId: 'ds2', status: 'READY' });
     const getRun = vi.spyOn(apify, 'getRun').mockResolvedValue({ status: 'RUNNING', datasetId: 'ds1' });
     const item = (id, user, iso, views, extra = {}) => ({
       id, authorMeta: { name: user }, createTimeISO: iso, playCount: views, diggCount: 10, commentCount: 1, shareCount: 1,
       videoMeta: { duration: 20 }, musicMeta: { musicOriginal: false }, text: 'видео', hashtags: [], ...extra,
     });
-    vi.spyOn(apify, 'fetchItems').mockResolvedValue([
+    // Бекітілген видеолар run-ы: осы айдағысы қалады, ескісі мен қайталанғаны түседі
+    const pinnedItems = [
+      item('7', 'juz40_mat', '2026-09-10T06:00:00Z', 800, { isPinned: true }),
+      item('8', 'juz40_mat', '2024-08-25T06:00:00Z', 170000, { isPinned: true }),
+      item('1', 'juz40_fiz', '2026-09-01T06:00:00Z', 1200, { isPinned: true }),
+    ];
+    vi.spyOn(apify, 'fetchItems').mockImplementation(async (ds) => (ds === 'ds2' ? pinnedItems : mainItems));
+    const mainItems = ([
       item('1', 'juz40_fiz', '2026-09-01T06:00:00Z', 1200, { hashtags: [{ name: 'juz40_life' }], text: 'бірге @juz40_mat' }),
       item('2', 'juz40_fiz', '2026-09-02T06:00:00Z', 600),
       item('2', 'juz40_fiz', '2026-09-02T06:00:00Z', 600), // қайталанған
@@ -100,9 +108,9 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
     expect(apify.startRun).toHaveBeenCalledTimes(1);
 
     expect((await api('GET', `/api/tiktok/sync/${sync.body.id}`, { token: media })).body.status).toBe('running');
-    getRun.mockResolvedValue({ status: 'SUCCEEDED', datasetId: 'ds1' });
+    getRun.mockImplementation(async (id) => ({ status: 'SUCCEEDED', datasetId: id === 'run2' ? 'ds2' : 'ds1' }));
     const done = await api('GET', `/api/tiktok/sync/${sync.body.id}`, { token: media });
-    expect(done.body).toMatchObject({ status: 'done', videoCount: 4 });
+    expect(done.body).toMatchObject({ status: 'done', videoCount: 5 });
 
     const score = await api('PUT', '/api/tiktok/scores/2026-09/2', { token: media, body: { creativity: 8, ethics: 10, bonus: '' } });
     expect(score.status).toBe(200);
@@ -110,7 +118,7 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
 
     const ov = await api('GET', '/api/tiktok/overview?month=2026-09', { token: media });
     expect(ov.status).toBe(200);
-    expect(ov.body.videos).toHaveLength(4);
+    expect(ov.body.videos).toHaveLength(5);
     expect(ov.body.leaderboard).toHaveLength(2);
     const fizRow = ov.body.leaderboard.find((r) => r.name === 'Физика');
     expect(fizRow).toMatchObject({ videoCount: 2, postedWorkdays: 2, crossCount: 1, teamCount: 1 });
