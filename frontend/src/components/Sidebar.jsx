@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import useIsMobile from '../hooks/useIsMobile';
 import juz40Logo from '../assets/juz40-logo.png';
@@ -200,10 +200,44 @@ function SidebarContent({ collapsed, onNavigate }) {
   );
 }
 
+// Әр бет <Sidebar />-ды өзі салады, сондықтан бөлімге басқанда панель қайта
+// mount болып, «тінтуір үстінде» күйі жоғалатын: тінтуір қозғалмаса браузер
+// mouseenter жібермейді де, панель тінтуір астында тұрып жабылып қалатын.
+// Күйді модуль деңгейінде сақтаймыз — жаңа бет ашылғанда да панель ашық қалады.
+let pointerInside = false;
+const CLOSE_DELAY_MS = 140; // шетінен сәл шығып кеткенде жыпылықтамасын
+
 export default function Sidebar() {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
-  const [hovered, setHovered] = useState(false);
+  const [hovered, setHovered] = useState(() => pointerInside);
+  const panelRef = useRef(null);
+  const closeTimer = useRef(null);
+
+  const enter = () => {
+    clearTimeout(closeTimer.current);
+    pointerInside = true;
+    setHovered(true);
+  };
+  const leave = () => {
+    pointerInside = false;
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setHovered(false), CLOSE_DELAY_MS);
+  };
+
+  // Бет ауысқан сәтте тінтуір шынымен панельден тыс болса (мыс. пернетақтамен
+  // өтті) — алғашқы қозғалыста жабамыз.
+  useEffect(() => {
+    if (isMobile || !pointerInside) return undefined;
+    const check = (e) => {
+      if (panelRef.current && !panelRef.current.contains(e.target)) leave();
+      window.removeEventListener('mousemove', check);
+    };
+    window.addEventListener('mousemove', check);
+    return () => window.removeEventListener('mousemove', check);
+  }, [isMobile]);
+
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
 
   if (!isMobile) {
     const expanded = hovered;
@@ -211,9 +245,11 @@ export default function Sidebar() {
       <>
         <style>{SIDEBAR_CSS}</style>
         <aside
+          ref={panelRef}
           className="sb-panel"
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => setHovered(false)}
+          onMouseEnter={enter}
+          onMouseMove={hovered ? undefined : enter}
+          onMouseLeave={leave}
           style={{
             width: expanded ? RAIL_WIDTH_EXPANDED : RAIL_WIDTH,
             position: 'fixed', top: RAIL_INSET, left: RAIL_INSET, bottom: RAIL_INSET, zIndex: 60,

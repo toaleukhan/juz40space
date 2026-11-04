@@ -28,6 +28,7 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
     pool = require('../config/db');
     await require('../config/schema')();
     await pool.query('TRUNCATE tiktok_departments, tiktok_syncs, tiktok_analyses RESTART IDENTITY CASCADE');
+    await pool.query("DELETE FROM app_settings WHERE key = 'apify_token'");
 
     const mk = async (role) => {
       const u = `tt_${role}_${Date.now()}`;
@@ -54,6 +55,7 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
   afterAll(async () => {
     server?.close();
     await pool.query('TRUNCATE tiktok_departments, tiktok_syncs, tiktok_analyses RESTART IDENTITY CASCADE');
+    await pool.query("DELETE FROM app_settings WHERE key = 'apify_token'");
     if (users.length) await pool.query('DELETE FROM users WHERE id = ANY($1)', [users]);
     await pool.end();
   });
@@ -141,5 +143,54 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
     expect(an.status, JSON.stringify(an.body)).toBe(200);
     expect(an.body.summary).toBe('Қыркүйек жақсы');
     expect((await api('GET', '/api/tiktok/overview?month=2026-09', { token: media })).body.analysis.summary).toBe('Қыркүйек жақсы');
+  });
+  it('Apify токенін сайттан ауыстыру', async () => {
+    const prevEnv = process.env.APIFY_TOKEN;
+    delete process.env.APIFY_TOKEN;
+    const info = vi.spyOn(apify, 'accountInfo');
+    try {
+      expect((await api('GET', '/api/tiktok/apify', { token: admin })).status).toBe(403);
+      let st = await api('GET', '/api/tiktok/apify', { token: media });
+      expect(st.body).toMatchObject({ configured: false, source: null, masked: null });
+
+      expect((await api('PUT', '/api/tiktok/apify', { token: media, body: { token: 'қысқа' } })).status).toBe(400);
+
+      // Apify «жарамсыз» десе — сақталмайды
+      info.mockRejectedValueOnce(new apify.ApifyError('Apify токені жарамсыз немесе өшірілген', 'bad_token'));
+      expect((await api('PUT', '/api/tiktok/apify', { token: media, body: { token: 'apify_api_BADBADBADBADBADBAD1234' } })).status).toBe(400);
+      expect((await api('GET', '/api/tiktok/apify', { token: media })).body.configured).toBe(false);
+
+      info.mockResolvedValue({ username: 'media2', plan: 'FREE', usedUsd: 1.2, limitUsd: 5, cycleEnd: null });
+      const ok = await api('PUT', '/api/tiktok/apify', { token: media, body: { token: '  apify_api_GOODGOODGOODGOOD9876  ' } });
+      expect(ok.status).toBe(200);
+      expect(ok.body).toMatchObject({ configured: true, source: 'site', masked: '••••••9876', account: { username: 'media2', usedUsd: 1.2 } });
+      expect(JSON.stringify(ok.body)).not.toContain('GOODGOOD');
+      expect(info.mock.calls[info.mock.calls.length - 2][0]).toEqual({ tokenOverride: 'apify_api_GOODGOODGOODGOOD9876' });
+
+      // Синхрон енді сайттағы токенді қолданады
+      const realFetch2 = global.fetch;
+      const seen = [];
+      global.fetch = async (url, opts) => {
+        if (String(url).startsWith('https://api.apify.com')) {
+          seen.push(opts.headers.Authorization);
+          return new Response(JSON.stringify({ data: { id: 'r', defaultDatasetId: 'd', status: 'READY' } }), { status: 201 });
+        }
+        return realFetch2(url, opts);
+      };
+      vi.mocked(apify.startRun).mockRestore?.();
+      vi.mocked(apify.startPinnedRun).mockRestore?.();
+      try {
+        await apify.startRun(['juz40_fiz'], '2026-09-01', '2026-09-30');
+      } finally {
+        global.fetch = realFetch2;
+      }
+      expect(seen[0]).toBe('Bearer apify_api_GOODGOODGOODGOOD9876');
+
+      const del = await api('DELETE', '/api/tiktok/apify', { token: media });
+      expect(del.body).toMatchObject({ configured: false, source: null });
+    } finally {
+      info.mockRestore();
+      if (prevEnv !== undefined) process.env.APIFY_TOKEN = prevEnv;
+    }
   });
 });

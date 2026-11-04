@@ -377,6 +377,15 @@ const createTables = async () => {
         finished_at TIMESTAMPTZ
       );
     `);
+    // Сайттан өзгертілетін баптаулар (мыс. Apify токені — Railway-ге кірмей ауыстыру үшін)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key VARCHAR(64) PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_by INT REFERENCES users(id) ON DELETE SET NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
     // Бекітілген видеоларға арналған қосымша run
     await pool.query(`ALTER TABLE tiktok_syncs ADD COLUMN IF NOT EXISTS pinned_run_id VARCHAR(64);`);
     await pool.query(`ALTER TABLE tiktok_syncs ADD COLUMN IF NOT EXISTS pinned_dataset_id VARCHAR(64);`);

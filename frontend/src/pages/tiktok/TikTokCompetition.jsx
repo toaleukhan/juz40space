@@ -10,6 +10,7 @@ import Insights from './Insights';
 import VideosTable from './VideosTable';
 import DepartmentsDialog from './DepartmentsDialog';
 import ShareImageDialog from './ShareImageDialog';
+import ApifyDialog from './ApifyDialog';
 import '../../styles/quiz.css';
 import '../../styles/tiktok.css';
 
@@ -48,6 +49,7 @@ function MonthView({ month, thisMonth, tab, setParam }) {
   const [syncId, setSyncId] = useState(null);
   const [deptsOpen, setDeptsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [apifyOpen, setApifyOpen] = useState(false);
 
   const reload = useCallback(() => tiktok.overview(month)
     .then((d) => { setData(d); setError(''); return d; })
@@ -124,6 +126,7 @@ function MonthView({ month, thisMonth, tab, setParam }) {
               <IconImage width={16} height={16} /> Сурет
             </button>
             <button type="button" className="qz-btn" onClick={() => setDeptsOpen(true)}>Бөлімдер</button>
+            <button type="button" className="qz-btn" onClick={() => setApifyOpen(true)} title="Apify токені және лимит">Apify</button>
             <button type="button" className="qz-btn qz-btn--primary" onClick={startSync} disabled={busy || !data || noDepts}>
               {busy ? 'Жаңартылуда…' : 'Деректерді жаңарту'}
             </button>
@@ -151,7 +154,14 @@ function MonthView({ month, thisMonth, tab, setParam }) {
           </div>
         )}
 
-        {error && <div className="qz-alert" role="alert">{error}</div>}
+        {error && (
+          <div className="qz-alert" role="alert">
+            {error}
+            {/Apify/.test(error) && (
+              <> {' '}<button type="button" className="qz-btn qz-btn--ghost" style={{ padding: '2px 8px' }} onClick={() => setApifyOpen(true)}>Токенді ауыстыру</button></>
+            )}
+          </div>
+        )}
 
         {!data ? (
           error ? null : <section className="qz-card"><div className="tt-loading"><span className="tt-spin" />Жүктелуде…</div></section>
@@ -182,6 +192,8 @@ function MonthView({ month, thisMonth, tab, setParam }) {
         )}
 
         {shareOpen && data && <ShareImageDialog data={data} onClose={() => setShareOpen(false)} />}
+
+        {apifyOpen && <ApifyDialog onClose={() => setApifyOpen(false)} onSaved={() => setError('')} />}
 
         {deptsOpen && (
           <DepartmentsDialog

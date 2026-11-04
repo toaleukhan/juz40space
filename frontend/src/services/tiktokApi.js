@@ -14,6 +14,11 @@ export const tiktok = {
 
   saveScores: (month, deptId, body) => api.put(`/tiktok/scores/${month}/${deptId}`, body).then((r) => r.data),
 
+  // Apify токені сайттан ауысады — Railway-ге кірудің қажеті жоқ
+  apifyStatus: () => api.get('/tiktok/apify', { timeout: 30000 }).then((r) => r.data),
+  saveApifyToken: (token) => api.put('/tiktok/apify', { token }, { timeout: 30000 }).then((r) => r.data),
+  removeApifyToken: () => api.delete('/tiktok/apify').then((r) => r.data),
+
   // Gemini бір минуттан асуы мүмкін
   analyze: (month) => api.post('/tiktok/analysis', { month }, { timeout: 150000 }).then((r) => r.data),
 };

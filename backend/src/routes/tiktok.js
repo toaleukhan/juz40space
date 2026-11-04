@@ -9,6 +9,9 @@
 //   GET    /api/tiktok/sync/:id                 күйін тексеру (дайын болса — базаға жазады)
 //   PUT    /api/tiktok/scores/:month/:deptId    жюри ұпайлары
 //   POST   /api/tiktok/analysis {month}         Gemini анализі (айына сақталады)
+//   GET    /api/tiktok/apify                    токен күйі + аккаунт шығыны (токеннің өзі қайтпайды)
+//   PUT    /api/tiktok/apify {token}            жаңа токен (алдымен Apify-да тексеріледі)
+//   DELETE /api/tiktok/apify                    сайттағы токенді өшіру (Railway-дегіге қайту)
 
 const express = require('express');
 const router = express.Router();
@@ -21,6 +24,17 @@ const { GeminiError } = require('../custdev/gemini');
 
 const RUN_STALE_MS = 20 * 60 * 1000; // одан ұзақ «running» болса — қайта іске қосуға рұқсат
 
+const APIFY_KEY = 'apify_token';
+
+async function siteToken() {
+  const { rows } = await pool.query('SELECT value, updated_at FROM app_settings WHERE key = $1', [APIFY_KEY]);
+  return rows[0] || null;
+}
+apify.setTokenSource(async () => (await siteToken())?.value || null);
+
+// Токенді ешқашан толық көрсетпейміз — тек соңғы 4 таңбасы.
+const maskToken = (t) => (t ? `••••••${String(t).slice(-4)}` : null);
+
 const requireMedia = (req, res, next) => {
   if (req.user?.role !== 'media') return res.status(403).json({ error: 'Тек Media team тимлидіне рұқсат' });
   next();
@@ -29,9 +43,10 @@ const requireMedia = (req, res, next) => {
 const asyncRoute = (fn) => (req, res, next) => fn(req, res, next).catch((err) => {
   if (err instanceof apify.ApifyError) {
     const msg = err.code === 'limit'
-      ? 'Apify лимиті таусылды — келесі есеп кезеңін күтіңіз немесе тарифті жаңартыңыз.'
+      ? 'Apify лимиті таусылды — Apify баптауына жаңа аккаунттың токенін енгізіңіз немесе келесі есеп кезеңін күтіңіз.'
       : err.message;
-    return res.status(err.code === 'no_token' ? 503 : 502).json({ error: msg, code: err.code });
+    const status = err.code === 'no_token' ? 503 : err.code === 'bad_token' ? 400 : 502;
+    return res.status(status).json({ error: msg, code: err.code });
   }
   if (err instanceof GeminiError) {
     return res.status(err.code === 'no_key' ? 503 : 502).json({ error: err.message });
@@ -113,6 +128,54 @@ router.put('/departments/:id', asyncRoute(async (req, res) => {
 router.delete('/departments/:id', asyncRoute(async (req, res) => {
   await pool.query('DELETE FROM tiktok_departments WHERE id = $1', [Number(req.params.id) || 0]);
   res.json({ ok: true });
+}));
+
+/* ───────────── Apify токені ───────────── */
+
+async function apifyStatus() {
+  const site = await siteToken();
+  const env = process.env.APIFY_TOKEN || null;
+  const active = site?.value || env;
+  const out = {
+    configured: Boolean(active),
+    source: site ? 'site' : env ? 'env' : null,
+    masked: maskToken(active),
+    updatedAt: site?.updated_at || null,
+    account: null,
+    accountError: null,
+  };
+  if (active) {
+    try {
+      out.account = await apify.accountInfo();
+    } catch (err) {
+      out.accountError = err.message;
+    }
+  }
+  return out;
+}
+
+router.get('/apify', asyncRoute(async (req, res) => {
+  res.json(await apifyStatus());
+}));
+
+router.put('/apify', asyncRoute(async (req, res) => {
+  const t = String(req.body.token || '').trim();
+  if (!/^[A-Za-z0-9_-]{20,200}$/.test(t)) {
+    return res.status(400).json({ error: 'Токен дұрыс емес: Apify Console → Settings → API & Integrations бетінен көшіріңіз' });
+  }
+  // Сақтамас бұрын жұмыс істейтінін тексереміз — қате токен ескісін алмастырмасын
+  await apify.accountInfo({ tokenOverride: t });
+  await pool.query(
+    `INSERT INTO app_settings (key, value, updated_by, updated_at) VALUES ($1, $2, $3, NOW())
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
+    [APIFY_KEY, t, req.user.id]
+  );
+  res.json(await apifyStatus());
+}));
+
+router.delete('/apify', asyncRoute(async (req, res) => {
+  await pool.query('DELETE FROM app_settings WHERE key = $1', [APIFY_KEY]);
+  res.json(await apifyStatus());
 }));
 
 /* ───────────── Синхрон (Apify) ───────────── */
