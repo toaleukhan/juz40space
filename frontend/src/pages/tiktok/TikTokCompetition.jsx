@@ -4,7 +4,8 @@ import Sidebar from '../../components/Sidebar';
 import { IconImage } from '../../components/icons';
 import { tiktok, errorText } from '../../services/tiktokApi';
 import { monthLabel, shiftMonth, currentMonth, fmtDateTime } from '../../utils/tiktok';
-import Leaderboard from './Leaderboard';
+import LiveRating from './LiveRating';
+import Grading from './Grading';
 import PostingCalendar from './PostingCalendar';
 import Insights from './Insights';
 import VideosTable from './VideosTable';
@@ -16,12 +17,19 @@ import '../../styles/tiktok.css';
 
 const TABS = [
   { key: 'rating', label: 'Рейтинг' },
+  { key: 'grading', label: 'Бағалау' },
   { key: 'calendar', label: 'Тұрақтылық' },
   { key: 'analysis', label: 'Анализ' },
   { key: 'videos', label: 'Видеолар' },
 ];
 
 const POLL_MS = 8000;
+const LIVE_MS = 60000; // бет ашық тұрғанда рейтинг өзі жаңарып тұрады
+
+function greeting() {
+  const h = Number(new Date().toLocaleString('en-GB', { timeZone: 'Asia/Almaty', hour: '2-digit', hour12: false }));
+  return h < 12 ? 'Қайырлы таң' : h < 18 ? 'Қайырлы күн' : 'Қайырлы кеш';
+}
 
 // 🎬 Бөлімдер арасындағы TikTok жарысы: Apify-дан тартылған видеолар
 // бойынша автомат ұпайлар, жюри ұпайлары, күнтізбе, «не өтеді» анализі
@@ -91,6 +99,14 @@ function MonthView({ month, thisMonth, tab, setParam }) {
     return () => { alive = false; clearTimeout(timer); };
   }, [syncId, reload]);
 
+  // «Тірі» режим: бет көрініп тұрса, минут сайын деректерді тыныш жаңартамыз
+  // (жюри ұпайы өзгерсе, жарыс жолы өзі қозғалады).
+  useEffect(() => {
+    if (tab !== 'rating') return undefined;
+    const t = setInterval(() => { if (!document.hidden) reload(); }, LIVE_MS);
+    return () => clearInterval(t);
+  }, [tab, reload]);
+
   const startSync = async () => {
     setError('');
     try {
@@ -103,17 +119,18 @@ function MonthView({ month, thisMonth, tab, setParam }) {
   };
 
   const busy = sync && (sync.status === 'running' || sync.status === 'ingesting');
+  const userName = (JSON.parse(localStorage.getItem('user') || '{}').fullName || '').split(' ')[0];
   const last = data?.lastSync;
   const noDepts = data && data.departments.filter((d) => !d.isTeamAccount).length === 0;
 
   return (
-    <div className="app-shell">
+    <div className="app-shell tl-shell">
       <Sidebar />
       <main className="qz tt">
         <div className="qz-head">
           <div>
-            <div className="qz-eyebrow">MEDIA · TIKTOK ЖАРЫСЫ</div>
-            <h1 className="qz-title">TikTok үздігі</h1>
+            <div className="qz-eyebrow tl-greet">{greeting()}{userName ? `, ${userName}` : ''} · MEDIA</div>
+            <h1 className="qz-title tl-title">TikTok жарысы</h1>
           </div>
           <div className="tt-toolbar">
             <div className="tt-month" aria-label="Ай">
@@ -184,7 +201,8 @@ function MonthView({ month, thisMonth, tab, setParam }) {
               ))}
             </div>
 
-            {tab === 'rating' && <Leaderboard data={data} month={month} onSaved={reload} />}
+            {tab === 'rating' && <LiveRating data={data} />}
+            {tab === 'grading' && <Grading data={data} month={month} onSaved={reload} />}
             {tab === 'calendar' && <PostingCalendar data={data} />}
             {tab === 'analysis' && <Insights data={data} month={month} onAnalysis={(analysis) => setData((d) => ({ ...d, analysis }))} />}
             {tab === 'videos' && <VideosTable data={data} />}
