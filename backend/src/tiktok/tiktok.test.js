@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 
 const S = require('./scoring');
-const { normalizeItem, buildInput, buildPinnedInput } = require('./apify');
+const { normalizeItem, buildInput, buildPinnedInput, accountInfo, setTokenSource, startRun, ApifyError } = require('./apify');
 const { computeInsights, parseAnalysis, generateAnalysis, buildAnalysisPrompt } = require('./insights');
 const { mediaMayAccess } = require('../middleware/auth');
 const { _internal: { cleanUsername, validateDept } } = require('../routes/tiktok');
@@ -196,5 +196,43 @@ describe('бастапқы бөлімдер тізімі', () => {
     all.forEach((d) => expect(validateDept({ ...d, isTeamAccount: d === TEAM_ACCOUNT }).errors).toEqual([]));
     expect(new Set(all.map((d) => d.username)).size).toBe(all.length);
     expect(DEFAULT_DEPARTMENTS).toHaveLength(13);
+  });
+});
+
+describe('Apify токені мен аккаунт', () => {
+  const resp = (status, body) => ({ ok: status < 400, status, json: async () => body });
+  // routes/tiktok жүктелгенде токен көзі базаға қосылады — бұл тесттерде базасыз
+  beforeEach(() => setTokenSource(async () => null));
+  afterEach(() => setTokenSource(async () => null));
+
+  it('сайттағы токен Railway-дегіден бұрын тұрады', async () => {
+    const prev = process.env.APIFY_TOKEN;
+    process.env.APIFY_TOKEN = 'env_token_aaaaaaaaaaaaaaaa';
+    const auths = [];
+    const fetchImpl = async (url, o) => { auths.push(o.headers.Authorization); return resp(201, { data: { id: 'r', defaultDatasetId: 'd', status: 'READY' } }); };
+    await startRun(['a'], '2026-10-01', '2026-10-02', { fetchImpl });
+    setTokenSource(async () => 'site_token_bbbbbbbbbbbbbbbb');
+    await startRun(['a'], '2026-10-01', '2026-10-02', { fetchImpl });
+    expect(auths).toEqual(['Bearer env_token_aaaaaaaaaaaaaaaa', 'Bearer site_token_bbbbbbbbbbbbbbbb']);
+    if (prev === undefined) delete process.env.APIFY_TOKEN; else process.env.APIFY_TOKEN = prev;
+  });
+
+  it('токен жоқ / жарамсыз', async () => {
+    const prev = process.env.APIFY_TOKEN;
+    delete process.env.APIFY_TOKEN;
+    await expect(startRun(['a'], 'x', 'y', { fetchImpl: async () => resp(200, {}) })).rejects.toMatchObject({ code: 'no_token' });
+    const bad = async () => resp(401, { error: { message: 'User was not found or authentication token is not valid' } });
+    await expect(accountInfo({ fetchImpl: bad, tokenOverride: 't' })).rejects.toBeInstanceOf(ApifyError);
+    await expect(accountInfo({ fetchImpl: bad, tokenOverride: 't' })).rejects.toMatchObject({ code: 'bad_token' });
+    if (prev !== undefined) process.env.APIFY_TOKEN = prev;
+  });
+
+  it('аккаунт шығыны', async () => {
+    const fetchImpl = async (url) => (url.endsWith('/limits')
+      ? resp(200, { data: { current: { monthlyUsageUsd: 4.567 }, limits: { maxMonthlyUsageUsd: 5 }, monthlyUsageCycle: { endAt: '2026-11-06T00:00:00Z' } } })
+      : resp(200, { data: { username: 'juz40media', plan: { id: 'FREE' } } }));
+    expect(await accountInfo({ fetchImpl, tokenOverride: 't' })).toEqual({
+      username: 'juz40media', plan: 'FREE', usedUsd: 4.57, limitUsd: 5, cycleEnd: '2026-11-06T00:00:00Z',
+    });
   });
 });

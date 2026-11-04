@@ -18,21 +18,29 @@ class ApifyError extends Error {
   }
 }
 
-function token() {
-  const t = process.env.APIFY_TOKEN;
-  if (!t) throw new ApifyError('APIFY_TOKEN орнатылмаған (Railway → Variables)', 'no_token');
+// Токен қайдан алынады: сайттағы баптаудан (базада) немесе Railway-дегі
+// APIFY_TOKEN-нен. Маршрут іске қосылғанда setTokenSource арқылы базаны қосады.
+let tokenSource = async () => null;
+function setTokenSource(fn) { tokenSource = fn; }
+
+async function token() {
+  const fromSite = await tokenSource();
+  const t = fromSite || process.env.APIFY_TOKEN;
+  if (!t) throw new ApifyError('Apify токені қосылмаған — TikTok беті → Apify баптауына жаңа токен енгізіңіз', 'no_token');
   return t;
 }
 
-async function call(path, { method = 'GET', body, fetchImpl = fetch } = {}) {
+async function call(path, { method = 'GET', body, fetchImpl = fetch, tokenOverride } = {}) {
+  const auth = tokenOverride || await token();
   const res = await fetchImpl(`${API}${path}`, {
     method,
-    headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${auth}`, 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     const msg = data?.error?.message || `HTTP ${res.status}`;
+    if (res.status === 401) throw new ApifyError('Apify токені жарамсыз немесе өшірілген', 'bad_token');
     // Тегін лимит біткенде Apify 402/403 қайтарады
     const code = res.status === 402 || /limit|usage|exceed/i.test(msg) ? 'limit' : 'http';
     throw new ApifyError(`Apify: ${msg}`, code);
@@ -90,6 +98,25 @@ async function fetchItems(datasetId, deps = {}) {
   return call(`/datasets/${encodeURIComponent(datasetId)}/items?clean=true&format=json`, deps);
 }
 
+// Аккаунт пен айлық шығын — сайдбардағы «қанша қалды» индикаторы үшін.
+// Бір токенді сақтамас бұрын тексеру үшін де қолданылады (tokenOverride).
+async function accountInfo(deps = {}) {
+  const [me, limits] = await Promise.all([
+    call('/users/me', deps),
+    call('/users/me/limits', deps).catch(() => null),
+  ]);
+  const l = limits?.data || {};
+  const used = Number(l.current?.monthlyUsageUsd);
+  const max = Number(l.limits?.maxMonthlyUsageUsd);
+  return {
+    username: me?.data?.username || null,
+    plan: me?.data?.plan?.id || null,
+    usedUsd: Number.isFinite(used) ? Math.round(used * 100) / 100 : null,
+    limitUsd: Number.isFinite(max) ? Math.round(max * 100) / 100 : null,
+    cycleEnd: l.monthlyUsageCycle?.endAt || null,
+  };
+}
+
 const num = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
 
 // Apify жолын біздің кестеге сай пішінге келтіреді. Жарамсыз жол → null.
@@ -119,4 +146,4 @@ function normalizeItem(it) {
   };
 }
 
-module.exports = { ApifyError, MAX_PER_PROFILE, buildInput, buildPinnedInput, startRun, startPinnedRun, getRun, fetchItems, normalizeItem };
+module.exports = { ApifyError, setTokenSource, accountInfo, MAX_PER_PROFILE, buildInput, buildPinnedInput, startRun, startPinnedRun, getRun, fetchItems, normalizeItem };
