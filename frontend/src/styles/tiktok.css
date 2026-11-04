@@ -7,11 +7,11 @@
    ═══════════════════════════════════════════════════════════════════ */
 
 .qz.tt {
-  --tt-red: #fe2c55; --tt-cyan: #12c7c1;
-  --tt-gold: #c99a14; --tt-silver: #8a9aa3; --tt-bronze: #b0683a;
-  --tt-heat: 14, 143, 98;
+  --tt-red: #D97706; --tt-cyan: #0D9488;
+  --tt-gold: #D97706; --tt-silver: #8a9aa3; --tt-bronze: #b0683a;
+  --tt-heat: 13, 148, 136;
 }
-[data-theme='dark'] .qz.tt { --tt-cyan: #25f4ee; --tt-heat: 69, 200, 148; }
+[data-theme='dark'] .qz.tt { --tt-red: #FBBF24; --tt-cyan: #2DD4BF; --tt-heat: 45, 212, 191; }
 
 .tt-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .tt-month { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border-radius: 10px; background: var(--qz-surface); border: 1px solid var(--qz-line); }
@@ -110,7 +110,8 @@
 
 /* ── ИИ анализі ── */
 .tt-ai { padding: 16px; display: grid; gap: 16px; }
-.qz .tt-ai__summary { font-size: 14.5px; line-height: 1.55; color: var(--qz-ink); padding: 14px 16px; border-radius: 10px; background: var(--qz-surface-2); border-left: 3px solid var(--tt-cyan); }
+.qz .tt-ai__summary { font-size: 15px; line-height: 1.6; color: var(--qz-ink); padding: 16px 18px; border-radius: 18px; background: #CCFBF1; }
+[data-theme='dark'] .qz .tt-ai__summary { background: rgba(45,212,191,.12); }
 .tt-ai__cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
 .tt-ai h3 { margin: 0 0 8px; font-size: 12px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--qz-faint); }
 .tt-ai ul { display: grid; gap: 7px; }
@@ -131,7 +132,8 @@
 .tt-filters select { padding: 7px 10px; border-radius: 8px; border: 1px solid var(--qz-line); background: var(--qz-surface); color: var(--qz-ink); font: 600 12.5px 'Inter', system-ui, sans-serif; }
 .tt-caption { max-width: 380px; color: var(--qz-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tt-tag { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 5px; font-size: 10.5px; font-weight: 700; background: var(--qz-surface-2); color: var(--qz-soft); border: 1px solid var(--qz-line-soft); }
-.tt-tag--viral { background: rgba(254, 44, 85, .1); color: var(--tt-red); border-color: transparent; }
+.tt-tag--viral { background: #FEF3C7; color: #92400E; border-color: transparent; }
+[data-theme='dark'] .tt-tag--viral { background: rgba(245,158,11,.18); color: #FDE68A; }
 .tt-tag--team { background: var(--qz-live-bg); color: var(--qz-live); border-color: transparent; }
 .tt-sort { border: 0; background: none; padding: 0; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
 .tt-sort.is-on { color: var(--qz-ink); }
@@ -330,4 +332,64 @@ input.tg-cell::placeholder { color: var(--qz-faint); font-weight: 500; }
   .tl > *, .tl-ticker__track, .tl-ticker__tag span, .zet, .zet__eyes, .zet__bubble, .tl-leader__orn path, .tl-confetti span, .tl-race__total em { animation: none !important; }
   .tl-race__row, .tl-race__bar i, .tl-kpi, .tl-hit { transition: none !important; }
   .tl-ticker__viewport { overflow-x: auto; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   Медиа кабинетінің жалпы стилі — тек TikTok беті (.qz.tt) ішінде,
+   сайттың басқа беттеріне әсер етпейді.
+   ═══════════════════════════════════════════════════════════════════ */
+.tl-shell { background: #EEF4F3; }
+[data-theme='dark'] .tl-shell { background: var(--qz-ground); }
+.qz.tt { --qz-live: #0F766E; --qz-live-bg: #CCFBF1; }
+[data-theme='dark'] .qz.tt { --qz-live: #2DD4BF; --qz-live-bg: rgba(45,212,191,.14); }
+
+/* Тақырыптар — Unbounded */
+.qz.tt .qz-title { font-family: var(--tl-display); font-weight: 800; letter-spacing: -0.03em; }
+.qz.tt .qz-card__head h2, .qz.tt .qz-modal__title, .qz.tt .qz-empty h2 { font-family: var(--tl-display); font-weight: 700; letter-spacing: -0.01em; }
+
+/* Батырмалар */
+.qz.tt .qz-btn { border-radius: 14px; min-height: 42px; padding: 0 16px; font-weight: 650; transition: transform .15s, background .15s, box-shadow .15s; }
+.qz.tt .qz-btn:active:not(:disabled) { transform: scale(.97); }
+.qz.tt .qz-btn--primary { background: #0F766E; border-color: #0F766E; color: #FFFFFF; }
+.qz.tt .qz-btn--primary:hover:not(:disabled) { background: #115E59; color: #FFFFFF; opacity: 1; }
+.qz.tt .qz-btn--ghost { min-height: 34px; }
+.qz.tt .tt-month { border-radius: 14px; padding: 4px; }
+.qz.tt .tt-month button { width: 34px; height: 34px; border-radius: 10px; }
+
+/* Қойындылар */
+.qz.tt .qz-seg { padding: 5px; border-radius: 16px; gap: 4px; background: var(--qz-surface); border-color: var(--qz-line-soft); }
+.qz.tt .qz-seg button { padding: 9px 16px; border-radius: 12px; font-size: 13.5px; transition: background .2s, color .2s; }
+.qz.tt .qz-seg button.is-on { background: #10262F; color: #FFFFFF; }
+[data-theme='dark'] .qz.tt .qz-seg button.is-on { background: #2DD4BF; color: #04211F; }
+
+/* Карталар мен кестелер */
+.qz.tt .qz-card { border-radius: var(--tl-radius); border: 0; box-shadow: 0 0 0 1px var(--qz-line-soft); animation: tl-rise .6s cubic-bezier(.2,.8,.2,1) both; }
+.qz.tt .qz-card + .qz-card { margin-top: 16px; }
+.qz.tt .qz-table tbody tr { transition: background .15s; }
+.qz.tt .qz-table tbody tr:hover td { background: var(--qz-hover); }
+.qz.tt .qz-alert { border-radius: 14px; }
+
+/* Күнтізбе: салынған күн — көгілдір-жасыл, жіберілген — ақшыл сары */
+.qz.tt .tt-cell { border-radius: 7px; transition: transform .15s; }
+.qz.tt .tt-cell:hover { transform: scale(1.18); }
+.qz.tt .tt-cell.is-miss { background: #FEF3C7; }
+[data-theme='dark'] .qz.tt .tt-cell.is-miss { background: rgba(245,158,11,.16); }
+
+/* Анализ */
+.qz.tt .tt-ins { border-radius: 16px; border: 0; }
+.qz.tt .tt-ins__track i { transition: width .8s cubic-bezier(.2,.8,.2,1); }
+.qz.tt .tt-ai__dept { border-radius: 16px; }
+
+/* Терезелер */
+.qz.tt .qz-modal__card { border-radius: 24px; border: 0; }
+.qz.tt .qz-modal .qz-btn { padding: 0 16px; }
+.qz.tt .tt-deptrow { border-radius: 14px; }
+.qz.tt .tt-deptform input, .qz.tt .tt-apify-form input, .qz.tt .tt-filters select { border-radius: 12px; min-height: 40px; }
+.qz.tt .tt-apify { border-radius: 18px; }
+.qz.tt .tt-apify-bar span { background: #0F766E; }
+.qz.tt .tt-apify-bar span.is-bad { background: #D97706; }
+
+@media (prefers-reduced-motion: reduce) {
+  .qz.tt .qz-card, .qz.tt .tt-cell, .qz.tt .qz-btn { animation: none !important; transition: none !important; }
 }

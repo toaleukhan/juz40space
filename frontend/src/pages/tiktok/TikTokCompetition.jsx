@@ -129,7 +129,7 @@ function MonthView({ month, thisMonth, tab, setParam }) {
       <main className="qz tt">
         <div className="qz-head">
           <div>
-            <div className="qz-eyebrow tl-greet">{greeting()}{userName ? `, ${userName}` : ''} · MEDIA</div>
+            <div className="qz-eyebrow tl-greet">{greeting()}{userName ? `, ${userName}` : ''}</div>
             <h1 className="qz-title tl-title">TikTok жарысы</h1>
           </div>
           <div className="tt-toolbar">

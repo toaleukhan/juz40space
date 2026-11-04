@@ -7,12 +7,13 @@ import { monthLabel, fmtCompact } from './tiktok';
 export const IMG_W = 1080;
 export const IMG_H = 1920;
 
+// «Тірі JUZ40» түстері: қою көгілдір-жасыл фон, сары екпін
 const C = {
-  bg1: '#07141a', bg2: '#0f2a33',
-  card: 'rgba(255,255,255,0.055)', cardLine: 'rgba(255,255,255,0.10)',
-  ink: '#f2f8fa', soft: '#a9bec6', faint: '#6f8891',
-  gold: '#f2c14e', silver: '#c9d4da', bronze: '#e0915c',
-  cyan: '#25f4ee', red: '#fe2c55',
+  bg1: '#0B1F24', bg2: '#0F4F4A',
+  card: 'rgba(255,255,255,0.06)', cardLine: 'rgba(255,255,255,0.12)',
+  ink: '#F2FBF9', soft: '#A7C9C4', faint: '#6E918C',
+  gold: '#FCD34D', silver: '#CCFBF1', bronze: '#F5B08A',
+  mint: '#5EEAD4', amber: '#F59E0B',
 };
 
 // Суретке керек деректер (таза функция — сынақпен тексеріледі)
@@ -47,7 +48,9 @@ export function buildImageModel(data) {
 
 const medal = (place) => (place === 1 ? C.gold : place === 2 ? C.silver : place === 3 ? C.bronze : null);
 const FONT = "'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif";
+const DISPLAY = "'Unbounded', 'Inter', system-ui, sans-serif";
 const font = (weight, size) => `${weight} ${size}px ${FONT}`;
+const display = (weight, size) => `${weight} ${size}px ${DISPLAY}`;
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -87,26 +90,28 @@ function iconEye(ctx, x, y, s, color) {
   ctx.beginPath(); ctx.arc(x + s / 2, y + s / 2, s * 0.16, 0, Math.PI * 2); ctx.stroke();
   ctx.restore();
 }
-function trophy(ctx, cx, cy, s) {
+// Зет — JUZ40 кейіпкері (TikTok бетіндегі SVG-мен бірдей пішін, 120×120 торы)
+const ZET_BODY = 'M22 22 H92 Q100 22 95 29 L40 92 H96 Q102 92 102 98 Q102 104 96 104 H26 Q16 104 23 95 L78 34 H22 Q14 34 14 28 Q14 22 22 22 Z';
+function zet(ctx, cx, cy, size) {
+  if (typeof Path2D === 'undefined') return;
+  const k = size / 120;
   ctx.save();
-  const g = ctx.createLinearGradient(cx - s, cy - s, cx + s, cy + s);
-  g.addColorStop(0, '#ffe08a'); g.addColorStop(1, '#d99a1e');
-  ctx.fillStyle = g; ctx.strokeStyle = g; ctx.lineWidth = s * 0.12;
-  // тостаған
-  ctx.beginPath();
-  ctx.moveTo(cx - s * 0.62, cy - s * 0.8);
-  ctx.lineTo(cx + s * 0.62, cy - s * 0.8);
-  ctx.quadraticCurveTo(cx + s * 0.62, cy + s * 0.15, cx, cy + s * 0.25);
-  ctx.quadraticCurveTo(cx - s * 0.62, cy + s * 0.15, cx - s * 0.62, cy - s * 0.8);
-  ctx.fill();
-  // құлақтары
-  ctx.beginPath(); ctx.arc(cx - s * 0.62, cy - s * 0.45, s * 0.3, Math.PI * 0.5, Math.PI * 1.5); ctx.stroke();
-  ctx.beginPath(); ctx.arc(cx + s * 0.62, cy - s * 0.45, s * 0.3, -Math.PI * 0.5, Math.PI * 0.5); ctx.stroke();
-  // аяғы
-  ctx.fillRect(cx - s * 0.1, cy + s * 0.2, s * 0.2, s * 0.35);
-  roundRect(ctx, cx - s * 0.42, cy + s * 0.55, s * 0.84, s * 0.22, s * 0.06); ctx.fill();
+  ctx.translate(cx - size / 2, cy - size / 2);
+  ctx.scale(k, k);
+  ctx.rotate(-0.05);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.fillStyle = C.gold; ctx.strokeStyle = '#10262F'; ctx.lineWidth = 4;
+  const body = new Path2D(ZET_BODY);
+  ctx.fill(body); ctx.stroke(body);
+  [[46, 56], [70, 56]].forEach(([x, y]) => {
+    ctx.beginPath(); ctx.ellipse(x, y, 9, 10, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFFFFF'; ctx.fill(); ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x + 2, y - 1, 4.2, 0, Math.PI * 2); ctx.fillStyle = '#10262F'; ctx.fill();
+  });
+  ctx.beginPath(); ctx.moveTo(50, 72); ctx.quadraticCurveTo(58, 80, 66, 72); ctx.lineWidth = 3.2; ctx.stroke();
   ctx.restore();
 }
+
 
 /**
  * model — buildImageModel() нәтижесі; logo — жүктелген <img> (міндетті емес).
@@ -124,8 +129,8 @@ export function drawRanking(ctx, model, logo) {
     g.addColorStop(0, color); g.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
   };
-  glow(W * 0.92, 160, 520, 'rgba(37,244,238,0.14)');
-  glow(W * 0.05, 760, 520, 'rgba(254,44,85,0.11)');
+  glow(W * 0.92, 160, 560, 'rgba(94,234,212,0.16)');
+  glow(W * 0.05, 820, 560, 'rgba(245,158,11,0.13)');
 
   // Тақырып
   let y = 96;
@@ -134,7 +139,7 @@ export function drawRanking(ctx, model, logo) {
     ctx.drawImage(logo, PAD, y, 72, 72); ctx.restore();
   }
   ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = C.ink; ctx.font = font(800, 40);
+  ctx.fillStyle = C.ink; ctx.font = display(800, 36);
   ctx.fillText('JUZ40', PAD + 92, y + 34);
   ctx.fillStyle = C.soft; ctx.font = font(600, 26);
   ctx.fillText('TikTok жарысы', PAD + 92, y + 68);
@@ -151,8 +156,8 @@ export function drawRanking(ctx, model, logo) {
 
   // Үлкен тақырып
   y = 270;
-  ctx.fillStyle = C.ink; ctx.font = font(900, 76);
-  ctx.fillText('TikTok үздігі', PAD, y);
+  ctx.fillStyle = C.ink; ctx.font = display(800, 70);
+  ctx.fillText(fitText(ctx, 'TikTok үздігі', W - PAD * 2), PAD, y);
   ctx.fillStyle = C.soft; ctx.font = font(500, 28);
   ctx.fillText(model.status, PAD, y + 50);
 
@@ -161,18 +166,18 @@ export function drawRanking(ctx, model, logo) {
   const cardH = 360;
   roundRect(ctx, PAD, y, W - PAD * 2, cardH, 36);
   const cg = ctx.createLinearGradient(PAD, y, W - PAD, y + cardH);
-  cg.addColorStop(0, 'rgba(242,193,78,0.20)'); cg.addColorStop(1, 'rgba(242,193,78,0.04)');
+  cg.addColorStop(0, 'rgba(252,211,77,0.20)'); cg.addColorStop(1, 'rgba(252,211,77,0.04)');
   ctx.fillStyle = cg; ctx.fill();
-  ctx.strokeStyle = 'rgba(242,193,78,0.55)'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.strokeStyle = 'rgba(252,211,77,0.55)'; ctx.lineWidth = 3; ctx.stroke();
 
-  trophy(ctx, W - PAD - 120, y + 150, 78);
+  zet(ctx, W - PAD - 140, y + 150, 200);
 
   const win = model.winners[0];
   ctx.fillStyle = C.gold; ctx.font = font(800, 26);
   ctx.fillText(model.winners.length > 1 ? '1-ОРЫН · ТЕҢ ҰПАЙ' : '1-ОРЫН', PAD + 48, y + 70);
   if (win) {
     const names = model.winners.map((w) => w.name).join(' · ');
-    ctx.fillStyle = C.ink; ctx.font = font(900, names.length > 14 ? 58 : 76);
+    ctx.fillStyle = C.ink; ctx.font = display(800, names.length > 14 ? 50 : 66);
     ctx.fillText(fitText(ctx, names, W - PAD * 2 - 300), PAD + 48, y + 160);
     ctx.fillStyle = C.soft; ctx.font = font(500, 28);
     ctx.fillText(fitText(ctx, model.winners.map((w) => '@' + w.username).join('  '), W - PAD * 2 - 300), PAD + 48, y + 204);
@@ -185,7 +190,7 @@ export function drawRanking(ctx, model, logo) {
     ];
     let sx = PAD + 48;
     stats.forEach(([v, l]) => {
-      ctx.fillStyle = C.ink; ctx.font = font(900, 52);
+      ctx.fillStyle = C.ink; ctx.font = display(800, 46);
       ctx.fillText(v, sx, y + 290);
       const vw = ctx.measureText(v).width;
       ctx.fillStyle = C.soft; ctx.font = font(600, 24);
@@ -245,14 +250,14 @@ export function drawRanking(ctx, model, logo) {
     ctx.textBaseline = 'middle';
     ctx.fillText(vText, colVid, mid + 1);
     const vw = ctx.measureText(vText).width;
-    iconVideo(ctx, colVid - vw - isz - 12, mid - isz / 2, isz, C.cyan);
+    iconVideo(ctx, colVid - vw - isz - 12, mid - isz / 2, isz, C.mint);
 
     // Ең көп қаралым
     const mText = fmtCompact(r.maxViews);
-    ctx.fillStyle = r.maxViews >= 15000 ? C.red : C.ink;
+    ctx.fillStyle = r.maxViews >= 15000 ? C.amber : C.ink;
     ctx.fillText(mText, colMax, mid + 1);
     const mw2 = ctx.measureText(mText).width;
-    iconEye(ctx, colMax - mw2 - isz - 12, mid - isz / 2, isz, r.maxViews >= 15000 ? C.red : C.soft);
+    iconEye(ctx, colMax - mw2 - isz - 12, mid - isz / 2, isz, r.maxViews >= 15000 ? C.amber : C.soft);
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   });
 
@@ -267,7 +272,10 @@ export function drawRanking(ctx, model, logo) {
 // Браузерде: шрифт пен логотип жүктелгенін күтіп, PNG Blob қайтарады.
 export async function renderRankingPng(model, logoSrc, scale = 2) {
   try {
-    await Promise.all([400, 500, 600, 700, 800, 900].map((w) => document.fonts?.load(`${w} 40px Inter`, 'ҚазанӘіңғүұқөһ')));
+    await Promise.all([
+      ...[400, 500, 600, 700, 800, 900].map((w) => document.fonts?.load(`${w} 40px Inter`, 'ҚазанӘіңғүұқөһ')),
+      ...[700, 800].map((w) => document.fonts?.load(`${w} 40px Unbounded`, 'ҚазанӘіңғүұқөһ')),
+    ]);
   } catch { /* шрифт жүктелмесе — жүйелік шрифтпен салынады */ }
   const logo = await new Promise((resolve) => {
     if (!logoSrc) return resolve(null);

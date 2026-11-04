@@ -57,7 +57,7 @@ export default function PostingCalendar({ data }) {
       </div>
       <div className="tt-legend">
         <span><i style={{ background: 'rgba(var(--tt-heat), .7)' }} />видео шықты (сан — нешеу)</span>
-        <span><i style={{ background: 'var(--qz-bad-bg)' }} />жұмыс күні, видео жоқ</span>
+        <span><i className="tt-cell is-miss" style={{ width: 12, height: 12 }} />жұмыс күні, видео жоқ</span>
         <span><i style={{ outline: '1px dashed var(--qz-line)', outlineOffset: -1 }} />демалыс (есепке кірмейді)</span>
       </div>
     </section>
