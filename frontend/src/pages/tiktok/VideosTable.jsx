@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { fmtInt, fmtDateTime } from '../../utils/tiktok';
+import { deptColor } from '../../utils/deptColor';
 
 const SORTS = {
   date: (a, b) => (a.postedAt < b.postedAt ? 1 : -1),
@@ -63,7 +64,8 @@ export default function VideosTable({ data }) {
                 <tr key={v.id}>
                   <td style={{ whiteSpace: 'nowrap' }}>{fmtDateTime(v.postedAt)}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    {v.isTeam ? <span className="tt-tag tt-tag--team" style={{ marginLeft: 0 }}>Juz40_team</span> : names[v.departmentId]}
+                    {v.isTeam ? <span className="tt-tag tt-tag--team" style={{ marginLeft: 0 }}>Juz40_team</span>
+                      : <span className="ov-chip" style={{ '--c': deptColor(v.departmentId) }}>{names[v.departmentId]}</span>}
                   </td>
                   <td>
                     <div className="tt-caption" title={v.caption}>

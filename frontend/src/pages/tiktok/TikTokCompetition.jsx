@@ -1,26 +1,31 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import Sidebar from '../../components/Sidebar';
 import { IconImage } from '../../components/icons';
 import { tiktok, errorText } from '../../services/tiktokApi';
 import { monthLabel, shiftMonth, currentMonth, fmtDateTime } from '../../utils/tiktok';
-import Leaderboard from './Leaderboard';
+import Overview from './Overview';
+import TopBar from './TopBar';
+import Grading from './Grading';
 import PostingCalendar from './PostingCalendar';
 import Insights from './Insights';
 import VideosTable from './VideosTable';
 import DepartmentsDialog from './DepartmentsDialog';
 import ShareImageDialog from './ShareImageDialog';
+import ApifyDialog from './ApifyDialog';
 import '../../styles/quiz.css';
 import '../../styles/tiktok.css';
+import '../../styles/overview.css';
 
 const TABS = [
   { key: 'rating', label: 'Рейтинг' },
+  { key: 'grading', label: 'Бағалау' },
   { key: 'calendar', label: 'Тұрақтылық' },
   { key: 'analysis', label: 'Анализ' },
   { key: 'videos', label: 'Видеолар' },
 ];
 
 const POLL_MS = 8000;
+const LIVE_MS = 60000; // бет ашық тұрғанда рейтинг өзі жаңарып тұрады
 
 // 🎬 Бөлімдер арасындағы TikTok жарысы: Apify-дан тартылған видеолар
 // бойынша автомат ұпайлар, жюри ұпайлары, күнтізбе, «не өтеді» анализі
@@ -48,6 +53,7 @@ function MonthView({ month, thisMonth, tab, setParam }) {
   const [syncId, setSyncId] = useState(null);
   const [deptsOpen, setDeptsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [apifyOpen, setApifyOpen] = useState(false);
 
   const reload = useCallback(() => tiktok.overview(month)
     .then((d) => { setData(d); setError(''); return d; })
@@ -89,6 +95,14 @@ function MonthView({ month, thisMonth, tab, setParam }) {
     return () => { alive = false; clearTimeout(timer); };
   }, [syncId, reload]);
 
+  // «Тірі» режим: бет көрініп тұрса, минут сайын деректерді тыныш жаңартамыз
+  // (жюри ұпайы өзгерсе, жарыс жолы өзі қозғалады).
+  useEffect(() => {
+    if (tab !== 'rating') return undefined;
+    const t = setInterval(() => { if (!document.hidden) reload(); }, LIVE_MS);
+    return () => clearInterval(t);
+  }, [tab, reload]);
+
   const startSync = async () => {
     setError('');
     try {
@@ -105,13 +119,12 @@ function MonthView({ month, thisMonth, tab, setParam }) {
   const noDepts = data && data.departments.filter((d) => !d.isTeamAccount).length === 0;
 
   return (
-    <div className="app-shell">
-      <Sidebar />
+    <div className="tt-page">
+      <TopBar tabs={data && !noDepts ? TABS : null} tab={tab} onTab={(k) => setParam('tab', k)} />
       <main className="qz tt">
         <div className="qz-head">
           <div>
-            <div className="qz-eyebrow">MEDIA · TIKTOK ЖАРЫСЫ</div>
-            <h1 className="qz-title">TikTok үздігі</h1>
+            <h1 className="qz-title">TikTok жарысы</h1>
           </div>
           <div className="tt-toolbar">
             <div className="tt-month" aria-label="Ай">
@@ -124,6 +137,7 @@ function MonthView({ month, thisMonth, tab, setParam }) {
               <IconImage width={16} height={16} /> Сурет
             </button>
             <button type="button" className="qz-btn" onClick={() => setDeptsOpen(true)}>Бөлімдер</button>
+            <button type="button" className="qz-btn" onClick={() => setApifyOpen(true)} title="Apify токені және лимит">Apify</button>
             <button type="button" className="qz-btn qz-btn--primary" onClick={startSync} disabled={busy || !data || noDepts}>
               {busy ? 'Жаңартылуда…' : 'Деректерді жаңарту'}
             </button>
@@ -151,7 +165,14 @@ function MonthView({ month, thisMonth, tab, setParam }) {
           </div>
         )}
 
-        {error && <div className="qz-alert" role="alert">{error}</div>}
+        {error && (
+          <div className="qz-alert" role="alert">
+            {error}
+            {/Apify/.test(error) && (
+              <> {' '}<button type="button" className="qz-btn qz-btn--ghost" style={{ padding: '2px 8px' }} onClick={() => setApifyOpen(true)}>Токенді ауыстыру</button></>
+            )}
+          </div>
+        )}
 
         {!data ? (
           error ? null : <section className="qz-card"><div className="tt-loading"><span className="tt-spin" />Жүктелуде…</div></section>
@@ -165,16 +186,8 @@ function MonthView({ month, thisMonth, tab, setParam }) {
           </section>
         ) : (
           <>
-            <div className="qz-seg tt-tabs" role="tablist">
-              {TABS.map((t) => (
-                <button key={t.key} type="button" role="tab" aria-selected={tab === t.key}
-                  className={tab === t.key ? 'is-on' : ''} onClick={() => setParam('tab', t.key)}>
-                  {t.label}
-                </button>
-              ))}
-            </div>
-
-            {tab === 'rating' && <Leaderboard data={data} month={month} onSaved={reload} />}
+            {tab === 'rating' && <Overview data={data} month={month} />}
+            {tab === 'grading' && <Grading data={data} month={month} onSaved={reload} />}
             {tab === 'calendar' && <PostingCalendar data={data} />}
             {tab === 'analysis' && <Insights data={data} month={month} onAnalysis={(analysis) => setData((d) => ({ ...d, analysis }))} />}
             {tab === 'videos' && <VideosTable data={data} />}
@@ -182,6 +195,8 @@ function MonthView({ month, thisMonth, tab, setParam }) {
         )}
 
         {shareOpen && data && <ShareImageDialog data={data} onClose={() => setShareOpen(false)} />}
+
+        {apifyOpen && <ApifyDialog onClose={() => setApifyOpen(false)} onSaved={() => setError('')} />}
 
         {deptsOpen && (
           <DepartmentsDialog
