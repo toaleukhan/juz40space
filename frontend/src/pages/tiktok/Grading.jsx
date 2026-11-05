@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { tiktok, errorText } from '../../services/tiktokApi';
 import { parseScore, fmtPct } from '../../utils/tiktok';
+import DeptAvatar from './DeptAvatar';
 
 // Автомат ұсыныс (тек кеңес — жюри өзі шешеді)
 function hint(key, r) {
@@ -63,7 +64,7 @@ export default function Grading({ data, month, onSaved }) {
   const done = rows.filter((r) => fields.every((f) => f.key === 'bonus' || value(r.departmentId, f.key) !== null)).length;
 
   return (
-    <section className="tl-card tg" aria-label="Жюри бағалауы">
+    <section className="ov-card tg" aria-label="Жюри бағалауы">
       <div className="tg-head">
         <div>
           <h2>Бағалау</h2>
@@ -97,7 +98,7 @@ export default function Grading({ data, month, onSaved }) {
               const st = state[id];
               return (
                 <tr key={id} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) saveRow(id); }}>
-                  <th scope="row" className="tg-dept"><b>{r.name}</b><small>@{r.username}</small></th>
+                  <th scope="row" className="tg-dept"><DeptAvatar id={id} name={r.name} size={30} /><span><b>{r.name}</b><small>@{r.username}</small></span></th>
                   <td><span className={`tg-cell tg-cell--ro ${tone(r.auto.stability, 10)}`}>{r.auto.stability}</span></td>
                   <td><span className={`tg-cell tg-cell--ro ${tone(r.auto.statistics, 10)}`}>{r.auto.statistics}</span></td>
                   {fields.map((f) => (

@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { daysOfMonth, postingMatrix, fmtInt, WEEKDAYS_SHORT } from '../../utils/tiktok';
+import { deptColor } from '../../utils/deptColor';
+import DeptAvatar from './DeptAvatar';
 
 // Бөлім × күн торы: видео шыққан күн — жасыл (саны жазылады), жұмыс күні
 // өтіп кетсе де видео жоқ — ақшыл қызыл, демалыс — үзік жиек.
@@ -32,7 +34,7 @@ export default function PostingCalendar({ data }) {
           <tbody>
             {data.leaderboard.map((r) => (
               <tr key={r.departmentId}>
-                <th className="tt-cal__name" scope="row">{r.name}</th>
+                <th className="tt-cal__name" scope="row"><span><DeptAvatar id={r.departmentId} name={r.name} size={24} />{r.name}</span></th>
                 {days.map((d) => {
                   const cell = matrix[r.departmentId]?.[d.iso];
                   const future = d.iso > today;
@@ -40,10 +42,10 @@ export default function PostingCalendar({ data }) {
                   if (d.weekend && !cell) cls.push('is-weekend');
                   if (future) cls.push('is-future');
                   if (!cell && !d.weekend && !future) cls.push('is-miss');
-                  const alpha = cell ? 0.4 + 0.6 * (cell.count / max) : 0;
+                  const pct = cell ? Math.round(45 + 55 * (cell.count / max)) : 0;
                   return (
                     <td key={d.iso} className={cls.join(' ')}
-                      style={cell ? { background: `rgba(var(--tt-heat), ${alpha})` } : undefined}
+                      style={cell ? { background: `color-mix(in srgb, ${deptColor(r.departmentId)} ${pct}%, transparent)` } : undefined}
                       title={cell ? `${d.iso}: ${cell.count} видео, ${fmtInt(cell.views)} қаралым` : `${d.iso}: видео жоқ`}>
                       {cell ? cell.count : ''}
                     </td>
@@ -56,7 +58,7 @@ export default function PostingCalendar({ data }) {
         </table>
       </div>
       <div className="tt-legend">
-        <span><i style={{ background: 'rgba(var(--tt-heat), .7)' }} />видео шықты (сан — нешеу)</span>
+        <span><i style={{ background: 'var(--pg-ink)', opacity: 0.6 }} />видео шықты (сан — нешеу, түсі — бөлімнің түсі)</span>
         <span><i className="tt-cell is-miss" style={{ width: 12, height: 12 }} />жұмыс күні, видео жоқ</span>
         <span><i style={{ outline: '1px dashed var(--qz-line)', outlineOffset: -1 }} />демалыс (есепке кірмейді)</span>
       </div>
