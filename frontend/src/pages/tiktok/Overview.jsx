@@ -12,6 +12,16 @@ import Avatar from './DeptAvatar';
 // Бонус (0–20) — осыдан тыс қосымша ұпай.
 const MAX_TOTAL = 70;
 
+function monthWorkdays(range) {
+  if (!range) return 0;
+  let n = 0;
+  for (let d = new Date(`${range.start}T00:00:00Z`); d <= new Date(`${range.end}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1)) {
+    const wd = d.getUTCDay();
+    if (wd !== 0 && wd !== 6) n += 1;
+  }
+  return n;
+}
+
 const juryOf = (r) => Object.entries(r.jury).reduce((a, [k, x]) => a + (k === 'bonus' ? 0 : Number(x) || 0), 0);
 const bonusOf = (r) => Number(r.jury.bonus) || 0;
 const r1 = (x) => (Math.round(x * 10) / 10).toFixed(1);
@@ -24,7 +34,7 @@ export default function Overview({ data }) {
 
   return (
     <div className="ov">
-      <Summary rows={rows} own={own} window={data.window} />
+      <Summary rows={rows} own={own} window={data.window} monthDays={monthWorkdays(data.allDays)} />
       <Podium rows={rows.slice(0, 3)} />
       <Ranking rows={rows} workdays={data.window.workdays} own={own} />
       {own.length > 0 && <Hits own={own} deptName={deptName} />}
@@ -33,7 +43,7 @@ export default function Overview({ data }) {
 }
 
 /* ── 1. Қорытынды ── */
-function Summary({ rows, own, window: win }) {
+function Summary({ rows, own, window: win, monthDays }) {
   const [a, b] = rows;
   const c = deptColor(a.departmentId);
   const views = sumBy(own, 'views');
@@ -53,11 +63,20 @@ function Summary({ rows, own, window: win }) {
           {a.totalWorkdays > 0 && <>{a.totalWorkdays} жұмыс күнінің {a.postedWorkdays} күні видео салды.</>}
         </p>
       </div>
-      <dl className="ov-sum__stats">
-        <div><dt>Видео</dt><dd>{fmtInt(own.length)}</dd></div>
-        <div><dt>Қаралым</dt><dd>{fmtCompact(views)}</dd></div>
-        <div><dt>15K+ хит</dt><dd>{own.filter((v) => v.views >= 15000).length}</dd></div>
-      </dl>
+      <div className="ov-sum__side">
+        <dl className="ov-sum__stats">
+          <div><dt>Видео</dt><dd>{fmtInt(own.length)}</dd></div>
+          <div><dt>Қаралым</dt><dd>{fmtCompact(views)}</dd></div>
+          <div><dt>15K+ хит</dt><dd>{own.filter((v) => v.views >= 15000).length}</dd></div>
+        </dl>
+        {win.isCurrent && monthDays > 0 && (
+          <div className="ov-sum__progress" title="Айдың өткен жұмыс күндері">
+            <span>Ай барысы</span>
+            <i><b style={{ width: `${Math.min(100, (win.workdays.length / monthDays) * 100)}%` }} /></i>
+            <span>{win.workdays.length}/{monthDays} күн</span>
+          </div>
+        )}
+      </div>
     </section>
   );
 }

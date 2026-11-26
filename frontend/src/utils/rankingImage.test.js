@@ -22,6 +22,21 @@ describe('рейтинг суретінің деректері', () => {
     expect(m.winners.map((w) => w.name)).toEqual(['САПА']);
     expect(m.rows.map((r) => r.maxViews)).toEqual([700, 16000]);
     expect(m.totals).toEqual({ videos: 4, views: 16900 });
+    expect(m.gap).toBe(5);
+    expect(m.runnerUp).toBe('IT');
+    expect(m.mostActive).toEqual({ name: 'САПА', videos: 3 });
+    expect(m.monthNo).toBe(10);
+  });
+
+  it('тең ұпай және қалған жұмыс күндері', () => {
+    const tie = { ...data,
+      leaderboard: data.leaderboard.map((r) => ({ ...r, place: 1, total: 20 })),
+      allDays: { start: '2026-10-01', end: '2026-10-31' },
+      window: { isCurrent: true, effectiveEnd: '2026-10-06', workdays: ['2026-10-01', '2026-10-02', '2026-10-05', '2026-10-06'] } };
+    const m = buildImageModel(tie);
+    expect(m.winners).toHaveLength(2);
+    expect(m.gap).toBeNull();
+    expect(m.daysLeft).toBe(22 - 4);
   });
 
   it('аяқталған ай — қорытынды', () => {

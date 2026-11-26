@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import Modal from '../../components/common/Modal';
 import { buildImageModel, renderRankingPng } from '../../utils/rankingImage';
-import juz40Logo from '../../assets/juz40-logo.png';
 
 // Рейтингті PNG сурет етіп (1080×1920, story өлшемі) алдын ала көрсетіп,
 // жүктеп алуға береді.
@@ -12,7 +11,7 @@ export default function ShareImageDialog({ data, onClose }) {
   useEffect(() => {
     let alive = true;
     let objectUrl = null;
-    renderRankingPng(buildImageModel(data), juz40Logo)
+    renderRankingPng(buildImageModel(data))
       .then((blob) => {
         if (!alive || !blob) return;
         objectUrl = URL.createObjectURL(blob);
