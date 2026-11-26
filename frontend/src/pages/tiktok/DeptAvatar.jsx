@@ -4,24 +4,31 @@ import { AvatarContext, avatarUrl } from './avatarContext';
 
 // Бөлімнің TikTok авасы. Ава әлі тартылмаса немесе жүктелмесе — бөлімнің
 // түсіндегі бас әріптер.
-export default function DeptAvatar({ id, name, size = 32 }) {
+export default function DeptAvatar({ id, name, size = 32, live = false }) {
   const versions = useContext(AvatarContext);
   const version = versions[id];
   const [failed, setFailed] = useState(null);
   const c = deptColor(id);
   const box = { width: size, height: size };
 
+  const dot = live ? <span className="lv-live" title="Бүгін видео салды" /> : null;
   if (version && failed !== version) {
     return (
-      <span className="ov-av ov-av--img" style={{ ...box, '--c': c }} aria-hidden="true">
-        <img src={avatarUrl(id, version)} alt="" width={size} height={size} loading="lazy" decoding="async"
-          onError={() => setFailed(version)} />
+      <span className="ov-av-wrap" style={box}>
+        <span className="ov-av ov-av--img" style={{ ...box, '--c': c }} aria-hidden="true">
+          <img src={avatarUrl(id, version)} alt="" width={size} height={size} loading="lazy" decoding="async"
+            onError={() => setFailed(version)} />
+        </span>
+        {dot}
       </span>
     );
   }
   return (
-    <span className="ov-av" style={{ ...box, background: `${c}1f`, color: c, fontSize: size * 0.34 }} aria-hidden="true">
-      {initials(name)}
+    <span className="ov-av-wrap" style={box}>
+      <span className="ov-av" style={{ ...box, background: `${c}1f`, color: c, fontSize: size * 0.34 }} aria-hidden="true">
+        {initials(name)}
+      </span>
+      {dot}
     </span>
   );
 }

@@ -395,6 +395,9 @@ const createTables = async () => {
     await pool.query(`ALTER TABLE tiktok_departments ADD COLUMN IF NOT EXISTS avatar BYTEA;`);
     await pool.query(`ALTER TABLE tiktok_departments ADD COLUMN IF NOT EXISTS avatar_type VARCHAR(40);`);
     await pool.query(`ALTER TABLE tiktok_departments ADD COLUMN IF NOT EXISTS avatar_updated_at TIMESTAMPTZ;`);
+    // Видео мұқабасы — тек әр бөлімнің соңғы бірнеше видеосына (шағын карта үшін)
+    await pool.query(`ALTER TABLE tiktok_videos ADD COLUMN IF NOT EXISTS cover BYTEA;`);
+    await pool.query(`ALTER TABLE tiktok_videos ADD COLUMN IF NOT EXISTS cover_type VARCHAR(40);`);
     await pool.query(`ALTER TABLE tiktok_syncs ADD COLUMN IF NOT EXISTS pinned_dataset_id VARCHAR(64);`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS tiktok_analyses (

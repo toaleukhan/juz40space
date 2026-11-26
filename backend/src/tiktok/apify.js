@@ -151,7 +151,7 @@ function normalizeItem(it) {
 // бітеді және басқа сайттан тікелей ашуға жиі тыйым салынады, сондықтан
 // суреттің өзін базаға сақтаймыз. Тек https және тек сурет, 1 МБ-тан аз.
 const AVATAR_MAX_BYTES = 1024 * 1024;
-async function downloadAvatar(url, { fetchImpl = fetch, timeoutMs = 8000 } = {}) {
+async function downloadImage(url, { fetchImpl = fetch, timeoutMs = 8000 } = {}) {
   if (!/^https:\/\//i.test(String(url || ''))) return null;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -170,4 +170,6 @@ async function downloadAvatar(url, { fetchImpl = fetch, timeoutMs = 8000 } = {})
   }
 }
 
-module.exports = { ApifyError, downloadAvatar, setTokenSource, accountInfo, MAX_PER_PROFILE, buildInput, buildPinnedInput, startRun, startPinnedRun, getRun, fetchItems, normalizeItem };
+const downloadAvatar = (url, opts) => downloadImage(url, opts);
+
+module.exports = { ApifyError, downloadAvatar, downloadImage, setTokenSource, accountInfo, MAX_PER_PROFILE, buildInput, buildPinnedInput, startRun, startPinnedRun, getRun, fetchItems, normalizeItem };
