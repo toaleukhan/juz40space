@@ -297,3 +297,7 @@
 }
 .tt-page .tg-reset:hover { color: var(--pg-brand); border-color: var(--pg-brand); }
 .tt-page .tg-table tbody td.tg-autocell { padding-bottom: 12px; }
+
+/* TikTok авасы (бар болса) — бөлім түсіндегі жұқа шеңбермен */
+.ov-av--img { overflow: hidden; padding: 0; background: var(--pg-line-2); box-shadow: 0 0 0 2px var(--pg-card), 0 0 0 3px color-mix(in srgb, var(--c) 55%, transparent); border-radius: 50% !important; }
+.ov-av--img img { display: block; width: 100%; height: 100%; object-fit: cover; }

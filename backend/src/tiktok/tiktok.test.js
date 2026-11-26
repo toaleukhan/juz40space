@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 
 const S = require('./scoring');
 const { normalizeItem, buildInput, buildPinnedInput, accountInfo, setTokenSource, startRun, ApifyError } = require('./apify');
+const apify = require('./apify');
 const { computeInsights, parseAnalysis, generateAnalysis, buildAnalysisPrompt } = require('./insights');
 const { mediaMayAccess } = require('../middleware/auth');
 const { _internal: { cleanUsername, validateDept } } = require('../routes/tiktok');
@@ -205,6 +206,25 @@ describe('бастапқы бөлімдер тізімі', () => {
     all.forEach((d) => expect(validateDept({ ...d, isTeamAccount: d === TEAM_ACCOUNT }).errors).toEqual([]));
     expect(new Set(all.map((d) => d.username)).size).toBe(all.length);
     expect(DEFAULT_DEPARTMENTS).toHaveLength(13);
+  });
+});
+
+describe('TikTok авасы', () => {
+  const res = (type, bytes, ok = true) => ({ ok, headers: { get: () => type }, arrayBuffer: async () => new Uint8Array(bytes).buffer });
+
+  it('normalizeItem ава сілтемесін алады', () => {
+    const v = apify.normalizeItem({ id: '1', authorMeta: { name: 'A', avatar: 'https://x/a.jpg' }, createTimeISO: '2026-09-01T06:00:00Z' });
+    expect(v.avatar).toBe('https://x/a.jpg');
+  });
+
+  it('тек https сурет, шектен үлкен емес', async () => {
+    const ok = await apify.downloadAvatar('https://x/a.jpg', { fetchImpl: async () => res('image/jpeg; q=1', [1, 2, 3]) });
+    expect(ok.type).toBe('image/jpeg');
+    expect(ok.data.length).toBe(3);
+    expect(await apify.downloadAvatar('http://x/a.jpg', { fetchImpl: async () => res('image/jpeg', [1]) })).toBeNull();
+    expect(await apify.downloadAvatar('https://x/a', { fetchImpl: async () => res('text/html', [1]) })).toBeNull();
+    expect(await apify.downloadAvatar('https://x/a', { fetchImpl: async () => res('image/png', [1], false) })).toBeNull();
+    expect(await apify.downloadAvatar('https://x/a', { fetchImpl: async () => { throw new Error('net'); } })).toBeNull();
   });
 });
 

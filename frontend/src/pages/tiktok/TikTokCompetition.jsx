@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { IconImage } from '../../components/icons';
 import { tiktok, errorText } from '../../services/tiktokApi';
 import { monthLabel, shiftMonth, currentMonth, fmtDateTime } from '../../utils/tiktok';
 import Overview from './Overview';
 import TopBar from './TopBar';
+import { AvatarContext } from './avatarContext';
 import Grading from './Grading';
 import PostingCalendar from './PostingCalendar';
 import Insights from './Insights';
@@ -116,10 +117,13 @@ function MonthView({ month, thisMonth, tab, setParam }) {
   };
 
   const busy = sync && (sync.status === 'running' || sync.status === 'ingesting');
+  const avatars = useMemo(() => Object.fromEntries((data?.departments || [])
+    .filter((d) => d.avatarVersion).map((d) => [d.id, d.avatarVersion])), [data]);
   const last = data?.lastSync;
   const noDepts = data && data.departments.filter((d) => !d.isTeamAccount).length === 0;
 
   return (
+    <AvatarContext.Provider value={avatars}>
     <div className="tt-page">
       <TopBar
         tabs={data && !noDepts ? TABS : null}
@@ -213,6 +217,7 @@ function MonthView({ month, thisMonth, tab, setParam }) {
         )}
       </main>
     </div>
+    </AvatarContext.Provider>
   );
 }
 

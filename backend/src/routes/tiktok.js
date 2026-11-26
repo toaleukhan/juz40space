@@ -55,6 +55,19 @@ const asyncRoute = (fn) => (req, res, next) => fn(req, res, next).catch((err) =>
   res.status(500).json({ error: 'Сервер қатесі: ' + err.message });
 });
 
+// Бөлімнің TikTok авасы. <img> сұранысы токен жібере алмайды, ал ава —
+// TikTok-тағы ашық ақпарат, сондықтан бұл жол авторизациясыз.
+router.get('/avatars/:id', asyncRoute(async (req, res) => {
+  const { rows } = await pool.query('SELECT avatar, avatar_type FROM tiktok_departments WHERE id = $1', [Number(req.params.id) || 0]);
+  const a = rows[0];
+  if (!a?.avatar) return res.status(404).end();
+  res.set('Content-Type', a.avatar_type || 'image/jpeg');
+  res.set('Cache-Control', 'public, max-age=604800, immutable'); // URL-де ?v= нұсқасы бар
+  res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.send(a.avatar);
+}));
+
 router.use(auth, requireMedia);
 
 /* ───────────── Бөлімдер ───────────── */
@@ -65,6 +78,8 @@ const cleanTag = (t) => String(t || '').trim().replace(/^#/, '').toLowerCase();
 const deptOut = (d) => ({
   id: d.id, name: d.name, username: d.username, teamTag: d.team_tag || '',
   isTeamAccount: d.is_team_account, active: d.active,
+  // Ава болса — нұсқасы (уақыты), фронтенд кэшті жаңарту үшін URL-ге қосады
+  avatarVersion: d.has_avatar && d.avatar_updated_at ? new Date(d.avatar_updated_at).getTime() : null,
 });
 
 function validateDept(body) {
@@ -80,7 +95,12 @@ function validateDept(body) {
 }
 
 async function listDepartments() {
-  const { rows } = await pool.query('SELECT * FROM tiktok_departments ORDER BY is_team_account, name');
+  // avatar (BYTEA) бағанын тартпаймыз — тек бар-жоғын
+  const { rows } = await pool.query(
+    `SELECT id, name, username, team_tag, is_team_account, active, created_at, avatar_updated_at,
+            (avatar IS NOT NULL) AS has_avatar
+     FROM tiktok_departments ORDER BY is_team_account, name`
+  );
   return rows;
 }
 
@@ -234,12 +254,14 @@ async function ingest(sync, datasetId, pinnedDatasetId = null) {
   const depts = await listDepartments();
   const byUser = new Map(depts.map((d) => [d.username, d.id]));
   const seen = new Set();
+  const avatars = new Map(); // username → сурет сілтемесі
   let n = 0;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     for (const raw of items) {
       const v = apify.normalizeItem(raw);
+      if (v?.avatar && byUser.has(v.username) && !avatars.has(v.username)) avatars.set(v.username, v.avatar);
       if (!v || seen.has(v.id) || !byUser.has(v.username) || v.postDay < start || v.postDay > end) continue;
       seen.add(v.id);
       await client.query(
@@ -265,6 +287,19 @@ async function ingest(sync, datasetId, pinnedDatasetId = null) {
   } finally {
     client.release();
   }
+  await refreshAvatars(avatars, byUser);
+}
+
+// Аваларды жаңарту — синхронның қосымша бөлігі: жүктелмесе, ескісі қалады.
+async function refreshAvatars(avatars, byUser) {
+  await Promise.all([...avatars].map(async ([username, url]) => {
+    const img = await apify.downloadAvatar(url);
+    if (!img) return;
+    await pool.query(
+      'UPDATE tiktok_departments SET avatar=$1, avatar_type=$2, avatar_updated_at=NOW() WHERE id=$3',
+      [img.data, img.type, byUser.get(username)]
+    ).catch((err) => console.warn('TikTok: ава сақталмады:', err.message));
+  }));
 }
 
 router.get('/sync/:id', asyncRoute(async (req, res) => {
