@@ -33,6 +33,7 @@ export default function TopBar({ tabs, tab, onTab, settings = [] }) {
   return (
     <div className="tb-wrap">
       <header className="tb" ref={ref}>
+        <div className="tb__left">
         <button type="button" className="tb__burger" aria-label="Мәзір" aria-expanded={open === 'mobile'} onClick={() => toggle('mobile')}>
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
             <path d="M3 5h14M3 10h10M3 15h14" />
@@ -43,6 +44,7 @@ export default function TopBar({ tabs, tab, onTab, settings = [] }) {
           <Juz40Logo height={17} />
           <span>Media</span>
         </a>
+        </div>
 
         {tabs && (
           <nav className="tb__nav" aria-label="Бөлімдер">

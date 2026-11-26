@@ -137,19 +137,21 @@ function MonthView({ month, thisMonth, tab, setParam }) {
       <main className="qz tt">
         <div className="qz-head">
           <div>
+            <div className="tt-eyebrow">Media · бөлімдер арасындағы жарыс</div>
             <h1 className="qz-title">TikTok жарысы</h1>
           </div>
           <div className="tt-toolbar">
             <div className="tt-month" aria-label="Ай">
               <button type="button" onClick={() => setParam('month', shiftMonth(month, -1))} aria-label="Алдыңғы ай">‹</button>
-              <span>{monthLabel(month)}</span>
+              <span><IconCal />{monthLabel(month)}</span>
               <button type="button" onClick={() => setParam('month', shiftMonth(month, 1))} disabled={month >= thisMonth} aria-label="Келесі ай">›</button>
             </div>
             <button type="button" className="qz-btn" onClick={() => setShareOpen(true)}
               disabled={!data || !data.leaderboard.length} title="Рейтингті сурет етіп жүктеу">
               <IconImage width={16} height={16} /> Сурет
             </button>
-            <button type="button" className="qz-btn qz-btn--primary" onClick={startSync} disabled={busy || !data || noDepts}>
+            <button type="button" className="qz-btn qz-btn--primary tt-sync" onClick={startSync} disabled={busy || !data || noDepts}>
+              <IconRefresh className={busy ? 'is-spinning' : ''} />
               {busy ? 'Жаңартылуда…' : 'Деректерді жаңарту'}
             </button>
           </div>
@@ -167,7 +169,7 @@ function MonthView({ month, thisMonth, tab, setParam }) {
                   : `Қорытынды: ${data.window.workdays.length} жұмыс күні`}
                 <span>·</span>
                 {last?.status === 'done'
-                  ? <span>Соңғы жаңарту: {fmtDateTime(last.finishedAt)} ({last.videoCount} видео)</span>
+                  ? <span title={fmtDateTime(last.finishedAt)}>Соңғы жаңарту {timeAgo(last.finishedAt)} · {last.videoCount} видео</span>
                   : last?.status === 'failed'
                     ? <span style={{ color: 'var(--qz-bad)' }}>Соңғы жаңарту сәтсіз: {last.error}</span>
                     : <span>Бұл айдың деректері әлі тартылған жоқ</span>}
@@ -186,7 +188,7 @@ function MonthView({ month, thisMonth, tab, setParam }) {
         )}
 
         {!data ? (
-          error ? null : <section className="qz-card"><div className="tt-loading"><span className="tt-spin" />Жүктелуде…</div></section>
+          error ? null : <Skeleton />
         ) : noDepts ? (
           <section className="qz-card">
             <div className="qz-empty qz-empty--hero">
@@ -218,6 +220,41 @@ function MonthView({ month, thisMonth, tab, setParam }) {
       </main>
     </div>
     </AvatarContext.Provider>
+  );
+}
+
+function timeAgo(iso) {
+  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (min < 1) return 'жаңа ғана';
+  if (min < 60) return `${min} мин бұрын`;
+  if (min < 60 * 24) return `${Math.round(min / 60)} сағ бұрын`;
+  return `${Math.round(min / 60 / 24)} күн бұрын`;
+}
+
+// Деректер жүктелгенше беттің пішіні (жыпылықтайтын сұр блоктар)
+function Skeleton() {
+  return (
+    <div className="ov sk" aria-busy="true" aria-label="Жүктелуде">
+      <div className="sk-block" style={{ height: 150 }} />
+      <div className="sk-row">{[0, 1, 2].map((i) => <div key={i} className="sk-block" style={{ height: 170 }} />)}</div>
+      <div className="sk-block" style={{ height: 420 }} />
+    </div>
+  );
+}
+
+function IconCal() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+      <rect x="2" y="3" width="12" height="11" rx="2.5" /><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3" />
+    </svg>
+  );
+}
+
+function IconRefresh({ className = '' }) {
+  return (
+    <svg className={className} width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" /><path d="M13.5 2.5v3h-3" />
+    </svg>
   );
 }
 
