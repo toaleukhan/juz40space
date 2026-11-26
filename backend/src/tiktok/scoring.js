@@ -208,9 +208,72 @@ function buildLeaderboard({ departments, videos, jury = {}, overrides = {}, wind
   return rows;
 }
 
+// Күнді N күнге жылжыту (YYYY-MM-DD, UTC-мен — уақыт белдеуіне тәуелсіз)
+function shiftDay(day, n) {
+  const d = new Date(`${day}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Рейтингке «тірі» детальдар қосады (rows-ты өзгертеді де қайтарады):
+ *  - prevPlace: 7 күн бұрынғы орны (сол күнге дейінгі видеолармен қайта
+ *    есептеледі; жюри ұпайы — қазіргісі). Айдың бірінші аптасында — null.
+ *  - streak: қатарынан видео салған жұмыс күндері. Бүгін әлі видео
+ *    салмаса, серия үзілмейді — кешегіден бастап санаймыз.
+ *  - postedToday: бүгін видео салды ма (тек ағымдағы ай).
+ *  - badges: айдың жетістіктері — hit, steady, team, record, comeback.
+ */
+function enrichLeaderboard(rows, { departments, videos, jury = {}, overrides = {}, window }) {
+  const cutoff = shiftDay(window.effectiveEnd, -7);
+  let prev = null;
+  if (cutoff >= window.start) {
+    const prevWindow = { ...window, effectiveEnd: cutoff, workdays: window.workdays.filter((d) => d <= cutoff) };
+    const prevVideos = videos.filter((v) => v.postDay <= cutoff);
+    prev = new Map(buildLeaderboard({ departments, videos: prevVideos, jury, overrides, window: prevWindow })
+      .map((r) => [r.departmentId, r.place]));
+  }
+
+  const posted = new Map();
+  let topVideo = null;
+  for (const v of videos) {
+    if (v.isTeam) continue;
+    if (!posted.has(v.departmentId)) posted.set(v.departmentId, new Set());
+    posted.get(v.departmentId).add(v.postDay);
+    if ((v.views || 0) > 0 && (!topVideo || v.views > topVideo.views)) topVideo = v;
+  }
+
+  const days = window.workdays;
+  for (const r of rows) {
+    const set = posted.get(r.departmentId) || new Set();
+    let i = days.length - 1;
+    if (window.isCurrent && i >= 0 && days[i] === window.effectiveEnd && !set.has(days[i])) i -= 1;
+    let streak = 0;
+    while (i >= 0 && set.has(days[i])) { streak += 1; i -= 1; }
+    r.streak = streak;
+    r.postedToday = Boolean(window.isCurrent && set.has(window.effectiveEnd));
+    r.prevPlace = prev ? (prev.get(r.departmentId) ?? null) : null;
+  }
+
+  const climb = (r) => (r.prevPlace ? r.prevPlace - r.place : 0);
+  const bestClimb = Math.max(0, ...rows.map(climb));
+  for (const r of rows) {
+    const b = [];
+    if (r.viralCount > 0) b.push('hit');
+    if (r.totalWorkdays >= 5 && r.postedWorkdays === r.totalWorkdays) b.push('steady');
+    if (r.crossCount > 0) b.push('team');
+    if (topVideo && topVideo.departmentId === r.departmentId) b.push('record');
+    if (bestClimb >= 2 && climb(r) === bestClimb) b.push('comeback');
+    r.badges = b;
+  }
+  const recordRow = rows.find((r) => r.badges.includes('record'));
+  if (recordRow) recordRow.recordViews = topVideo.views;
+  return rows;
+}
+
 module.exports = {
   TZ, TAGS, JURY_FIELDS, VIRAL_VIEWS,
   isMonth, almatyDay, almatyHour, currentMonth, monthRange, workdays, scoringWindow,
   median, statScore, stabilityScore, teamAccountSuggestion, crossDeptSuggestion, bonusSuggestion,
-  hasCompetitionTag, mentionsOf, buildLeaderboard,
+  hasCompetitionTag, mentionsOf, buildLeaderboard, enrichLeaderboard, shiftDay,
 };

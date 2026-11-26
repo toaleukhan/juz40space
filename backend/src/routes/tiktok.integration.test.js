@@ -90,7 +90,7 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
     vi.spyOn(apify, 'fetchItems').mockImplementation(async (ds) => (ds === 'ds2' ? pinnedItems : mainItems));
     const mainItems = ([
       item('1', 'juz40_fiz', '2026-09-01T06:00:00Z', 1200, { hashtags: [{ name: 'juz40_life' }], text: 'бірге @juz40_mat', authorMeta: { name: 'juz40_fiz', avatar: 'https://p16.tiktokcdn.com/fiz.jpeg' } }),
-      item('2', 'juz40_fiz', '2026-09-02T06:00:00Z', 600),
+      item('2', 'juz40_fiz', '2026-09-02T06:00:00Z', 600, { videoMeta: { duration: 20, coverUrl: 'https://p16.tiktokcdn.com/c2.jpeg' } }),
       item('2', 'juz40_fiz', '2026-09-02T06:00:00Z', 600), // қайталанған
       item('3', 'juz40_mat', '2026-09-03T06:00:00Z', 300),
       item('4', 'juz40_team', '2026-09-04T06:00:00Z', 5000, { hashtags: [{ name: 'juz40_fizika' }] }),
@@ -111,6 +111,7 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
 
     expect((await api('GET', `/api/tiktok/sync/${sync.body.id}`, { token: media })).body.status).toBe('running');
     getRun.mockImplementation(async (id) => ({ status: 'SUCCEEDED', datasetId: id === 'run2' ? 'ds2' : 'ds1' }));
+    const coverDl = vi.spyOn(apify, 'downloadImage').mockResolvedValue({ type: 'image/jpeg', data: Buffer.from([0xff, 0xd8, 0xff, 0x02]) });
     const avatarDl = vi.spyOn(apify, 'downloadAvatar').mockResolvedValue({ type: 'image/jpeg', data: Buffer.from([0xff, 0xd8, 0xff, 0x01]) });
     const done = await api('GET', `/api/tiktok/sync/${sync.body.id}`, { token: media });
     expect(done.body).toMatchObject({ status: 'done', videoCount: 5 });
@@ -127,6 +128,13 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
     expect(img.headers.get('cross-origin-resource-policy')).toBe('cross-origin');
     expect((await realFetch(`${base}/api/tiktok/avatars/999999`)).status).toBe(404);
 
+    // Мұқаба: соңғы видеолардікі сақталады, авторизациясыз ашылады
+    expect(coverDl).toHaveBeenCalledWith('https://p16.tiktokcdn.com/c2.jpeg');
+    const cov = await realFetch(`${base}/api/tiktok/covers/2`);
+    expect(cov.status).toBe(200);
+    expect(cov.headers.get('content-type')).toBe('image/jpeg');
+    expect((await realFetch(`${base}/api/tiktok/covers/nope`)).status).toBe(404);
+
     const score = await api('PUT', '/api/tiktok/scores/2026-09/2', { token: media, body: { creativity: 8, ethics: 10, bonus: '', stabilityOverride: 7.5 } });
     expect(score.status).toBe(200);
     expect((await api('PUT', '/api/tiktok/scores/2026-09/2', { token: media, body: { statisticsOverride: 12 } })).status).toBe(400);
@@ -135,6 +143,9 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
     const ov = await api('GET', '/api/tiktok/overview?month=2026-09', { token: media });
     expect(ov.status).toBe(200);
     expect(ov.body.videos).toHaveLength(5);
+    expect(ov.body.videos.find((x) => x.id === '2').hasCover).toBe(true);
+    expect(ov.body.leaderboard[0]).toHaveProperty('streak');
+    expect(ov.body.leaderboard[0]).toHaveProperty('badges');
     expect(ov.body.leaderboard).toHaveLength(2);
     const fizRow = ov.body.leaderboard.find((r) => r.name === 'Физика');
     expect(fizRow).toMatchObject({ videoCount: 2, postedWorkdays: 2, crossCount: 1, teamCount: 1 });

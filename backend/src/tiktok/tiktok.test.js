@@ -107,6 +107,58 @@ describe('ұпайлар', () => {
   });
 });
 
+describe('рейтинг детальдары: қозғалыс, серия, бейдждер', () => {
+  const depts = [
+    { id: 1, name: 'А', username: 'a', teamTag: null },
+    { id: 2, name: 'Б', username: 'b', teamTag: null },
+    { id: 3, name: 'В', username: 'v', teamTag: null },
+  ];
+  const v = (o) => ({ isTeam: false, views: 600, likes: 0, comments: 0, shares: 0, hashtags: [], mentions: [], caption: '', ...o });
+  // 2026-09: 1-сәрсенбі. «Бүгін» — 18-ші (жұма)
+  const win = S.scoringWindow('2026-09', new Date('2026-09-18T10:00:00Z'));
+  const videos = [
+    // А — бірінші аптада бәрінен алда, кейін тоқтады
+    ...['2026-09-01', '2026-09-02', '2026-09-03', '2026-09-04', '2026-09-07', '2026-09-08', '2026-09-09', '2026-09-10', '2026-09-11']
+      .map((d, i) => v({ departmentId: 1, postDay: d, views: 2000, id: `a${i}` })),
+    // Б — соңғы аптада күн сайын, бүгін де салды, бір видеосы 20K
+    ...['2026-09-14', '2026-09-15', '2026-09-16', '2026-09-17', '2026-09-18']
+      .map((d, i) => v({ departmentId: 2, postDay: d, views: i === 0 ? 20000 : 1500, id: `b${i}` })),
+    // В — бүгін әлі салмаған, кеше мен алдыңғы күні салды
+    v({ departmentId: 3, postDay: '2026-09-16', id: 'v1' }), v({ departmentId: 3, postDay: '2026-09-17', id: 'v2', mentions: ['a'] }),
+  ];
+
+  const rows = S.enrichLeaderboard(S.buildLeaderboard({ departments: depts, videos, window: win }), { departments: depts, videos, window: win });
+  const get = (id) => rows.find((r) => r.departmentId === id);
+
+  it('7 күн бұрынғы орын', () => {
+    expect(get(1).prevPlace).toBe(1);
+    // бір апта бұрын Б мен В 0 ұпаймен тең 2-орында еді; енді В 3-ке түсті
+    expect(get(3).prevPlace).toBe(2);
+    expect(get(3).place).toBe(3);
+  });
+
+  it('серия: бүгін салмаса кешегіден санайды', () => {
+    expect(get(2).streak).toBe(5);
+    expect(get(2).postedToday).toBe(true);
+    expect(get(3).streak).toBe(2);
+    expect(get(3).postedToday).toBe(false);
+    expect(get(1).streak).toBe(0);
+  });
+
+  it('бейдждер', () => {
+    expect(get(2).badges).toEqual(expect.arrayContaining(['hit', 'record']));
+    expect(get(2).recordViews).toBe(20000);
+    expect(get(3).badges).toContain('team');
+    expect(get(1).badges).not.toContain('record');
+  });
+
+  it('айдың бірінші аптасында prevPlace жоқ', () => {
+    const w = S.scoringWindow('2026-09', new Date('2026-09-03T10:00:00Z'));
+    const r = S.enrichLeaderboard(S.buildLeaderboard({ departments: depts, videos: [], window: w }), { departments: depts, videos: [], window: w });
+    expect(r.every((x) => x.prevPlace === null)).toBe(true);
+  });
+});
+
 describe('Apify жолын келтіру', () => {
   it('өрістерді алады, кіші әріппен, Алматы күнімен', () => {
     const n = normalizeItem({

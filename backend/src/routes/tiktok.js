@@ -68,6 +68,19 @@ router.get('/avatars/:id', asyncRoute(async (req, res) => {
   res.send(a.avatar);
 }));
 
+// Видео мұқабасы — ава сияқты ашық ақпарат, <img> үшін авторизациясыз.
+router.get('/covers/:id', asyncRoute(async (req, res) => {
+  const id = String(req.params.id || '').slice(0, 40);
+  const { rows } = await pool.query('SELECT cover, cover_type FROM tiktok_videos WHERE id = $1', [id]);
+  const c = rows[0];
+  if (!c?.cover) return res.status(404).end();
+  res.set('Content-Type', c.cover_type || 'image/jpeg');
+  res.set('Cache-Control', 'public, max-age=2592000, immutable'); // видео мұқабасы өзгермейді
+  res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.send(c.cover);
+}));
+
 router.use(auth, requireMedia);
 
 /* ───────────── Бөлімдер ───────────── */
@@ -255,6 +268,7 @@ async function ingest(sync, datasetId, pinnedDatasetId = null) {
   const byUser = new Map(depts.map((d) => [d.username, d.id]));
   const seen = new Set();
   const avatars = new Map(); // username → сурет сілтемесі
+  const covers = []; // { id, departmentId, postedAt, url }
   let n = 0;
   const client = await pool.connect();
   try {
@@ -264,6 +278,7 @@ async function ingest(sync, datasetId, pinnedDatasetId = null) {
       if (v?.avatar && byUser.has(v.username) && !avatars.has(v.username)) avatars.set(v.username, v.avatar);
       if (!v || seen.has(v.id) || !byUser.has(v.username) || v.postDay < start || v.postDay > end) continue;
       seen.add(v.id);
+      if (v.cover) covers.push({ id: v.id, departmentId: byUser.get(v.username), postedAt: v.postedAt, url: v.cover });
       await client.query(
         `INSERT INTO tiktok_videos (id, department_id, username, posted_at, post_day, views, likes, comments, shares,
            duration_sec, music_original, music_name, caption, hashtags, mentions, url, fetched_at)
@@ -288,6 +303,29 @@ async function ingest(sync, datasetId, pinnedDatasetId = null) {
     client.release();
   }
   await refreshAvatars(avatars, byUser);
+  await saveCovers(covers);
+}
+
+// Әр бөлімнің ең соңғы COVERS_PER_DEPT видеосының мұқабасын сақтаймыз
+// (бұрын сақталғанын қайта жүктемейміз). Жүктелмесе — карта мұқабасыз шығады.
+const COVERS_PER_DEPT = 3;
+async function saveCovers(covers) {
+  const byDept = new Map();
+  for (const c of covers) {
+    if (!byDept.has(c.departmentId)) byDept.set(c.departmentId, []);
+    byDept.get(c.departmentId).push(c);
+  }
+  const pick = [...byDept.values()].flatMap((list) => list
+    .sort((a, b) => (a.postedAt < b.postedAt ? 1 : -1)).slice(0, COVERS_PER_DEPT));
+  if (!pick.length) return;
+  const { rows: have } = await pool.query('SELECT id FROM tiktok_videos WHERE id = ANY($1) AND cover IS NOT NULL', [pick.map((c) => c.id)]);
+  const done = new Set(have.map((r) => r.id));
+  await Promise.all(pick.filter((c) => !done.has(c.id)).map(async (c) => {
+    const img = await apify.downloadImage(c.url);
+    if (!img) return;
+    await pool.query('UPDATE tiktok_videos SET cover=$1, cover_type=$2 WHERE id=$3', [img.data, img.type, c.id])
+      .catch((err) => console.warn('TikTok: мұқаба сақталмады:', err.message));
+  }));
 }
 
 // Аваларды жаңарту — синхронның қосымша бөлігі: жүктелмесе, ескісі қалады.
@@ -365,6 +403,7 @@ const videoOut = (v, teamIds) => ({
   views: Number(v.views), likes: Number(v.likes), comments: Number(v.comments), shares: Number(v.shares),
   durationSec: v.duration_sec, musicOriginal: v.music_original, musicName: v.music_name,
   caption: v.caption, hashtags: v.hashtags || [], mentions: v.mentions || [], url: v.url,
+  hasCover: Boolean(v.has_cover),
 });
 
 const JURY_COLUMNS = { creativity: 'creativity', ethics: 'ethics', crossDept: 'cross_dept', activity: 'activity', teamAccount: 'team_account', bonus: 'bonus' };
@@ -375,7 +414,8 @@ async function loadMonth(month) {
   const teamIds = new Set(depts.filter((d) => d.is_team_account).map((d) => d.id));
   const { rows: vrows } = await pool.query(
     `SELECT id, department_id, username, posted_at, post_day::text AS day, views, likes, comments, shares,
-            duration_sec, music_original, music_name, caption, hashtags, mentions, url
+            duration_sec, music_original, music_name, caption, hashtags, mentions, url,
+            (cover IS NOT NULL) AS has_cover
      FROM tiktok_videos WHERE post_day BETWEEN $1 AND $2 ORDER BY posted_at`, [start, end]
   );
   const videos = vrows.map((v) => videoOut(v, teamIds));
@@ -399,7 +439,10 @@ router.get('/overview', asyncRoute(async (req, res) => {
 
   const competing = depts.filter((d) => !d.is_team_account && d.active)
     .map((d) => ({ id: d.id, name: d.name, username: d.username, teamTag: d.team_tag }));
-  const leaderboard = S.buildLeaderboard({ departments: competing, videos, jury, overrides, window });
+  const leaderboard = S.enrichLeaderboard(
+    S.buildLeaderboard({ departments: competing, videos, jury, overrides, window }),
+    { departments: competing, videos, jury, overrides, window }
+  );
   const insights = computeInsights(videos.filter((v) => competing.some((d) => d.id === v.departmentId)));
 
   const [{ rows: syncRows }, { rows: analysisRows }] = await Promise.all([
