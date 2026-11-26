@@ -143,7 +143,31 @@ function normalizeItem(it) {
     mentions: (it.mentions || []).map((m) => String(m).replace(/^@/, '').toLowerCase()).filter(Boolean),
     url: it.webVideoUrl || `https://www.tiktok.com/@${username}/video/${id}`,
     cover: it.videoMeta?.coverUrl || null,
+    avatar: it.authorMeta?.avatar || it.authorMeta?.originalAvatarUrl || null,
   };
 }
 
-module.exports = { ApifyError, setTokenSource, accountInfo, MAX_PER_PROFILE, buildInput, buildPinnedInput, startRun, startPinnedRun, getRun, fetchItems, normalizeItem };
+// Профиль суретін жүктеу. TikTok CDN сілтемелерінің мерзімі бірнеше күнде
+// бітеді және басқа сайттан тікелей ашуға жиі тыйым салынады, сондықтан
+// суреттің өзін базаға сақтаймыз. Тек https және тек сурет, 1 МБ-тан аз.
+const AVATAR_MAX_BYTES = 1024 * 1024;
+async function downloadAvatar(url, { fetchImpl = fetch, timeoutMs = 8000 } = {}) {
+  if (!/^https:\/\//i.test(String(url || ''))) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetchImpl(url, { signal: ctrl.signal });
+    if (!res.ok) return null;
+    const type = String(res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (!/^image\/(jpeg|png|webp|gif|avif|heic)$/.test(type)) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (!buf.length || buf.length > AVATAR_MAX_BYTES) return null;
+    return { type, data: buf };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+module.exports = { ApifyError, downloadAvatar, setTokenSource, accountInfo, MAX_PER_PROFILE, buildInput, buildPinnedInput, startRun, startPinnedRun, getRun, fetchItems, normalizeItem };

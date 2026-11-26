@@ -388,6 +388,13 @@ const createTables = async () => {
     `);
     // Бекітілген видеоларға арналған қосымша run
     await pool.query(`ALTER TABLE tiktok_syncs ADD COLUMN IF NOT EXISTS pinned_run_id VARCHAR(64);`);
+    // Тимлид Тұрақтылық/Статистиканы қолмен түзетсе (null — автомат есеп)
+    await pool.query(`ALTER TABLE tiktok_scores ADD COLUMN IF NOT EXISTS stability_override NUMERIC(4,1);`);
+    await pool.query(`ALTER TABLE tiktok_scores ADD COLUMN IF NOT EXISTS statistics_override NUMERIC(4,1);`);
+    // Бөлім аккаунтының TikTok авасы (синхрон кезінде Apify-дан келген сілтемеден жүктеледі)
+    await pool.query(`ALTER TABLE tiktok_departments ADD COLUMN IF NOT EXISTS avatar BYTEA;`);
+    await pool.query(`ALTER TABLE tiktok_departments ADD COLUMN IF NOT EXISTS avatar_type VARCHAR(40);`);
+    await pool.query(`ALTER TABLE tiktok_departments ADD COLUMN IF NOT EXISTS avatar_updated_at TIMESTAMPTZ;`);
     await pool.query(`ALTER TABLE tiktok_syncs ADD COLUMN IF NOT EXISTS pinned_dataset_id VARCHAR(64);`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS tiktok_analyses (

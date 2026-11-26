@@ -89,7 +89,7 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
     ];
     vi.spyOn(apify, 'fetchItems').mockImplementation(async (ds) => (ds === 'ds2' ? pinnedItems : mainItems));
     const mainItems = ([
-      item('1', 'juz40_fiz', '2026-09-01T06:00:00Z', 1200, { hashtags: [{ name: 'juz40_life' }], text: 'бірге @juz40_mat' }),
+      item('1', 'juz40_fiz', '2026-09-01T06:00:00Z', 1200, { hashtags: [{ name: 'juz40_life' }], text: 'бірге @juz40_mat', authorMeta: { name: 'juz40_fiz', avatar: 'https://p16.tiktokcdn.com/fiz.jpeg' } }),
       item('2', 'juz40_fiz', '2026-09-02T06:00:00Z', 600),
       item('2', 'juz40_fiz', '2026-09-02T06:00:00Z', 600), // қайталанған
       item('3', 'juz40_mat', '2026-09-03T06:00:00Z', 300),
@@ -111,11 +111,25 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
 
     expect((await api('GET', `/api/tiktok/sync/${sync.body.id}`, { token: media })).body.status).toBe('running');
     getRun.mockImplementation(async (id) => ({ status: 'SUCCEEDED', datasetId: id === 'run2' ? 'ds2' : 'ds1' }));
+    const avatarDl = vi.spyOn(apify, 'downloadAvatar').mockResolvedValue({ type: 'image/jpeg', data: Buffer.from([0xff, 0xd8, 0xff, 0x01]) });
     const done = await api('GET', `/api/tiktok/sync/${sync.body.id}`, { token: media });
     expect(done.body).toMatchObject({ status: 'done', videoCount: 5 });
+    expect(avatarDl).toHaveBeenCalledWith('https://p16.tiktokcdn.com/fiz.jpeg');
 
-    const score = await api('PUT', '/api/tiktok/scores/2026-09/2', { token: media, body: { creativity: 8, ethics: 10, bonus: '' } });
+    // Ава — авторизациясыз ашылады, басқа сайттан <img> арқылы да
+    const depts = (await api('GET', '/api/tiktok/departments', { token: media })).body;
+    const fizDept = depts.find((d) => d.username === 'juz40_fiz');
+    expect(fizDept.avatarVersion).toEqual(expect.any(Number));
+    expect(depts.find((d) => d.username === 'juz40_mat').avatarVersion).toBeNull();
+    const img = await realFetch(`${base}/api/tiktok/avatars/${fizDept.id}`);
+    expect(img.status).toBe(200);
+    expect(img.headers.get('content-type')).toBe('image/jpeg');
+    expect(img.headers.get('cross-origin-resource-policy')).toBe('cross-origin');
+    expect((await realFetch(`${base}/api/tiktok/avatars/999999`)).status).toBe(404);
+
+    const score = await api('PUT', '/api/tiktok/scores/2026-09/2', { token: media, body: { creativity: 8, ethics: 10, bonus: '', stabilityOverride: 7.5 } });
     expect(score.status).toBe(200);
+    expect((await api('PUT', '/api/tiktok/scores/2026-09/2', { token: media, body: { statisticsOverride: 12 } })).status).toBe(400);
     expect((await api('PUT', '/api/tiktok/scores/2026-09/2', { token: media, body: { creativity: 11 } })).status).toBe(400);
 
     const ov = await api('GET', '/api/tiktok/overview?month=2026-09', { token: media });
@@ -126,6 +140,9 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
     expect(fizRow).toMatchObject({ videoCount: 2, postedWorkdays: 2, crossCount: 1, teamCount: 1 });
     const matRow = ov.body.leaderboard.find((r) => r.name === 'Математика');
     expect(matRow.jury).toMatchObject({ creativity: 8, ethics: 10, bonus: null });
+    expect(matRow.override).toEqual({ stability: 7.5, statistics: null });
+    expect(matRow.scores.stability).toBe(7.5);
+    expect(matRow.scores.statistics).toBe(matRow.auto.statistics);
     expect(ov.body.lastSync.status).toBe('done');
     expect(ov.body.videos.find((v) => v.id === '4').isTeam).toBe(true);
 

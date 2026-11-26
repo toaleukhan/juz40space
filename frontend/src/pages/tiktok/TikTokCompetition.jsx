@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { IconImage } from '../../components/icons';
 import { tiktok, errorText } from '../../services/tiktokApi';
 import { monthLabel, shiftMonth, currentMonth, fmtDateTime } from '../../utils/tiktok';
 import Overview from './Overview';
 import TopBar from './TopBar';
+import { AvatarContext } from './avatarContext';
 import Grading from './Grading';
 import PostingCalendar from './PostingCalendar';
 import Insights from './Insights';
@@ -14,6 +15,7 @@ import ShareImageDialog from './ShareImageDialog';
 import ApifyDialog from './ApifyDialog';
 import '../../styles/quiz.css';
 import '../../styles/tiktok.css';
+import '../../styles/juz40-font.css';
 import '../../styles/overview.css';
 
 const TABS = [
@@ -115,12 +117,23 @@ function MonthView({ month, thisMonth, tab, setParam }) {
   };
 
   const busy = sync && (sync.status === 'running' || sync.status === 'ingesting');
+  const avatars = useMemo(() => Object.fromEntries((data?.departments || [])
+    .filter((d) => d.avatarVersion).map((d) => [d.id, d.avatarVersion])), [data]);
   const last = data?.lastSync;
   const noDepts = data && data.departments.filter((d) => !d.isTeamAccount).length === 0;
 
   return (
+    <AvatarContext.Provider value={avatars}>
     <div className="tt-page">
-      <TopBar tabs={data && !noDepts ? TABS : null} tab={tab} onTab={(k) => setParam('tab', k)} />
+      <TopBar
+        tabs={data && !noDepts ? TABS : null}
+        tab={tab}
+        onTab={(k) => setParam('tab', k)}
+        settings={[
+          { label: 'Бөлімдер', hint: 'TikTok аккаунттары мен хештегтер', onClick: () => setDeptsOpen(true) },
+          { label: 'Apify токені', hint: 'Деректерді тарту лимиті', onClick: () => setApifyOpen(true) },
+        ]}
+      />
       <main className="qz tt">
         <div className="qz-head">
           <div>
@@ -136,8 +149,6 @@ function MonthView({ month, thisMonth, tab, setParam }) {
               disabled={!data || !data.leaderboard.length} title="Рейтингті сурет етіп жүктеу">
               <IconImage width={16} height={16} /> Сурет
             </button>
-            <button type="button" className="qz-btn" onClick={() => setDeptsOpen(true)}>Бөлімдер</button>
-            <button type="button" className="qz-btn" onClick={() => setApifyOpen(true)} title="Apify токені және лимит">Apify</button>
             <button type="button" className="qz-btn qz-btn--primary" onClick={startSync} disabled={busy || !data || noDepts}>
               {busy ? 'Жаңартылуда…' : 'Деректерді жаңарту'}
             </button>
@@ -206,6 +217,7 @@ function MonthView({ month, thisMonth, tab, setParam }) {
         )}
       </main>
     </div>
+    </AvatarContext.Provider>
   );
 }
 
