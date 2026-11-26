@@ -125,8 +125,8 @@ function Ranking({ rows, workdays, own }) {
               {isOpen && (
                 <div className="ov-rank__more">
                   <div className="ov-parts">
-                    <Part label="Тұрақтылық" value={r.auto.stability} max={10} hint="видео салған жұмыс күндері" />
-                    <Part label="Статистика" value={r.auto.statistics} max={10} hint={`орташа ${fmtInt(r.avgViews)} қаралым`} />
+                    <Part label="Тұрақтылық" value={r.scores?.stability ?? r.auto.stability} max={10} hint="видео салған жұмыс күндері" />
+                    <Part label="Статистика" value={r.scores?.statistics ?? r.auto.statistics} max={10} hint={`орташа ${fmtInt(r.avgViews)} қаралым`} />
                     <Part label="Жюри" value={jury} max={50} hint={`${r.juryComplete ? 'бағаланды' : 'әлі толық бағаланбаған'}${bonusOf(r) ? ` · бонус +${r1(bonusOf(r))}` : ''}`} />
                   </div>
                   <div className="ov-days-wrap">

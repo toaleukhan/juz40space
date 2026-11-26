@@ -51,7 +51,7 @@ export default function PostingCalendar({ data }) {
                     </td>
                   );
                 })}
-                <td className="tt-cal__score">{r.auto.stability} <small className="tt-pending">({r.postedWorkdays}/{r.totalWorkdays})</small></td>
+                <td className="tt-cal__score">{r.scores?.stability ?? r.auto.stability} <small className="tt-pending">({r.postedWorkdays}/{r.totalWorkdays})</small></td>
               </tr>
             ))}
           </tbody>

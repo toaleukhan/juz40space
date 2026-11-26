@@ -91,6 +91,15 @@ describe('ұпайлар', () => {
     expect(rows[0].departmentId).toBe(2);
   });
 
+  it('тимлид түзеткен Тұрақтылық/Статистика рейтингке кіреді, auto өзгермейді', () => {
+    const rows = S.buildLeaderboard({ departments, videos, window, overrides: { 1: { stability: 8, statistics: null } } });
+    const fiz = rows.find((r) => r.departmentId === 1);
+    expect(fiz.auto).toEqual({ stability: 0.5, statistics: 10 });
+    expect(fiz.override).toEqual({ stability: 8, statistics: null });
+    expect(fiz.scores).toEqual({ stability: 8, statistics: 10 });
+    expect(fiz.total).toBe(18);
+  });
+
   it('тең ұпайда орын бірдей', () => {
     const rows = S.buildLeaderboard({ departments, videos: [], window });
     expect(rows.map((r) => r.place)).toEqual([1, 1]);

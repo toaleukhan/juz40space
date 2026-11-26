@@ -1,0 +1,4 @@
+/* JUZ40 корпоративтік қарпі (медиа кабинеті) */
+@font-face { font-family: 'JUZ40'; src: url('../assets/fonts/Juz40-Regular.otf') format('opentype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'JUZ40'; src: url('../assets/fonts/Juz40-Medium.otf') format('opentype'); font-weight: 500 600; font-style: normal; font-display: swap; }
+@font-face { font-family: 'JUZ40'; src: url('../assets/fonts/Juz40-Bold.otf') format('opentype'); font-weight: 700 900; font-style: normal; font-display: swap; }

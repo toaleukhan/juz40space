@@ -114,8 +114,9 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
     const done = await api('GET', `/api/tiktok/sync/${sync.body.id}`, { token: media });
     expect(done.body).toMatchObject({ status: 'done', videoCount: 5 });
 
-    const score = await api('PUT', '/api/tiktok/scores/2026-09/2', { token: media, body: { creativity: 8, ethics: 10, bonus: '' } });
+    const score = await api('PUT', '/api/tiktok/scores/2026-09/2', { token: media, body: { creativity: 8, ethics: 10, bonus: '', stabilityOverride: 7.5 } });
     expect(score.status).toBe(200);
+    expect((await api('PUT', '/api/tiktok/scores/2026-09/2', { token: media, body: { statisticsOverride: 12 } })).status).toBe(400);
     expect((await api('PUT', '/api/tiktok/scores/2026-09/2', { token: media, body: { creativity: 11 } })).status).toBe(400);
 
     const ov = await api('GET', '/api/tiktok/overview?month=2026-09', { token: media });
@@ -126,6 +127,9 @@ describe.skipIf(!isLocal)('TikTok жарысы — бөлім, синхрон, �
     expect(fizRow).toMatchObject({ videoCount: 2, postedWorkdays: 2, crossCount: 1, teamCount: 1 });
     const matRow = ov.body.leaderboard.find((r) => r.name === 'Математика');
     expect(matRow.jury).toMatchObject({ creativity: 8, ethics: 10, bonus: null });
+    expect(matRow.override).toEqual({ stability: 7.5, statistics: null });
+    expect(matRow.scores.stability).toBe(7.5);
+    expect(matRow.scores.statistics).toBe(matRow.auto.statistics);
     expect(ov.body.lastSync.status).toBe('done');
     expect(ov.body.videos.find((v) => v.id === '4').isTeam).toBe(true);
 

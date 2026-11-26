@@ -129,8 +129,10 @@ function mentionsOf(v) {
  * departments: [{id, name, username, teamTag}]
  * videos: [{departmentId, isTeam, postDay, views, likes, comments, shares, hashtags, mentions, caption}]
  * jury: { [departmentId]: {creativity, ethics, crossDept, activity, teamAccount, bonus} }
+ * overrides: { [departmentId]: {stability, statistics} } — тимлид қолмен қойған
+ *   мән (null = автомат есеп қолданылады). auto әрқашан жүйе есептегенін көрсетеді.
  */
-function buildLeaderboard({ departments, videos, jury = {}, window }) {
+function buildLeaderboard({ departments, videos, jury = {}, overrides = {}, window }) {
   const workSet = new Set(window.workdays);
   const deptUsers = new Map(departments.map((d) => [String(d.username).toLowerCase(), d.id]));
 
@@ -152,8 +154,15 @@ function buildLeaderboard({ departments, videos, jury = {}, window }) {
       ? videos.filter((v) => v.isTeam && (v.hashtags || []).some((t) => String(t).toLowerCase() === tag))
       : [];
 
-    const stability = round1(stabilityScore(postedDays.size, window.workdays.length));
-    const statistics = round1(statScore(avg));
+    const autoStability = round1(stabilityScore(postedDays.size, window.workdays.length));
+    const autoStatistics = round1(statScore(avg));
+    const o = overrides[d.id] || {};
+    const override = {
+      stability: Number.isFinite(o.stability) ? o.stability : null,
+      statistics: Number.isFinite(o.statistics) ? o.statistics : null,
+    };
+    const stability = override.stability ?? autoStability;
+    const statistics = override.statistics ?? autoStatistics;
 
     const j = jury[d.id] || {};
     const juryValues = Object.fromEntries(JURY_FIELDS.map((f) => [f.key, j[f.key] ?? null]));
@@ -176,7 +185,9 @@ function buildLeaderboard({ departments, videos, jury = {}, window }) {
       tagShare,
       crossCount: crossVideos.length,
       teamCount: teamVideos.length,
-      auto: { stability, statistics },
+      auto: { stability: autoStability, statistics: autoStatistics },
+      override,
+      scores: { stability, statistics }, // рейтингке кіретін мән (қолмен қойылса — сол)
       suggestions: {
         crossDept: crossDeptSuggestion(crossVideos.length),
         teamAccount: tag ? teamAccountSuggestion(teamVideos) : null,

@@ -14,6 +14,7 @@ import ShareImageDialog from './ShareImageDialog';
 import ApifyDialog from './ApifyDialog';
 import '../../styles/quiz.css';
 import '../../styles/tiktok.css';
+import '../../styles/juz40-font.css';
 import '../../styles/overview.css';
 
 const TABS = [
@@ -120,7 +121,15 @@ function MonthView({ month, thisMonth, tab, setParam }) {
 
   return (
     <div className="tt-page">
-      <TopBar tabs={data && !noDepts ? TABS : null} tab={tab} onTab={(k) => setParam('tab', k)} />
+      <TopBar
+        tabs={data && !noDepts ? TABS : null}
+        tab={tab}
+        onTab={(k) => setParam('tab', k)}
+        settings={[
+          { label: 'Бөлімдер', hint: 'TikTok аккаунттары мен хештегтер', onClick: () => setDeptsOpen(true) },
+          { label: 'Apify токені', hint: 'Деректерді тарту лимиті', onClick: () => setApifyOpen(true) },
+        ]}
+      />
       <main className="qz tt">
         <div className="qz-head">
           <div>
@@ -136,8 +145,6 @@ function MonthView({ month, thisMonth, tab, setParam }) {
               disabled={!data || !data.leaderboard.length} title="Рейтингті сурет етіп жүктеу">
               <IconImage width={16} height={16} /> Сурет
             </button>
-            <button type="button" className="qz-btn" onClick={() => setDeptsOpen(true)}>Бөлімдер</button>
-            <button type="button" className="qz-btn" onClick={() => setApifyOpen(true)} title="Apify токені және лимит">Apify</button>
             <button type="button" className="qz-btn qz-btn--primary" onClick={startSync} disabled={busy || !data || noDepts}>
               {busy ? 'Жаңартылуда…' : 'Деректерді жаңарту'}
             </button>

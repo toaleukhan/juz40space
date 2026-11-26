@@ -346,22 +346,25 @@ async function loadMonth(month) {
   const videos = vrows.map((v) => videoOut(v, teamIds));
   const { rows: srows } = await pool.query('SELECT * FROM tiktok_scores WHERE month = $1', [month]);
   const jury = {};
+  const overrides = {};
+  const num = (x) => (x === null || x === undefined ? null : Number(x));
   srows.forEach((s) => {
     jury[s.department_id] = Object.fromEntries(Object.entries(JURY_COLUMNS)
-      .map(([k, col]) => [k, s[col] === null ? null : Number(s[col])]));
+      .map(([k, col]) => [k, num(s[col])]));
+    overrides[s.department_id] = { stability: num(s.stability_override), statistics: num(s.statistics_override) };
   });
-  return { depts, videos, jury, teamIds };
+  return { depts, videos, jury, overrides, teamIds };
 }
 
 router.get('/overview', asyncRoute(async (req, res) => {
   const month = String(req.query.month || S.currentMonth());
   if (!S.isMonth(month)) return res.status(400).json({ error: 'Ай форматы YYYY-MM' });
   const window = S.scoringWindow(month);
-  const { depts, videos, jury } = await loadMonth(month);
+  const { depts, videos, jury, overrides } = await loadMonth(month);
 
   const competing = depts.filter((d) => !d.is_team_account && d.active)
     .map((d) => ({ id: d.id, name: d.name, username: d.username, teamTag: d.team_tag }));
-  const leaderboard = S.buildLeaderboard({ departments: competing, videos, jury, window });
+  const leaderboard = S.buildLeaderboard({ departments: competing, videos, jury, overrides, window });
   const insights = computeInsights(videos.filter((v) => competing.some((d) => d.id === v.departmentId)));
 
   const [{ rows: syncRows }, { rows: analysisRows }] = await Promise.all([
@@ -387,6 +390,13 @@ router.get('/overview', asyncRoute(async (req, res) => {
 
 /* ───────────── Жюри ───────────── */
 
+// Тұрақтылық пен Статистиканы жүйе өзі есептейді; тимлид керек болса
+// қолмен түзете алады (null — автомат мәнге қайту).
+const OVERRIDE_FIELDS = [
+  { key: 'stabilityOverride', label: 'Тұрақтылық', column: 'stability_override' },
+  { key: 'statisticsOverride', label: 'Статистика', column: 'statistics_override' },
+];
+
 router.put('/scores/:month/:deptId', asyncRoute(async (req, res) => {
   const month = String(req.params.month);
   const deptId = Number(req.params.deptId);
@@ -394,25 +404,32 @@ router.put('/scores/:month/:deptId', asyncRoute(async (req, res) => {
   const { rows: d } = await pool.query('SELECT id FROM tiktok_departments WHERE id=$1 AND NOT is_team_account', [deptId || 0]);
   if (!d.length) return res.status(404).json({ error: 'Бөлім табылмады' });
 
-  const values = {};
-  for (const f of S.JURY_FIELDS) {
-    const raw = req.body[f.key];
-    if (raw === null || raw === '' || raw === undefined) { values[f.key] = null; continue; }
+  const parse = (raw, label, max) => {
+    if (raw === null || raw === '' || raw === undefined) return { value: null };
     const n = Number(raw);
-    if (!Number.isFinite(n) || n < 0 || n > f.max) {
-      return res.status(400).json({ error: `«${f.label}» 0–${f.max} аралығында болуы керек` });
-    }
-    values[f.key] = Math.round(n * 10) / 10;
+    if (!Number.isFinite(n) || n < 0 || n > max) return { error: `«${label}» 0–${max} аралығында болуы керек` };
+    return { value: Math.round(n * 10) / 10 };
+  };
+
+  const values = {};
+  for (const f of [...S.JURY_FIELDS, ...OVERRIDE_FIELDS.map((o) => ({ ...o, max: 10 }))]) {
+    const { value, error } = parse(req.body[f.key], f.label, f.max);
+    if (error) return res.status(400).json({ error });
+    values[f.key] = value;
   }
   await pool.query(
-    `INSERT INTO tiktok_scores (month, department_id, creativity, ethics, cross_dept, activity, team_account, bonus, updated_by, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
+    `INSERT INTO tiktok_scores (month, department_id, creativity, ethics, cross_dept, activity, team_account, bonus,
+                                stability_override, statistics_override, updated_by, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW())
      ON CONFLICT (month, department_id) DO UPDATE SET creativity=EXCLUDED.creativity, ethics=EXCLUDED.ethics,
        cross_dept=EXCLUDED.cross_dept, activity=EXCLUDED.activity, team_account=EXCLUDED.team_account,
-       bonus=EXCLUDED.bonus, updated_by=EXCLUDED.updated_by, updated_at=NOW()`,
-    [month, deptId, values.creativity, values.ethics, values.crossDept, values.activity, values.teamAccount, values.bonus, req.user.id]
+       bonus=EXCLUDED.bonus, stability_override=EXCLUDED.stability_override,
+       statistics_override=EXCLUDED.statistics_override, updated_by=EXCLUDED.updated_by, updated_at=NOW()`,
+    [month, deptId, values.creativity, values.ethics, values.crossDept, values.activity, values.teamAccount, values.bonus,
+      values.stabilityOverride, values.statisticsOverride, req.user.id]
   );
-  res.json({ ok: true, jury: values });
+  const jury = Object.fromEntries(S.JURY_FIELDS.map((f) => [f.key, values[f.key]]));
+  res.json({ ok: true, jury, override: { stability: values.stabilityOverride, statistics: values.statisticsOverride } });
 }));
 
 /* ───────────── ИИ анализі ───────────── */
@@ -421,13 +438,13 @@ router.post('/analysis', asyncRoute(async (req, res) => {
   const month = String(req.body.month || S.currentMonth());
   if (!S.isMonth(month)) return res.status(400).json({ error: 'Ай форматы YYYY-MM' });
   const window = S.scoringWindow(month);
-  const { depts, videos, jury } = await loadMonth(month);
+  const { depts, videos, jury, overrides } = await loadMonth(month);
   const competing = depts.filter((d) => !d.is_team_account && d.active)
     .map((d) => ({ id: d.id, name: d.name, username: d.username, teamTag: d.team_tag }));
   const own = videos.filter((v) => competing.some((d) => d.id === v.departmentId));
   if (own.length < 5) return res.status(400).json({ error: 'Анализге кемінде 5 видео керек — алдымен деректерді жаңартыңыз' });
 
-  const leaderboard = S.buildLeaderboard({ departments: competing, videos, jury, window });
+  const leaderboard = S.buildLeaderboard({ departments: competing, videos, jury, overrides, window });
   const insights = computeInsights(own);
   const departmentsById = Object.fromEntries(competing.map((d) => [d.id, d]));
   const content = await generateAnalysis({ month, leaderboard, insights, departmentsById });
