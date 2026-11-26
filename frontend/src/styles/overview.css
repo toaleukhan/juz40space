@@ -337,3 +337,6 @@
 .sk-block { border-radius: 14px; background: linear-gradient(90deg, var(--pg-line-2) 0%, var(--pg-card) 50%, var(--pg-line-2) 100%); background-size: 200% 100%; animation: sk-shine 1.3s ease-in-out infinite; border: 1px solid var(--pg-line); }
 @keyframes sk-shine { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .sk-block, .tt-dot--live::after, .tt-sync svg.is-spinning { animation: none; } .ov-pod:hover { transform: none; } }
+.tt-page .tt-apify-form--solo { margin-top: 16px; align-items: stretch; }
+.tt-page .tt-apify-form--solo input { min-height: 44px; }
+.tt-page .tt-apify-form--solo .qz-btn { min-height: 44px; }
