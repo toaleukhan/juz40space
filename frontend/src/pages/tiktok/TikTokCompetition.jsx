@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { IconImage } from '../../components/icons';
 import { tiktok, errorText } from '../../services/tiktokApi';
-import { monthLabel, shiftMonth, currentMonth, fmtDateTime } from '../../utils/tiktok';
+import { monthLabel, shiftMonth, currentMonth } from '../../utils/tiktok';
 import Overview from './Overview';
 import TopBar from './TopBar';
 import { AvatarContext } from './avatarContext';
@@ -157,24 +157,14 @@ function MonthView({ month, thisMonth, tab, setParam }) {
           </div>
         </div>
 
-        {data && (
+        {busy && (
           <div className="tt-status" role="status">
-            {busy ? (
-              <><span className="tt-dot tt-dot--busy" />TikTok-тан видеолар тартылып жатыр — әдетте 1–5 минут. Бетті жаба берсеңіз болады.</>
-            ) : (
-              <>
-                <span className={`tt-dot ${data.window.isCurrent ? 'tt-dot--live' : ''}`} />
-                {data.window.isCurrent
-                  ? `Аралық рейтинг: ${data.window.workdays.length} / ${countWorkdays(data)} жұмыс күні өтті`
-                  : `Қорытынды: ${data.window.workdays.length} жұмыс күні`}
-                <span>·</span>
-                {last?.status === 'done'
-                  ? <span title={fmtDateTime(last.finishedAt)}>Соңғы жаңарту {timeAgo(last.finishedAt)} · {last.videoCount} видео</span>
-                  : last?.status === 'failed'
-                    ? <span style={{ color: 'var(--qz-bad)' }}>Соңғы жаңарту сәтсіз: {last.error}</span>
-                    : <span>Бұл айдың деректері әлі тартылған жоқ</span>}
-              </>
-            )}
+            <span className="tt-dot tt-dot--busy" />Жиналуда… TikTok-тан видеолар тартылып жатыр, әдетте 1–5 минут.
+          </div>
+        )}
+        {!busy && last?.status === 'failed' && (
+          <div className="tt-status" role="status" style={{ color: 'var(--qz-bad)' }}>
+            <span className="tt-dot" style={{ background: 'var(--qz-bad)' }} />Соңғы жаңарту сәтсіз: {last.error}
           </div>
         )}
 
@@ -223,14 +213,6 @@ function MonthView({ month, thisMonth, tab, setParam }) {
   );
 }
 
-function timeAgo(iso) {
-  const min = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  if (min < 1) return 'жаңа ғана';
-  if (min < 60) return `${min} мин бұрын`;
-  if (min < 60 * 24) return `${Math.round(min / 60)} сағ бұрын`;
-  return `${Math.round(min / 60 / 24)} күн бұрын`;
-}
-
 // Деректер жүктелгенше беттің пішіні (жыпылықтайтын сұр блоктар)
 function Skeleton() {
   return (
@@ -258,13 +240,3 @@ function IconRefresh({ className = '' }) {
   );
 }
 
-// Айдағы барлық жұмыс күні (бүгіннен кейінгілерді қоса)
-function countWorkdays(data) {
-  const { start, end } = data.allDays;
-  let n = 0;
-  for (let d = new Date(`${start}T00:00:00Z`); d <= new Date(`${end}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + 1)) {
-    const wd = d.getUTCDay();
-    if (wd !== 0 && wd !== 6) n += 1;
-  }
-  return n;
-}

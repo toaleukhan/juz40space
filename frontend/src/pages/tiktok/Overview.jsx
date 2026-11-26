@@ -44,10 +44,9 @@ export default function Overview({ data }) {
 
 /* ── 1. Қорытынды ── */
 function Summary({ rows, own, window: win, monthDays }) {
-  const [a, b] = rows;
+  const [a] = rows;
   const c = deptColor(a.departmentId);
   const views = sumBy(own, 'views');
-  const gap = b ? a.total - b.total : 0;
   return (
     <section className="ov-sum" style={{ '--c': c }}>
       <div className="ov-sum__main">
@@ -56,12 +55,6 @@ function Summary({ rows, own, window: win, monthDays }) {
           <Avatar id={a.departmentId} name={a.name} size={44} />
           <span><b>{a.name}</b> {win.isCurrent ? 'көш бастап тұр' : 'айдың жеңімпазы'}</span>
         </h2>
-        <p>
-          {b && (gap > 0
-            ? <>{b.name} бөлімінен <b>{r1(gap)} ұпай</b> алда. </>
-            : <>{b.name} бөлімімен ұпайы тең. </>)}
-          {a.totalWorkdays > 0 && <>{a.totalWorkdays} жұмыс күнінің {a.postedWorkdays} күні видео салды.</>}
-        </p>
       </div>
       <div className="ov-sum__side">
         <dl className="ov-sum__stats">
