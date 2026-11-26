@@ -79,19 +79,10 @@ export default function Grading({ data, month, onSaved }) {
     saveRow(id, row);
   };
 
-  const done = rows.filter((r) => fields.every((f) => f.key === 'bonus' || value(r.departmentId, f.key) !== null)).length;
-
   return (
     <section className="ov-card tg" aria-label="Жюри бағалауы">
       <div className="tg-head">
-        <div>
-          <h2>Бағалау</h2>
-          <span>Ұяшыққа балл жазыңыз — келесісіне өткенде автомат сақталады. Тұрақтылық пен Статистиканы жүйе есептейді, керек болса үстінен жазып түзетіңіз.</span>
-        </div>
-        <div className="tg-progress" aria-label="Бағаланған бөлімдер">
-          <b>{done}/{rows.length}</b> бөлім бағаланды
-          <span><i style={{ width: `${rows.length ? (done / rows.length) * 100 : 0}%` }} /></span>
-        </div>
+        <h2>Бағалау</h2>
       </div>
       <div className="tg-wrap">
         <table className="tg-table">
@@ -167,7 +158,6 @@ export default function Grading({ data, month, onSaved }) {
           </tbody>
         </table>
       </div>
-      <p className="qz-note">Сұр сан — жүйе есебі. Қолмен түзетілген ұяшық қою болып, астында ↺ шығады — оны басса жүйе есебіне қайтады. Бонус 0–20 (15K+ видео мен хэштег үшін). Бос ұяшық = әлі қойылмаған.</p>
     </section>
   );
 }
